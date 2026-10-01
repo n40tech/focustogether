@@ -52,7 +52,11 @@ export function useSound() {
   useEffect(() => {
     load();
   }, []);
-  return useSyncExternalStore(subscribe, () => snapshot, () => snapshot);
+  return useSyncExternalStore(
+    subscribe,
+    () => snapshot,
+    () => snapshot
+  );
 }
 
 /** Plays `ambience` while this screen is focused. */

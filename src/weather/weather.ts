@@ -76,14 +76,24 @@ export function weatherAt(ms: number, localHour = 12): Weather {
   const t = ms / MINUTE;
 
   // Weather systems roll through over a few hours, with shorter wobbles on top.
-  const c = layered(t, SEED.cloud, [[240, 0.7], [55, 0.25], [13, 0.05]]);
+  const c = layered(t, SEED.cloud, [
+    [240, 0.7],
+    [55, 0.25],
+    [13, 0.05],
+  ]);
   const cloud = smoothstep(0.18, 0.76, c);
 
   // Rain needs heavy cloud *and* a wet spell, so some overcast days stay dry.
-  const wet = layered(t, SEED.wet, [[70, 0.8], [15, 0.2]]);
+  const wet = layered(t, SEED.wet, [
+    [70, 0.8],
+    [15, 0.2],
+  ]);
   const rain = smoothstep(0.6, 0.95, cloud) * smoothstep(0.4, 0.85, wet);
 
-  const w = layered(t, SEED.wind, [[150, 0.75], [30, 0.25]]);
+  const w = layered(t, SEED.wind, [
+    [150, 0.75],
+    [30, 0.25],
+  ]);
   const wind = clamp01(0.06 + smoothstep(0.28, 0.85, w) * 0.94);
 
   const storm = smoothstep(0.6, 0.95, rain) * smoothstep(0.55, 0.85, wind);
@@ -104,7 +114,10 @@ export function wetnessAt(ms: number): number {
 
 /** Moment-to-moment wind strength (0–1): the average wind plus shared gusts. */
 export function gustAt(ms: number, wind = weatherAt(ms).wind): number {
-  const g = layered(ms / MINUTE, SEED.gust, [[0.6, 0.6], [0.15, 0.4]]);
+  const g = layered(ms / MINUTE, SEED.gust, [
+    [0.6, 0.6],
+    [0.15, 0.4],
+  ]);
   return clamp01(wind * (0.55 + 0.9 * g));
 }
 

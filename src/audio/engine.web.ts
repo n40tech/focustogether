@@ -30,6 +30,7 @@ type Mix = {
   glass: number;
 };
 
+// prettier-ignore
 const MIXES: Record<Ambience, Mix> = {
   carpark: { window: 16000, outside: 1, rain: 1, drops: 1, wind: 1, birds: 0.6, crickets: 0.7, chimes: 0, traffic: 1, room: 0, glass: 0 },
   office: { window: 700, outside: 0.9, rain: 1, drops: 0.4, wind: 0.8, birds: 0.5, crickets: 0.4, chimes: 0, traffic: 0.5, room: 1, glass: 1 },
@@ -124,17 +125,28 @@ class WebAudioEngine implements AudioEngine {
     if (!ctx || !this.n || ctx.state !== 'running') return;
     const t = ctx.currentTime + 0.01;
     switch (sfx) {
-      case 'door': return this.door(t);
-      case 'bell': return this.bell(t);
-      case 'chime': return this.chime(t);
-      case 'chips': return this.chips(t, options?.count ?? 5);
-      case 'coin': return this.coin(t);
-      case 'lighter': return this.lighter(t);
-      case 'water': return this.water(t);
-      case 'pluck': return this.pluck(t);
-      case 'munch': return this.munch(t);
-      case 'pop': return this.pop(t);
-      case 'paper': return this.paper(t);
+      case 'door':
+        return this.door(t);
+      case 'bell':
+        return this.bell(t);
+      case 'chime':
+        return this.chime(t);
+      case 'chips':
+        return this.chips(t, options?.count ?? 5);
+      case 'coin':
+        return this.coin(t);
+      case 'lighter':
+        return this.lighter(t);
+      case 'water':
+        return this.water(t);
+      case 'pluck':
+        return this.pluck(t);
+      case 'munch':
+        return this.munch(t);
+      case 'pop':
+        return this.pop(t);
+      case 'paper':
+        return this.paper(t);
     }
   }
 
@@ -367,7 +379,11 @@ class WebAudioEngine implements AudioEngine {
   /** Calls `fn` at random times in [from, to) at `rate` per second on average. */
   private every(rate: number, from: number, to: number, fn: (t: number) => void) {
     if (rate <= 0) return;
-    for (let t = from - Math.log(1 - Math.random()) / rate; t < to; t -= Math.log(1 - Math.random()) / rate) {
+    for (
+      let t = from - Math.log(1 - Math.random()) / rate;
+      t < to;
+      t -= Math.log(1 - Math.random()) / rate
+    ) {
       fn(t);
     }
   }
@@ -404,7 +420,15 @@ class WebAudioEngine implements AudioEngine {
   private burst(
     t: number,
     into: AudioNode,
-    { colour = 'white', type = 'bandpass', freq, Q = 1, level, decay, pan = 0 }: {
+    {
+      colour = 'white',
+      type = 'bandpass',
+      freq,
+      Q = 1,
+      level,
+      decay,
+      pan = 0,
+    }: {
       colour?: NoiseColour;
       type?: BiquadFilterType;
       freq: number;
@@ -416,7 +440,11 @@ class WebAudioEngine implements AudioEngine {
   ) {
     const src = this.source(colour);
     const env = this.gainNode();
-    src.connect(this.filterNode(type, freq, Q)).connect(env).connect(this.panner(pan)).connect(into);
+    src
+      .connect(this.filterNode(type, freq, Q))
+      .connect(env)
+      .connect(this.panner(pan))
+      .connect(into);
     env.gain.setValueAtTime(0, t);
     env.gain.linearRampToValueAtTime(level, t + 0.002);
     env.gain.exponentialRampToValueAtTime(0.0001, t + decay);
@@ -428,7 +456,15 @@ class WebAudioEngine implements AudioEngine {
   private tone(
     t: number,
     into: AudioNode,
-    { freq, to, type = 'sine', level, attack = 0.005, decay, pan = 0 }: {
+    {
+      freq,
+      to,
+      type = 'sine',
+      level,
+      attack = 0.005,
+      decay,
+      pan = 0,
+    }: {
       freq: number;
       to?: number;
       type?: OscillatorType;
@@ -476,12 +512,14 @@ class WebAudioEngine implements AudioEngine {
     const base = 2300 + Math.random() * 2200;
     const pan = Math.random() * 1.6 - 0.8;
     const level = 0.02 + Math.random() * 0.03;
-    const notes = species === 1 ? 6 + Math.floor(Math.random() * 6) : 2 + Math.floor(Math.random() * 4);
+    const notes =
+      species === 1 ? 6 + Math.floor(Math.random() * 6) : 2 + Math.floor(Math.random() * 4);
     let at = t;
     for (let i = 0; i < notes; i++) {
       const length = species === 1 ? 0.03 : 0.06 + Math.random() * 0.08;
       const freq = base * (species === 2 ? 1 + 0.25 * Math.sin(i * 1.7) : 1 + Math.random() * 0.12);
-      const glideTo = freq * (species === 0 ? 1.25 : species === 1 ? 0.92 : 0.8 + Math.random() * 0.5);
+      const glideTo =
+        freq * (species === 0 ? 1.25 : species === 1 ? 0.92 : 0.8 + Math.random() * 0.5);
       this.tone(at, this.n!.birds, { freq, to: glideTo, level, attack: 0.008, decay: length, pan });
       at += length + (species === 1 ? 0.02 : 0.05 + Math.random() * 0.1);
     }
@@ -511,7 +549,12 @@ class WebAudioEngine implements AudioEngine {
       const pan = Math.random() - 0.5;
       const decay = 2.5 + Math.random() * 1.5;
       [1, 2.76, 5.4].forEach((partial, k) => {
-        this.tone(at, this.n!.chimes, { freq: freq * partial, level: 0.02 / (1 + k * 2.5), decay: decay / (1 + k), pan });
+        this.tone(at, this.n!.chimes, {
+          freq: freq * partial,
+          level: 0.02 / (1 + k * 2.5),
+          decay: decay / (1 + k),
+          pan,
+        });
       });
     }
   }
@@ -547,7 +590,10 @@ class WebAudioEngine implements AudioEngine {
     env.gain.linearRampToValueAtTime(level, at + 0.08 + distance * 0.5);
     let rumble = at + 0.3 + distance * 0.5;
     for (let k = 0; k < 4; k++) {
-      env.gain.linearRampToValueAtTime(level * (0.4 + Math.random() * 0.6) * (1 - k * 0.18), rumble);
+      env.gain.linearRampToValueAtTime(
+        level * (0.4 + Math.random() * 0.6) * (1 - k * 0.18),
+        rumble
+      );
       rumble += 0.4 + Math.random() * 0.9;
     }
     env.gain.exponentialRampToValueAtTime(0.0001, rumble + 2.5 + distance * 2);
@@ -580,7 +626,11 @@ class WebAudioEngine implements AudioEngine {
   private bell(t: number) {
     [784, 659.3].forEach((freq, i) => {
       [1, 2, 2.99, 4.1].forEach((partial, k) => {
-        this.tone(t + i * 0.6, this.n!.sfx, { freq: freq * partial, level: 0.12 / (1 + k * 1.8), decay: 2.8 / (1 + k * 0.6) });
+        this.tone(t + i * 0.6, this.n!.sfx, {
+          freq: freq * partial,
+          level: 0.12 / (1 + k * 1.8),
+          decay: 2.8 / (1 + k * 0.6),
+        });
       });
     });
   }
@@ -614,7 +664,10 @@ class WebAudioEngine implements AudioEngine {
     this.burst(t, out, { freq: 3500, Q: 2, level: 0.25, decay: 0.05 });
     const src = this.source('pink');
     const env = this.gainNode();
-    src.connect(this.filterNode('bandpass', 700, 0.8)).connect(env).connect(out);
+    src
+      .connect(this.filterNode('bandpass', 700, 0.8))
+      .connect(env)
+      .connect(out);
     env.gain.setValueAtTime(0, t + 0.05);
     env.gain.linearRampToValueAtTime(0.14, t + 0.2);
     env.gain.linearRampToValueAtTime(0, t + 0.6);
@@ -630,7 +683,10 @@ class WebAudioEngine implements AudioEngine {
     const depth = this.gainNode(0.06);
     wobble.frequency.value = 7;
     wobble.connect(depth).connect(env.gain);
-    src.connect(this.filterNode('bandpass', 2000, 1.2)).connect(env).connect(this.n!.sfx);
+    src
+      .connect(this.filterNode('bandpass', 2000, 1.2))
+      .connect(env)
+      .connect(this.n!.sfx);
     env.gain.setValueAtTime(0, t);
     env.gain.linearRampToValueAtTime(0.24, t + 0.25);
     env.gain.setValueAtTime(0.24, t + 1.6);
@@ -643,12 +699,23 @@ class WebAudioEngine implements AudioEngine {
 
   private pluck(t: number) {
     this.tone(t, this.n!.sfx, { freq: 220, to: 160, type: 'triangle', level: 0.1, decay: 0.15 });
-    this.burst(t, this.n!.sfx, { colour: 'brown', type: 'lowpass', freq: 300, level: 0.2, decay: 0.12 });
+    this.burst(t, this.n!.sfx, {
+      colour: 'brown',
+      type: 'lowpass',
+      freq: 300,
+      level: 0.2,
+      decay: 0.12,
+    });
   }
 
   private munch(t: number) {
     for (let i = 0; i < 3; i++) {
-      this.burst(t + i * 0.2, this.n!.sfx, { freq: 1500 + Math.random() * 1000, Q: 1.5, level: 0.18, decay: 0.08 });
+      this.burst(t + i * 0.2, this.n!.sfx, {
+        freq: 1500 + Math.random() * 1000,
+        Q: 1.5,
+        level: 0.18,
+        decay: 0.08,
+      });
     }
   }
 
@@ -659,7 +726,11 @@ class WebAudioEngine implements AudioEngine {
   private paper(t: number) {
     const src = this.source('pink');
     const env = this.gainNode();
-    src.connect(this.filterNode('highpass', 1500)).connect(this.filterNode('bandpass', 3000, 0.8)).connect(env).connect(this.n!.sfx);
+    src
+      .connect(this.filterNode('highpass', 1500))
+      .connect(this.filterNode('bandpass', 3000, 0.8))
+      .connect(env)
+      .connect(this.n!.sfx);
     env.gain.setValueAtTime(0, t);
     env.gain.linearRampToValueAtTime(0.2, t + 0.12);
     env.gain.linearRampToValueAtTime(0, t + 0.35);

@@ -20,33 +20,24 @@ const PRESETS: Record<string, Weather> = {
   mist: { cloud: 0.55, rain: 0, wind: 0.05, storm: 0, fog: 0.8 },
 };
 
-let cached: { search: string; forced: { weather?: Weather; hour?: number } } | null = null;
-
 /**
  * Preview other weather with `?weather=clear|cloudy|windy|rain|storm|mist` and
- * another time of day with `?hour=0-23`. Web only, and it only changes what
- * you see and hear.
+ * another time of day with `?hour=0-23` (web only; it only changes what you see
+ * and hear). Read once as the app loads, because the router rewrites the URL as
+ * it starts up and as you move between places.
  */
-function override() {
+const forced = ((): { weather?: Weather; hour?: number } => {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return {};
-  const search = window.location.search;
-  if (cached?.search !== search) {
-    const params = new URLSearchParams(search);
-    const hour = params.get('hour');
-    cached = {
-      search,
-      forced: {
-        weather: PRESETS[params.get('weather') ?? ''],
-        hour: hour !== null && hour !== '' && !Number.isNaN(Number(hour)) ? Number(hour) : undefined,
-      },
-    };
-  }
-  return cached.forced;
-}
+  const params = new URLSearchParams(window.location.search);
+  const hour = params.get('hour');
+  return {
+    weather: PRESETS[params.get('weather') ?? ''],
+    hour: hour !== null && hour !== '' && !Number.isNaN(Number(hour)) ? Number(hour) : undefined,
+  };
+})();
 
 /** The shared weather and your local light at a (server-corrected) moment. */
 export function conditionsAt(ms: number): Conditions {
-  const forced = override();
   const local = new Date(ms);
   if (forced.hour !== undefined) local.setHours(forced.hour, 0, 0, 0);
   const hour = local.getHours() + local.getMinutes() / 60;

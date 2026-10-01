@@ -27,10 +27,13 @@ const toHex = (c: RGB) => '#' + c.map((v) => Math.round(v).toString(16).padStart
 function stack(layers: { color: string; opacity: number }[]) {
   const total = layers.reduce((sum, l) => sum + l.opacity, 0);
   if (total <= 0.001) return { color: '#000000', opacity: 0 };
-  const rgb = [0, 1, 2].map((i) =>
-    layers.reduce((sum, l) => sum + hex(l.color)[i] * l.opacity, 0) / total
+  const rgb = [0, 1, 2].map(
+    (i) => layers.reduce((sum, l) => sum + hex(l.color)[i] * l.opacity, 0) / total
   ) as RGB;
-  return { color: toHex(rgb), opacity: Math.min(0.72, 1 - layers.reduce((p, l) => p * (1 - l.opacity), 1)) };
+  return {
+    color: toHex(rgb),
+    opacity: Math.min(0.72, 1 - layers.reduce((p, l) => p * (1 - l.opacity), 1)),
+  };
 }
 
 /**
@@ -71,9 +74,15 @@ export function lightAt(ms: number, w: Weather): Light {
   ]);
 
   const phase: DayPhase =
-    daylight < 0.06 ? 'night'
-      : daylight < 0.94 ? (h < 12 ? 'dawn' : 'dusk')
-        : golden > 0.4 ? 'golden' : 'day';
+    daylight < 0.06
+      ? 'night'
+      : daylight < 0.94
+        ? h < 12
+          ? 'dawn'
+          : 'dusk'
+        : golden > 0.4
+          ? 'golden'
+          : 'day';
 
   return {
     daylight,
