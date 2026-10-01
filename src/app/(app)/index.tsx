@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 
 import { Box, Dot, Glow, Hotspot, Shadow, Tag } from '@/art/primitives';
 import { BLEED, Scene, useTone } from '@/art/Scene';
@@ -7,45 +8,60 @@ import { useAmbience } from '@/audio/sound';
 import { Button } from '@/components/Button';
 import { Body, HeaderDetail, Muted, Panel, SceneHeader } from '@/components/Chrome';
 import { Countdown } from '@/components/Countdown';
-import type { Friend, Me } from '@/lib/api';
+import { api, DESKS, type Me } from '@/lib/api';
 import { itemInfo } from '@/lib/catalog';
 import { cancelSessionEnd } from '@/lib/notifications';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import { useConditions } from '@/weather/useConditions';
+import { seatsOf } from '@/world/seats';
 import { useGo, useWorld } from '@/world/World';
 
 const C = palette.carpark;
 
-/** Parking bays: two rows of five for friends, and your own bay at the front. */
-const BAYS = Array.from({ length: 10 }, (_, i) => ({ x: 60 + (i % 5) * 60, y: i < 5 ? 348 : 476 }));
-const MY_BAY = { x: 180, y: 606 };
-const RACK = Array.from({ length: 8 }, (_, i) => ({ x: 34 + i * 13, y: 224 }));
+/**
+ * Three even rows of four bays, and a rack slot each for bikes. Bay n and slot n
+ * belong to whoever has desk n, so people park where they sit (you included).
+ */
+const ROW_TOPS = [256, 384, 512];
+const BAY_W = 75;
+const BAYS = Array.from({ length: DESKS }, (_, i) => ({
+  x: 30 + (i % 4) * BAY_W + BAY_W / 2,
+  y: ROW_TOPS[Math.floor(i / 4)] + 88,
+}));
+const RACK = Array.from({ length: DESKS }, (_, i) => ({ x: 22 + i * 9.6, y: 222 + (i % 2) * 6 }));
 const WINDOW_XS = Array.from({ length: 94 }, (_, i) => -1956 + i * 46).filter(
   (x) => x + 30 < 138 || x > 222
 );
 
-const atWork = (f: Friend) => f.status !== 'absent';
-
 export default function CarPark() {
   useAmbience('carpark');
-  const { me, friends } = useWorld();
+  const { me, setMe, friends } = useWorld();
   const conditions = useConditions();
   const go = useGo();
   const onBreak = me.status === 'on_break';
+  const atWork = me.status !== 'absent';
+  const [leaving, setLeaving] = useState(false);
 
-  // Everyone keeps the same bay or rack slot, so the car park feels familiar.
-  const sorted = [...friends].sort((a, b) => a.username.localeCompare(b.username));
-  const cars = sorted
-    .map((f, i) => ({ f, bay: BAYS[i % BAYS.length] }))
-    .filter(({ f }) => atWork(f) && f.vehicle && f.vehicle !== 'bike');
-  const bikes = sorted
-    .filter((f) => f.vehicle === 'bike')
-    .map((f, i) => ({ f, slot: RACK[i % (RACK.length - 1)] }))
-    .filter(({ f }) => atWork(f));
-  const myBike = me.vehicle === 'bike' ? RACK[RACK.length - 1] : null;
-  const myCar = me.vehicle && me.vehicle !== 'bike' ? me.vehicle : null;
-  const inCount = friends.filter(atWork).length;
+  // People at work park in the bay (or rack slot) that matches their desk.
+  // Anyone without a vehicle walked, so the car park doesn't show them.
+  const seats = seatsOf(me, friends);
+  const cars = seats.flatMap((seat, i) =>
+    seat?.vehicle && seat.vehicle !== 'bike' ? [{ seat, model: seat.vehicle, bay: BAYS[i] }] : []
+  );
+  const bikes = seats.flatMap((seat, i) =>
+    seat?.vehicle === 'bike' ? [{ seat, slot: RACK[i] }] : []
+  );
+  const inCount = friends.filter((f) => f.status !== 'absent').length;
+
+  const goHome = async () => {
+    setLeaving(true);
+    try {
+      setMe(await api.goHome());
+    } finally {
+      setLeaving(false);
+    }
+  };
 
   const art = (
     <>
@@ -81,22 +97,21 @@ export default function CarPark() {
       {/* Pavement, bike rack and the hedge with the garden gate. */}
       <Box x={BLEED.x} y={152} w={BLEED.w} h={80} c={C.pavement} />
       <Box x={BLEED.x} y={232} w={BLEED.w} h={3} c="#8f8a82" />
-      <Box x={24} y={190} w={108} h={3} c="#8b9096" r={1} />
+      <Box x={16} y={190} w={118} h={3} c="#8b9096" r={1} />
       {RACK.map((s) => (
         <Box
           key={s.x}
-          x={s.x - 4}
-          y={184}
-          w={8}
-          h={10}
-          r={4}
-          style={{ borderWidth: 1.5, borderColor: '#8b9096' }}
+          x={s.x - 3}
+          y={185}
+          w={6}
+          h={9}
+          r={3}
+          style={{ borderWidth: 1.2, borderColor: '#8b9096' }}
         />
       ))}
-      {bikes.map(({ f, slot }) => (
-        <Bike key={f.username} x={slot.x} y={slot.y} />
+      {bikes.map(({ seat, slot }) => (
+        <Bike key={seat.username} x={slot.x} y={slot.y} />
       ))}
-      {myBike && <Bike x={myBike.x} y={myBike.y} />}
       <Box x={300} y={152} w={2100} h={80} c={C.hedge} />
       {[300, 324, 348, 372].map((x) => (
         <Dot key={x} x={x + 10} y={226} d={28} h={14} c="#557352" />
@@ -106,38 +121,19 @@ export default function CarPark() {
         <Box key={i} x={312 + i * 8} y={164} w={4} h={48} c="#8a7154" />
       ))}
 
-      {/* Bays. */}
-      <Box x={30} y={256} w={300} h={2} c={C.line} o={0.8} />
-      <Box x={30} y={384} w={300} h={2} c={C.line} o={0.8} />
-      {[0, 1, 2, 3, 4, 5].map((i) => (
-        <Box key={i} x={29 + i * 60} y={258} w={2} h={92} c={C.line} o={0.8} />
-      ))}
-      {[0, 1, 2, 3, 4, 5].map((i) => (
-        <Box key={`b${i}`} x={29 + i * 60} y={386} w={2} h={92} c={C.line} o={0.8} />
-      ))}
-      {/* More of the car park beyond the stage, for wide screens. */}
-      {[-330, 390].map((x0) => (
-        <EmptyBays key={x0} x={x0} />
+      {/* Three even rows of bays, and more of the car park past the stage. */}
+      {[-330, 30, 390].map((x0) => (
+        <Bays key={x0} x={x0} faint={x0 !== 30} />
       ))}
       {[-150, -280, 520, 650].map((x, i) => (
         <Tree key={x} x={x} y={300 + (i % 2) * 210} />
       ))}
-      <Box x={150} y={512} w={60} h={2} c={C.line} o={0.8} />
-      <Box x={149} y={514} w={2} h={96} c={C.line} o={0.8} />
-      <Box x={209} y={514} w={2} h={96} c={C.line} o={0.8} />
-      <Text style={[styles.painted, { left: 150, top: 590 }]}>RESERVED</Text>
-      {cars.map(({ f, bay }) => (
-        <Car key={f.username} model={f.vehicle!} x={bay.x} y={bay.y} />
+      {cars.map(({ seat, model, bay }) => (
+        <Car key={seat.username} model={model} x={bay.x} y={bay.y} />
       ))}
-      {myCar && <Car model={myCar} x={MY_BAY.x} y={MY_BAY.y} />}
 
-      {/* Lamp posts, the kiosk and a tree. */}
       <LampPost x={14} y={470} />
       <LampPost x={346} y={340} />
-      <Kiosk x={10} y={536} />
-      <Shadow x={330} y={624} w={70} />
-      <Dot x={330} y={596} d={64} h={54} c={C.tree} />
-      <Dot x={318} y={588} d={34} h={28} c="#7b9a70" />
     </>
   );
 
@@ -157,10 +153,9 @@ export default function CarPark() {
       ].map((p) => (
         <Glow key={p.x} x={p.x} y={p.y - 6} w={150} h={64} c="#ffe2a0" o={0.45} />
       ))}
-      {cars.map(({ f, bay }) => (
-        <CarLights key={f.username} model={f.vehicle!} x={bay.x} y={bay.y} />
+      {cars.map(({ seat, model, bay }) => (
+        <CarLights key={seat.username} model={model} x={bay.x} y={bay.y} />
       ))}
-      <Box x={24} y={570} w={56} h={26} c="#f3d9a6" r={2} />
     </>
   );
 
@@ -184,15 +179,6 @@ export default function CarPark() {
         onPress={() => go('/friends', null)}
       />
       <Hotspot
-        x={6}
-        y={532}
-        w={92}
-        h={100}
-        label="Kiosk: spend chips"
-        onPress={() => go('/shop', null)}
-      />
-      <Tag x={52} y={616} text="Kiosk" dim />
-      <Hotspot
         x={300}
         y={154}
         w={52}
@@ -202,11 +188,22 @@ export default function CarPark() {
         onPress={() => go('/garden')}
       />
       {onBreak && <Tag x={326} y={204} text="Garden" dim />}
-      {cars.map(({ f, bay }) => (
-        <Tag key={f.username} x={bay.x} y={bay.y + 2} text={f.display_name} />
+      {cars.map(({ seat, bay }) => (
+        <Tag
+          key={seat.username}
+          x={bay.x}
+          y={bay.y + 2}
+          text={seat.isMe ? 'You' : seat.display_name}
+        />
       ))}
-      {bikes.map(({ f, slot }) => (
-        <Tag key={f.username} x={slot.x} y={slot.y + 2} text={f.display_name} dim />
+      {bikes.map(({ seat, slot }, i) => (
+        <Tag
+          key={seat.username}
+          x={slot.x}
+          y={slot.y + 4 + (i % 2) * 12}
+          text={seat.isMe ? 'You' : seat.display_name}
+          dim
+        />
       ))}
     </>
   );
@@ -231,13 +228,6 @@ export default function CarPark() {
         <Button title="Walk in" onPress={() => go('/office')} />
         <View style={styles.row}>
           <Button
-            title="Kiosk"
-            variant="quiet"
-            small
-            onPress={() => go('/shop', null)}
-            style={styles.flex}
-          />
-          <Button
             title="Noticeboard"
             variant="quiet"
             small
@@ -250,6 +240,16 @@ export default function CarPark() {
               variant="quiet"
               small
               onPress={() => go('/garden')}
+              style={styles.flex}
+            />
+          )}
+          {atWork && (
+            <Button
+              title="Go home"
+              variant="quiet"
+              small
+              onPress={goHome}
+              disabled={leaving}
               style={styles.flex}
             />
           )}
@@ -295,7 +295,7 @@ function Greeting({ me, inCount }: { me: Me; inCount: number }) {
       <Muted>
         {me.vehicle
           ? `You came by ${itemInfo(me.vehicle).name.toLowerCase()}.`
-          : 'You walked in today. The kiosk sells bikes.'}
+          : 'You came on foot. The garden shed sells bikes.'}
       </Muted>
     </View>
   );
@@ -311,29 +311,17 @@ function LampPost({ x, y }: { x: number; y: number }) {
   );
 }
 
-function Kiosk({ x, y }: { x: number; y: number }) {
+/** Three rows of four bays starting at `x`; faint ones are just scenery. */
+function Bays({ x, faint }: { x: number; faint?: boolean }) {
+  const o = faint ? 0.5 : 0.8;
   return (
     <>
-      <Shadow x={x + 42} y={y + 94} w={96} o={0.12} />
-      <Box x={x + 4} y={y + 24} w={76} h={70} c={C.kiosk} r={3} />
-      {Array.from({ length: 7 }, (_, i) => (
-        <Box key={i} x={x + i * 12} y={y} w={12} h={26} c={i % 2 ? C.awning : '#9c6b57'} />
+      {ROW_TOPS.map((y) => (
+        <Box key={y} x={x} y={y} w={4 * BAY_W} h={2} c={C.line} o={o} />
       ))}
-      <Box x={x + 14} y={y + 34} w={56} h={26} c="#e7dcc8" r={2} />
-      <Box x={x + 10} y={y + 60} w={64} h={5} c="#8d6650" r={1} />
-    </>
-  );
-}
-
-function EmptyBays({ x }: { x: number }) {
-  return (
-    <>
-      {[256, 384].map((y) => (
-        <Box key={y} x={x} y={y} w={300} h={2} c={C.line} o={0.5} />
-      ))}
-      {[258, 386].flatMap((y) =>
-        [0, 1, 2, 3, 4, 5].map((i) => (
-          <Box key={`${y}-${i}`} x={x - 1 + i * 60} y={y} w={2} h={92} c={C.line} o={0.5} />
+      {ROW_TOPS.flatMap((y) =>
+        [0, 1, 2, 3, 4].map((i) => (
+          <Box key={`${y}-${i}`} x={x - 1 + i * BAY_W} y={y + 2} w={2} h={92} c={C.line} o={o} />
         ))
       )}
     </>
@@ -353,13 +341,4 @@ function Tree({ x, y }: { x: number; y: number }) {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 8 },
   flex: { flex: 1 },
-  painted: {
-    position: 'absolute',
-    width: 60,
-    textAlign: 'center',
-    fontSize: 7,
-    letterSpacing: 1,
-    color: 'rgba(216, 212, 203, 0.7)',
-    fontWeight: '700',
-  },
 });

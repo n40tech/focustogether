@@ -123,3 +123,44 @@ export function Scene({
 const styles = StyleSheet.create({
   root: { flex: 1, overflow: 'hidden' },
 });
+
+type Point = { x: number; y: number };
+
+/**
+ * Draws stage-unit art magnified `k` times so that the point `from` lands on
+ * `to`: a closer look at part of a scene, with everything in proportion.
+ */
+export function Zoom({
+  k,
+  from,
+  to,
+  children,
+}: {
+  k: number;
+  from: Point;
+  to: Point;
+  children: ReactNode;
+}) {
+  // Transforms scale about the view's centre.
+  const cx = STAGE.width / 2;
+  const cy = STAGE.height / 2;
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        width: STAGE.width,
+        height: STAGE.height,
+        transform: [
+          { translateX: to.x - cx - k * (from.x - cx) },
+          { translateY: to.y - cy - k * (from.y - cy) },
+          { scale: k },
+        ],
+      }}
+    >
+      {children}
+    </View>
+  );
+}

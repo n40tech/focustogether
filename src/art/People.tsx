@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Animated, Text, View } from 'react-native';
 
 import type { Activity } from '@/lib/api';
-import { itemInfo, personColour } from '@/lib/catalog';
+import { personColour } from '@/lib/catalog';
 import { nativeDriver, rand, useLoop } from './motion';
 import { Box, Dot, Shadow } from './primitives';
 
@@ -30,15 +30,12 @@ export function Person({
   y,
   pose = 'stand',
   activity = null,
-  snack,
 }: {
   username: string;
   x: number;
   y: number;
   pose?: 'stand' | 'sit';
   activity?: Activity;
-  /** What they're eating, if `activity` is 'eating'. */
-  snack?: string;
 }) {
   const { shirt, skin, hair } = looks(username);
   if (pose === 'sit') {
@@ -67,9 +64,6 @@ export function Person({
           <Dot x={x + 14} y={y - 21.2} d={2} c="#e0763c" />
           <Smoke x={x + 14} y={y - 23} />
         </>
-      )}
-      {activity === 'eating' && (
-        <Dot x={x + 8} y={y - 25} d={6} c={snack ? itemInfo(snack).colour : '#d1543f'} />
       )}
     </>
   );

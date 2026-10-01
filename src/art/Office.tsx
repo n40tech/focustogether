@@ -1,11 +1,128 @@
 import { Animated } from 'react-native';
 
+import { DESKS } from '@/lib/api';
 import { palette } from '@/lib/theme';
+import type { Seat } from '@/world/seats';
 import { rand, useLoop } from './motion';
 import { Person } from './People';
 import { Box, Dot, Glow, Shadow } from './primitives';
+import { BLEED } from './Scene';
 
 const P = palette.office;
+
+/** Twelve identical desks in four rows of three; nobody's is special. */
+export const DESK_SPOTS = Array.from({ length: DESKS }, (_, i) => ({
+  x: 70 + (i % 3) * 110,
+  y: 200 + Math.floor(i / 3) * 110,
+}));
+/** Windows all along the back wall, centred on the middle one. */
+const WINDOWS = Array.from({ length: 33 }, (_, i) => 140 + (i - 16) * 112);
+
+/**
+ * The open-plan floor and everyone at work on it, by desk (see seatsOf).
+ * Friends sit at their desks while they study; you're at yours while you're in
+ * the office. `closeUp` is a desk seen from just behind its chair, as at the
+ * end of a session: empty, with the screen on.
+ */
+export function OfficeFloor({
+  seats,
+  rain,
+  closeUp,
+}: {
+  seats: (Seat | null)[];
+  rain: number;
+  closeUp?: number;
+}) {
+  return (
+    <>
+      {/* Back wall with frosted windows: the light comes in, but no sky. */}
+      <Box x={BLEED.x} y={-400} w={BLEED.w} h={496} c={P.wall} />
+      <Box x={BLEED.x} y={90} w={BLEED.w} h={6} c={P.skirting} />
+      {WINDOWS.map((x) => (
+        <OfficeWindow key={x} x={x} y={18} w={80} h={60} rain={rain} />
+      ))}
+      <Surroundings />
+      {DESK_SPOTS.map(({ x, y }, i) => {
+        const seat = seats[i];
+        const sitting =
+          i !== closeUp && seat && (seat.isMe || seat.studying) ? seat.username : null;
+        return (
+          <Desk
+            key={i}
+            x={x}
+            y={y}
+            occupant={sitting}
+            screenOn={i === closeUp || !!seat?.studying}
+            items={seat?.deskItems ?? []}
+          />
+        );
+      })}
+    </>
+  );
+}
+
+/** The office's screens and desk lamps, for the glow layer. */
+export function OfficeGlow({ seats, closeUp }: { seats: (Seat | null)[]; closeUp?: number }) {
+  return (
+    <>
+      {DESK_SPOTS.map(({ x, y }, i) => (
+        <DeskGlow
+          key={i}
+          x={x}
+          y={y}
+          on={i === closeUp || !!seats[i]?.studying}
+          items={seats[i]?.deskItems ?? []}
+        />
+      ))}
+    </>
+  );
+}
+
+/** The rest of the open-plan floor, seen on wide screens: shelves, a meeting table, plants. */
+function Surroundings() {
+  const spines = ['#8e4b4b', '#5f7f8f', '#c2a46e', '#6d8c78', '#a88cb5', '#d9c9b0'];
+  return (
+    <>
+      <PottedPlant x={14} y={132} size={1.1} />
+      <PottedPlant x={346} y={132} size={1.1} />
+      <PottedPlant x={14} y={600} size={1.2} />
+      {/* Water cooler */}
+      <Shadow x={346} y={620} w={24} />
+      <Box x={336} y={586} w={20} h={34} c="#d9dcdf" r={3} />
+      <Dot x={346} y={582} d={16} h={18} c="#a9c8da" />
+      {[-330, 400].map((x0) =>
+        [0, 1].map((k) => (
+          <Box key={`${x0}-${k}`} x={x0 + k * 130} y={100} w={110} h={34} c="#9c8063" r={2}>
+            {Array.from({ length: 12 }, (_, i) => (
+              <Box
+                key={i}
+                x={4 + i * 8.6}
+                y={4}
+                w={6}
+                h={26}
+                c={spines[(i + k * 3) % spines.length]}
+                r={1}
+              />
+            ))}
+          </Box>
+        ))
+      )}
+      <Box x={-255} y={305} w={160} h={84} c="#16181b" r={10} o={0.1} />
+      <Box x={-260} y={300} w={160} h={84} c={P.deskTop} r={10} />
+      {[-235, -195, -155].flatMap((x) => [
+        <Box key={`t${x}`} x={x - 9} y={282} w={18} h={14} c={P.chair} r={5} />,
+        <Box key={`b${x}`} x={x - 9} y={388} w={18} h={14} c={P.chair} r={5} />,
+      ])}
+      <PottedPlant x={-60} y={560} size={1.3} />
+      <PottedPlant x={-300} y={520} size={1.1} />
+      <PottedPlant x={420} y={560} size={1.3} />
+      <Box x={460} y={250} w={70} h={110} c="#b4b9bd" r={3} />
+      {[0, 1, 2].map((i) => (
+        <Box key={i} x={466} y={258 + i * 34} w={58} h={28} c="#c7ccd0" r={2} />
+      ))}
+    </>
+  );
+}
 
 /** Where things sit on a desk top, relative to the desk's front-centre. */
 const SLOTS: [number, number][] = [
@@ -28,18 +145,21 @@ export function Desk({
   x,
   y,
   occupant,
+  screenOn = !!occupant,
   items = [],
   scale = 1,
 }: {
   x: number;
   y: number;
-  /** Username of whoever is studying here, if anyone. */
+  /** Username of whoever is sitting here, if anyone. */
   occupant?: string | null;
+  /** Whether the monitor is on; by default, whenever someone's sitting here. */
+  screenOn?: boolean;
   items?: string[];
   scale?: number;
 }) {
   const s = scale;
-  const on = !!occupant;
+  const on = screenOn;
   return (
     <>
       <Box x={x - 45 * s} y={y - 42 * s} w={96 * s} h={46 * s} c="#16181b" r={4 * s} o={0.1} />
@@ -68,8 +188,8 @@ export function Desk({
           scale={s}
         />
       ))}
-      {on ? (
-        <Person username={occupant!} x={x} y={y + 12 * s} pose="sit" />
+      {occupant ? (
+        <Person username={occupant} x={x} y={y + 12 * s} pose="sit" />
       ) : (
         // An empty chair, pushed in.
         <>

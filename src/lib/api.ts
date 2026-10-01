@@ -1,9 +1,9 @@
 import { syncClock } from './clock';
 import { supabase } from './supabase';
 
-/** See private.presence in supabase/migrations/0002_game.sql. */
+/** See private.presence in supabase/migrations/0003_community.sql. */
 export type Status = 'focused' | 'on_break' | 'idle' | 'absent';
-export type Activity = 'smoking' | 'eating' | null;
+export type Activity = 'smoking' | null;
 export type ItemKind = 'vehicle' | 'desk' | 'seed' | 'produce' | 'cigarette';
 /** Item slug -> how many you have. */
 export type Inventory = Record<string, number>;
@@ -16,11 +16,20 @@ export type Me = {
   status: Status;
   /** When the break earned by your last completed session ends. */
   break_ends_at: string | null;
+  /** Your desk (0 to DESKS - 1) while you're at work. */
+  desk: number | null;
   vehicle: string | null;
   activity: Activity;
   activity_until: string | null;
   active_session: { started_at: string; duration_min: number; ends_at: string } | null;
-  last_completed: { id: number; ended_at: string; duration_min: number; break_min: number } | null;
+  last_completed: {
+    id: number;
+    ended_at: string;
+    duration_min: number;
+    /** What it paid: about a chip a minute, give or take a little luck. */
+    chips: number;
+    break_min: number;
+  } | null;
   inventory: Inventory;
   server_now: string;
 };
@@ -32,9 +41,12 @@ export type Friend = {
   /** When their running session ends. */
   ends_at: string | null;
   break_ends_at: string | null;
+  /** Their desk while they're at work, else null. */
+  desk: number | null;
+  arrived_at: string | null;
   vehicle: string | null;
   /** Desk item slugs, in display order. */
-  desk: string[];
+  desk_items: string[];
   activity: Activity;
 };
 
@@ -63,6 +75,9 @@ export type Plot = {
   planted_at: string;
 };
 
+/** Something set out on a market stall, at a price per item. */
+export type Listing = { id: number; item: string; qty: number; price: number };
+
 export type Gardener = {
   username: string;
   display_name: string;
@@ -70,7 +85,10 @@ export type Gardener = {
   break_ends_at: string | null;
   activity: Activity;
   activity_until: string | null;
+  /** Where their allotment sits in the shared garden grid. */
+  plot_slot: number;
   plots: Plot[];
+  stall: Listing[];
 };
 
 export type Trade = {
@@ -87,11 +105,21 @@ export type Trade = {
 };
 
 export type Garden = {
-  me: Gardener & { inventory: Inventory };
+  me: Gardener & { chips: number; inventory: Inventory };
   neighbours: Gardener[];
   trades: Trade[];
   server_now: string;
 };
+
+export type Invite = {
+  code: string;
+  expires_at: string;
+  /** Who joined with it, once used. */
+  used_by: string | null;
+  used_at: string | null;
+};
+
+export type SignupCheck = { ok: boolean; reason?: string; from?: string };
 
 async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.rpc(fn, args);
@@ -107,6 +135,7 @@ export const api = {
   addFriend: (username: string) =>
     rpc<{ username: string }>('add_friend', { p_username: username }),
 
+  arrive: () => rpc<Me>('arrive'),
   startSession: (minutes: number) => rpc<Me>('start_session', { p_minutes: minutes }),
   cancelSession: () => rpc<Me>('cancel_session'),
   goHome: () => rpc<Me>('go_home'),
@@ -117,6 +146,7 @@ export const api = {
   getGarden: () => rpc<Garden>('get_garden'),
   plant: (bed: number, seed: string) => rpc<Garden>('plant', { p_bed: bed, p_seed: seed }),
   water: () => rpc<Garden>('water'),
+  waterFriend: (username: string) => rpc<Garden>('water_friend', { p_username: username }),
   harvest: (bed: number) => rpc<Garden>('harvest', { p_bed: bed }),
   eat: (item: string) => rpc<Garden>('eat', { p_item: item }),
   saveSeeds: (item: string) => rpc<Garden>('save_seeds', { p_item: item }),
@@ -138,6 +168,17 @@ export const api = {
   respondTrade: (id: number, accept: boolean) =>
     rpc<Garden>('respond_trade', { p_id: id, p_accept: accept }),
   cancelTrade: (id: number) => rpc<Garden>('cancel_trade', { p_id: id }),
+
+  listItem: (item: string, qty: number, price: number) =>
+    rpc<Garden>('list_item', { p_item: item, p_qty: qty, p_price: price }),
+  unlist: (id: number) => rpc<Garden>('unlist', { p_id: id }),
+  buyListing: (id: number, qty: number) => rpc<Garden>('buy_listing', { p_id: id, p_qty: qty }),
+
+  createInvite: () => rpc<{ code: string; expires_at: string }>('create_invite'),
+  getInvites: () => rpc<Invite[]>('get_invites'),
+  /** Works signed out: checks an invite code and a username before sign-up. */
+  checkSignup: (code: string, username: string) =>
+    rpc<SignupCheck>('check_signup', { p_code: code, p_username: username }),
 };
 
 export const MAX_SESSION_MIN = 120;
@@ -145,3 +186,5 @@ export const MAX_SESSION_MIN = 120;
 export const breakMinutes = (sessionMin: number) => Math.max(1, Math.round(sessionMin / 5));
 /** Mirrors the 4 beds per plot in public.plots. */
 export const BEDS = 4;
+/** Mirrors profiles.desk (0-11): the office has twelve desks. */
+export const DESKS = 12;
