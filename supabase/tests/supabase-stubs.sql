@@ -14,8 +14,10 @@ grant anon, authenticated, service_role to current_user;
 -- auth: users, and auth.uid() read from the JWT claim PostgREST would set.
 create schema auth;
 create table auth.users (
-  id    uuid primary key default gen_random_uuid(),
-  email text unique
+  id                 uuid primary key default gen_random_uuid(),
+  email              text unique,
+  raw_user_meta_data jsonb,
+  created_at         timestamptz not null default now()
 );
 create function auth.uid() returns uuid
 language sql stable as $$
