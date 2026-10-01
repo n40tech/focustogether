@@ -1,6 +1,6 @@
 /**
  * The shared weather. Every player computes it from the same (server-corrected)
- * clock, so friends always see and hear the same sky without a server.
+ * clock, so friends always see and hear the same weather without a server.
  *
  * Smooth value noise on a few time scales gives slowly drifting cloud, rain and
  * wind; storms and lightning strikes fall out of those deterministically too.

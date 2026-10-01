@@ -14,11 +14,15 @@ agreed; **Open questions** lists what hasn't.
 
 1. **One place at a time.** The car park, the office and the garden are separate
    full screens. While a session runs, the office is the only place that exists.
-2. **Calm over clever.** Muted palettes, slow motion, no badges, feeds, red dots
+2. **Seen from above and in front.** Every place is drawn top-front, like a
+   tabletop diorama: you see the ground, and the tops and fronts of things. There
+   is no sky. The time of day shows only as the scene's changing hues, and the
+   weather shows on the ground.
+3. **Calm over clever.** Muted palettes, slow motion, no badges, feeds, red dots
    or confetti. The timer is the only number that changes while you study.
-3. **Sound is the world.** The shared weather is something you *hear*: rain on
+4. **Sound is the world.** The shared weather is something you *hear*: rain on
    the office window, wind through the allotments, birds when it clears.
-4. **Presence, not pressure.** You see friends' cars, desks and avatars. There
+5. **Presence, not pressure.** You see friends' cars, desks and avatars. There
    are no leaderboards and nobody else's chip count.
 
 ## 2. The loop
@@ -59,8 +63,9 @@ agreed; **Open questions** lists what hasn't.
 
 ### Office
 - **See:** your desk at the front with everything you've bought for it, and a
-  desk per friend: someone sitting at it if they're studying, empty if not. A
-  window shows the shared sky.
+  desk per friend: someone sitting at it (back to you, monitor glowing) if
+  they're studying, an empty chair if not. Frosted windows with blinds let the
+  light in, and rain runs down the glass, but they show no sky.
 - **Do, before a session:** choose a length (1–120 min) and start, or walk out.
 - **Do, during a session:** nothing else. There's the countdown and a small
   *give up* link, which forfeits the session. The chip balance, shop and all
@@ -71,7 +76,7 @@ agreed; **Open questions** lists what hasn't.
 ### Payout (end of a session)
 - **See:** chips counted out (1 per minute) and the break you've earned.
 - **Do:** *Take a break* (garden) · *Go home* (car park) · *Spend chips* (shop).
-- **Hear:** a soft bell, then chips clinking.
+- **Hear:** a soft chime, then chips clinking.
 
 ### Garden (on a break)
 - **See:** an allotment plot for you and one for each friend, with crops at
@@ -164,14 +169,23 @@ see them, and nothing is stored.
 ## 5. Weather
 
 - One **shared, deterministic** weather cycle computed from the clock.
-  Everyone sees and hears the same sky at the same moment, with no server or
+  Everyone sees and hears the same weather at the same moment, with no server or
   API involved.
 - Smooth value noise on several time scales (hours, ~30 min, ~10 min) produces
   `cloud`, `rain`, `wind`, `storm` and `fog`, each from 0 to 1. Rain only falls
   under heavy cloud, storms need heavy rain and strong wind, and fog settles on
   still mornings.
-- Time of day (sky colour, sun or moon, birds or crickets) follows each
-  player's own clock.
+- Over a year it comes out roughly Bristol-like: clear about 38% of the time,
+  cloudy or overcast 35%, wet 23% (drizzle, rain, heavy rain and the odd
+  thunderstorm), and morning mist 3%. Rain spells last about an hour.
+- Lightning strikes fall at deterministic moments too, so everyone in the
+  garden sees the flash and hears the thunder together, later the further
+  away it is.
+- With no sky in view, weather shows on the ground: rain slanting with the
+  wind, ripples, wet ground that dries out over the following hour, cloud
+  shadows drifting across, mist, and leaves blown through in gusts.
+- Time of day (the colour cast over each scene, birds or crickets) follows
+  each player's own clock and a rough Bristol sunrise and sunset for the date.
 - It lives in `src/weather/`. The same function can be ported to SQL or an Edge
   Function if the server ever needs it, for example so rain waters plots while
   nobody is looking.
@@ -194,7 +208,7 @@ later.
 
 - One-shots: door, bell, chips, lighter, watering can, bubble pop, harvest,
   purchase.
-- Scenes crossfade over about 2 s. Indoors, the weather passes through a
+- Scenes crossfade over about 3 s. Indoors, the weather passes through a
   low-pass "window" filter. Weather changes ramp over about 10 s, so the sound
   never jumps.
 - Browsers only allow audio after a tap; the first tap anywhere unlocks it.
@@ -206,6 +220,10 @@ later.
 
 - Each place is a full-screen scene with its own muted palette. Scenes fade in;
   they never slide.
+- Time of day is a single colour cast over the whole scene: rose at dawn,
+  neutral by day, amber in the golden hour, violet at dusk, deep blue at night.
+  Lamps, lit windows and screens are drawn above the cast, so they glow after
+  dark. UI panels switch from warm paper to dim slate at night.
 - No scrolling feeds, badges, red dots or confetti. The chip balance is hidden
   while studying.
 - Motion is slow and ambient: rain, drifting clouds, smoke. Lightning is a
@@ -213,8 +231,10 @@ later.
   weather is drawn still.
 - UI chrome is a thin header (place, chips, sound) and a bottom action panel.
 - Placeholder art is built from simple shapes on a fixed 360×640 "stage" that
-  scales to any screen. Real illustrations can replace pieces later without
-  changing scene layout code.
+  scales to fit between the header and the bottom panel. Backdrops (walls,
+  roads, hedges, spare beds and trees) run past the stage edges, so wide
+  screens look like a wider diorama rather than a phone in the middle. Real
+  illustrations can replace pieces later without changing scene layout code.
 
 ## 8. Architecture
 
@@ -230,13 +250,15 @@ src/
     (app)/garden.tsx      garden
     (app)/shop.tsx        kiosk
     (app)/friends.tsx     noticeboard
-  world/                  client game state (polling, scene guards)
-  weather/                shared weather algorithm + sky colours
+  world/                  client game state (polling, payout prompt, garden chat)
+  weather/                shared weather algorithm + scene lighting
   audio/                  sound engine: engine.web.ts (Web Audio), engine.ts (native stub)
-  art/                    placeholder art: stage, sky, vehicles, desks, people, beds
+  art/                    placeholder art: the scene stage and its light, weather,
+                          vehicles, desks, people, beds
   components/             UI pieces: buttons, header, timer, chat bubble, sheets
   lib/                    Supabase client, typed RPC wrappers, catalogue art, time
 supabase/migrations/      0001 init (MVP), 0002 game
+supabase/tests/           scenario tests for the game rules (plain Postgres + stubs)
 ```
 
 - **The server is the source of truth** for anything that matters: chips,
@@ -253,6 +275,11 @@ supabase/migrations/      0001 init (MVP), 0002 game
 - **Routing:** while a session runs, every place except the office is removed
   from the navigator (`Stack.Protected`), so deep links and the back button
   can't escape the office.
+- **Scene layers**, bottom to top: the art (in stage units), weather on the
+  ground, the time-of-day colour cast, lights that glow through it, untinted
+  name tags and chat bubbles, then the UI.
+- **Previewing:** on web, `?weather=clear|cloudy|windy|rain|storm|mist` and
+  `?hour=0-23` change what you see and hear (and nothing else).
 
 ## 9. Data model and API
 
@@ -288,7 +315,7 @@ supabase/migrations/      0001 init (MVP), 0002 game
 | Web build | `npx expo export -p web` with `web.output: "static"` | Every route gets its own HTML file, so refreshing `/garden` works on any static host |
 | Hosting | **EAS Hosting** (`eas deploy`), served at `https://<name>.expo.app` | The project is already linked to EAS; free tier; a preview URL per deploy; custom domain later |
 | Backend | **Supabase**: Postgres, Auth, Realtime | Already in use. RLS and RPCs keep the rules server-side, and Realtime Broadcast carries chat |
-| CI | GitHub Actions: lint, typecheck and web export on every push and PR | |
+| CI | GitHub Actions: lint, typecheck, web export and the database tests, on pull requests and pushes to `main` | Catches a broken build or rule before it ships |
 | CD | GitHub Actions: `eas deploy --prod` on push to `main`, a preview deploy for each PR | |
 | DB migrations | SQL files in `supabase/migrations/`, run in the SQL editor (or `supabase db push`) | |
 
@@ -306,12 +333,16 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 **M1: playable placeholder (this branch)**
 - [x] Plan (this document)
 - [x] Static web export so deep links survive a refresh
-- [ ] Migration `0002_game.sql`: chips, earned breaks, shop, vehicles, desk,
-      allotment, produce, cigarettes, trades, garden chat policies
-- [ ] Shared weather algorithm
-- [ ] Procedural sound engine (web)
-- [ ] Scenes: car park, office, payout, garden, shop, friends
-- [ ] CI and EAS Hosting deploy workflows
+- [x] Migration `0002_game.sql`: chips, earned breaks, shop, vehicles, desk,
+      allotment, produce, cigarettes, trades, garden chat policies, with 22
+      scenario tests (`npm run test:db`)
+- [x] Shared weather algorithm and top-front scene lighting
+- [x] Procedural sound engine (web)
+- [x] Scenes: car park, office, payout, garden, kiosk, noticeboard
+- [x] CI and EAS Hosting deploy workflows
+- [ ] Run `0002_game.sql` on the Supabase project, add the deploy secrets, and
+      do the first `eas deploy` (needs your accounts; see README)
+- [ ] Try it with friends, then tune prices, break length and the mix
 
 **M2: feel**
 - Illustrated art, recorded audio (layer by layer), a typeface, gentle
@@ -339,6 +370,7 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 | How does the allotment grow? | By the minutes you study. Crops are never sold for chips; they're eaten, traded or saved for seeds. |
 | How do friends without a car appear in the car park? | They don't. You can buy a bike (shown in the bike rack) or a car. |
 | How does a break end? | An earned break timer (1 min per 5 studied), then a bell and a choice of office or home. |
+| Perspective | Top-front for every place, with no sky: time of day only shows as the scene's changing hues. |
 | Web hosting | EAS Hosting with a static export; Supabase for the backend. |
 | Social model | Pairwise friendships, as in the MVP. See open questions. |
 
@@ -361,6 +393,9 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
   are one row in `items`, so they can be renamed or swapped per platform.
 - **Audio autoplay:** browsers stay silent until the first tap. The car park's
   first interaction unlocks sound.
+- **Background tabs:** browsers slow timers in hidden tabs, so rain drops and
+  birds thin out while you study in another tab. The continuous layers (rain
+  hiss, wind, room tone) keep playing.
 - **Cheating:** rewards are computed in Postgres from server time, so a client
   can't award itself chips. Chat is friends-only and unstored, so there's
   nothing to moderate after the fact, but also no history.
