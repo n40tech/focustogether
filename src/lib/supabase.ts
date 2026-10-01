@@ -13,7 +13,9 @@ if (!url || !key) {
 
 export const supabase = createClient(url, key, {
   auth: {
-    storage: AsyncStorage,
+    // On web, supabase-js uses localStorage itself, and falls back to memory while
+    // the static export renders pages in Node (where there is no window).
+    ...(Platform.OS !== 'web' && { storage: AsyncStorage }),
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
