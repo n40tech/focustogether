@@ -7,6 +7,7 @@ import { playSound } from '@/audio/sound';
 import { api, type Me } from '@/lib/api';
 import { ITEMS } from '@/lib/catalog';
 import { serverNow } from '@/lib/clock';
+import { TESTING, timeSkipped } from '@/lib/testing';
 import { font } from '@/lib/theme';
 import { useWorld } from '@/world/World';
 import { Button } from './Button';
@@ -16,9 +17,10 @@ const SEEDS = Object.keys(ITEMS).filter((slug) => ITEMS[slug].kind === 'seed');
 const PRODUCE = Object.keys(ITEMS).filter((slug) => ITEMS[slug].kind === 'produce');
 
 /**
- * Testing tools for accounts marked as testers in the SQL editor (see
- * deployment/0002-testing-tools.md): chips, skipping ahead, items, ripe crops.
- * Everyone else never sees it, and the server refuses them anyway.
+ * Testing tools (see deployment/0002-testing-tools.md): chips, skipping ahead,
+ * items, ripe crops. Only in a build made with EXPO_PUBLIC_TESTING=true (your
+ * own machine), and only for accounts marked as testers in the SQL editor;
+ * the server refuses everyone else anyway.
  */
 export function TestPanel() {
   const { me, setMe } = useWorld();
@@ -27,12 +29,13 @@ export function TestPanel() {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<{ text: string; ok: boolean } | null>(null);
-  if (!me.tester) return null;
+  if (!TESTING) return null;
 
   const run = async (label: string, action: () => Promise<Me>) => {
     setBusy(true);
     try {
       setMe(await action());
+      timeSkipped();
       setNote({ text: label, ok: true });
       playSound('coin');
     } catch (e) {
@@ -62,86 +65,108 @@ export function TestPanel() {
       </Pressable>
       {open && (
         <Sheet title="Testing tools" onClose={() => setOpen(false)}>
-          <ScrollView contentContainerStyle={styles.list}>
-            <Section title={`Chips (you have ${me.chips})`}>
-              <Act
-                title="+100"
-                busy={busy}
-                onPress={() => run('Added 100 chips.', () => api.dev.chips(100))}
-              />
-              <Act
-                title="+1000"
-                busy={busy}
-                onPress={() => run('Added 1000 chips.', () => api.dev.chips(1000))}
-              />
-              <Act
-                title="−100"
-                busy={busy}
-                onPress={() => run('Took 100 chips.', () => api.dev.chips(-100))}
-              />
-            </Section>
-            <Section title="Skip ahead (your clock only)">
-              {sessionLeft !== null && (
-                <Act
-                  title={`Finish my session (${sessionLeft} min)`}
-                  busy={busy}
-                  onPress={() => run('Session finished.', () => api.dev.skip(sessionLeft))}
-                />
-              )}
-              <Act
-                title="5 min"
-                busy={busy}
-                onPress={() => run('Skipped 5 minutes.', () => api.dev.skip(5))}
-              />
-              <Act
-                title="30 min"
-                busy={busy}
-                onPress={() => run('Skipped 30 minutes.', () => api.dev.skip(30))}
-              />
-              <Act
-                title="2 hours"
-                busy={busy}
-                onPress={() => run('Skipped 2 hours.', () => api.dev.skip(120))}
-              />
-              <Act
-                title="1 day"
-                busy={busy}
-                onPress={() => run('Skipped a day.', () => api.dev.skip(1440))}
-              />
-            </Section>
-            <Section title="Garden">
-              <Act
-                title="Ripen my crops"
-                busy={busy}
-                onPress={() => run('Everything planted is ripe.', api.dev.ripen)}
-              />
-              <Act
-                title="3 of each seed"
-                busy={busy}
-                onPress={() => run('Added 3 of each seed.', each(SEEDS, 3))}
-              />
-              <Act
-                title="3 of each crop"
-                busy={busy}
-                onPress={() => run('Added 3 of each crop.', each(PRODUCE, 3))}
-              />
-              <Act
-                title="5 cigarettes"
-                busy={busy}
-                onPress={() => run('Added 5 cigarettes.', () => api.dev.item('cigarette', 5))}
-              />
-            </Section>
-            {note && (
-              <Text style={{ color: note.ok ? tone.accent : tone.danger, fontSize: 13 }}>
-                {note.text}
+          {!me.tester ? (
+            <View style={styles.list}>
+              <Muted>
+                {`Testing mode is on in this build, but ${me.display_name}'s account isn't a tester yet. In the Supabase SQL Editor, run:`}
+              </Muted>
+              <Text selectable style={[styles.code, { color: tone.text, borderColor: tone.line }]}>
+                {`update public.profiles set tester = true where username = '${me.username}';`}
               </Text>
-            )}
-            <Muted>
-              {
-                "Skipping moves your own timestamps back, so sessions finish, breaks run out and crops age; friends' clocks don't move. The garden catches up within a few seconds."
-              }
-            </Muted>
-          </ScrollView>
+              <Muted>The tools appear here within a few seconds.</Muted>
+            </View>
+          ) : (
+            <ScrollView contentContainerStyle={styles.list}>
+              <Section title={`Chips (you have ${me.chips})`}>
+                <Act
+                  title="+100"
+                  busy={busy}
+                  onPress={() => run('Added 100 chips.', () => api.dev.chips(100))}
+                />
+                <Act
+                  title="+1000"
+                  busy={busy}
+                  onPress={() => run('Added 1000 chips.', () => api.dev.chips(1000))}
+                />
+                <Act
+                  title="−100"
+                  busy={busy}
+                  onPress={() => run('Took 100 chips.', () => api.dev.chips(-100))}
+                />
+              </Section>
+              <Section title="Skip ahead (your clock only)">
+                {sessionLeft !== null && (
+                  <Act
+                    title={`Finish my session (${sessionLeft} min)`}
+                    busy={busy}
+                    onPress={() => run('Session finished.', () => api.dev.skip(sessionLeft))}
+                  />
+                )}
+                <Act
+                  title="5 min"
+                  busy={busy}
+                  onPress={() => run('Skipped 5 minutes.', () => api.dev.skip(5))}
+                />
+                <Act
+                  title="30 min"
+                  busy={busy}
+                  onPress={() => run('Skipped 30 minutes.', () => api.dev.skip(30))}
+                />
+                <Act
+                  title="2 hours"
+                  busy={busy}
+                  onPress={() => run('Skipped 2 hours.', () => api.dev.skip(120))}
+                />
+                <Act
+                  title="12 hours"
+                  busy={busy}
+                  onPress={() => run('Skipped 12 hours.', () => api.dev.skip(720))}
+                />
+                <Act
+                  title="1 day"
+                  busy={busy}
+                  onPress={() => run('Skipped a day.', () => api.dev.skip(1440))}
+                />
+                <Act
+                  title="3 days"
+                  busy={busy}
+                  onPress={() => run('Skipped 3 days.', () => api.dev.skip(3 * 1440))}
+                />
+              </Section>
+              <Section title="Garden">
+                <Act
+                  title="Ripen my crops"
+                  busy={busy}
+                  onPress={() => run('Everything planted is ripe.', api.dev.ripen)}
+                />
+                <Act
+                  title="3 of each seed"
+                  busy={busy}
+                  onPress={() => run('Added 3 of each seed.', each(SEEDS, 3))}
+                />
+                <Act
+                  title="3 of each crop"
+                  busy={busy}
+                  onPress={() => run('Added 3 of each crop.', each(PRODUCE, 3))}
+                />
+                <Act
+                  title="5 cigarettes"
+                  busy={busy}
+                  onPress={() => run('Added 5 cigarettes.', () => api.dev.item('cigarette', 5))}
+                />
+              </Section>
+              {note && (
+                <Text style={{ color: note.ok ? tone.accent : tone.danger, fontSize: 13 }}>
+                  {note.text}
+                </Text>
+              )}
+              <Muted>
+                {
+                  "Skipping moves your own timestamps back, so sessions finish, breaks run out and crops grow (and wither) as if that time had passed; friends' clocks don't move."
+                }
+              </Muted>
+            </ScrollView>
+          )}
         </Sheet>
       )}
     </>
@@ -174,4 +199,11 @@ const styles = StyleSheet.create({
   list: { gap: 14, paddingBottom: 4 },
   section: { gap: 6 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  code: {
+    fontFamily: 'monospace',
+    fontSize: 12,
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 8,
+  },
 });

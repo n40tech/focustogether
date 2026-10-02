@@ -23,16 +23,17 @@ git pull
 npm install
 ```
 
-## 2. Run migrations 0003 and 0004
+## 2. Run migrations 0003 to 0006
 
 1. Supabase dashboard → **SQL Editor** → **New query**.
 2. Paste the whole of `supabase/migrations/0003_community.sql` and press **Run**.
-3. Do the same with `supabase/migrations/0004_withering.sql`.
+3. Do the same, one at a time and in order, with `0004_withering.sql`,
+   `0005_testing.sql` and `0006_growing_and_desks.sql`.
 
 Each one runs as a single transaction: if anything fails, nothing is changed,
 so you can fix the problem and run it again. Once one has succeeded, don't run
 it a second time. It would fail on its first line, and nothing would change.
-(If you already ran 0003, just run 0004.)
+(If you've already run some, start from the first one you haven't.)
 
 What it does to your existing data:
 
@@ -44,6 +45,8 @@ What it does to your existing data:
 - A trigger on `auth.users` makes sign-up invite-only (step 3).
 - From 0004: crops that are already ripe get two days from now before they
   wither.
+- From 0006: crops grow in real time. Anything already planted keeps how far
+  it had got (half grown stays half grown), and ripe crops keep their time.
 
 To check it worked, run this in the SQL Editor. Every player should have a
 `plot_slot`:
@@ -160,6 +163,10 @@ With two players (A and B) who are friends:
       it from **A's stall**.
 - [ ] B waters A's beds by standing next to A's plot, but can't harvest them.
 - [ ] Eating a crop (**Basket → Eat**) just makes a munching sound.
+- [ ] Crops grow in real time, studying or not: radishes in a day, pumpkins
+      in five, sooner while watered (the bed's sheet says when).
+- [ ] When A's session ends, B still sees A sitting at their desk. A only
+      leaves it by going to the garden, walking out or going home.
 - [ ] A crop left ripe for two days withers. Walking up to it offers **Clear
       the withered ...**, and the bed is free again afterwards. (To try it
       without waiting, age a ripe crop in the SQL Editor:

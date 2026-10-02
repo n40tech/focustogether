@@ -9,7 +9,8 @@ import { Body, Muted, Sheet } from '@/components/Chrome';
 import { api, KEEPS_FOR_DAYS, type Garden, type Plot, type Trade } from '@/lib/api';
 import { countOf, ITEMS, itemInfo } from '@/lib/catalog';
 import { font } from '@/lib/theme';
-import { formatMinutes } from '@/lib/time';
+import { useNow } from '@/hooks/useNow';
+import { formatSpan } from '@/lib/time';
 
 /** Runs a garden action, then updates the garden from its result. */
 export type Act = (action: () => Promise<Garden>, sound?: Sfx) => Promise<boolean>;
@@ -188,21 +189,28 @@ export function SeedSheet({
 
 export function BedSheet({ plot, onClose }: { plot: Plot; onClose: () => void }) {
   const tone = useTone();
-  const share = Math.min(1, plot.growth_min / plot.grow_min);
+  const now = useNow(30_000);
+  const left = Date.parse(plot.ripe_at) - now;
+  const dryIn = plot.dry_at ? Date.parse(plot.dry_at) - now : 0;
   return (
     <Sheet title={itemInfo(plot.crop).name} onClose={onClose}>
-      <Body>
-        {`${formatMinutes(plot.growth_min * 60_000)} of ${formatMinutes(plot.grow_min * 60_000)} of study so far.`}
-      </Body>
+      <Body>{left > 0 ? `Ripe in about ${formatSpan(left)}.` : 'Ripe.'}</Body>
       <View style={[styles.track, { backgroundColor: tone.line }]}>
-        <View style={[styles.fill, { width: `${share * 100}%`, backgroundColor: tone.accent }]} />
+        <View
+          style={[
+            styles.fill,
+            { width: `${Math.min(1, plot.progress) * 100}%`, backgroundColor: tone.accent },
+          ]}
+        />
       </View>
       <Muted>
-        {plot.watered
-          ? 'Watered: it grows while you study.'
-          : "It's dry, so it's paused. Water it before your next session."}
+        {plot.watered && dryIn > 0
+          ? `Watered: growing half as fast again for another ${formatSpan(dryIn)}.`
+          : 'Dry: growing at its own pace. Water it and it grows half as fast again for a day.'}
       </Muted>
-      <Muted>{`Once it's ripe, pick it within ${KEEPS_FOR_DAYS} days, or it withers.`}</Muted>
+      <Muted>
+        {`Crops grow in real time, studying or not. Once it's ripe, pick it within ${KEEPS_FOR_DAYS} days, or it withers.`}
+      </Muted>
     </Sheet>
   );
 }

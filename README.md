@@ -17,7 +17,8 @@ up and shipping each update is in **[deployment/](deployment/)**, starting with
 - **Payout**: a closer look at your desk, about 1 chip per minute (give or take a
   little luck), and an earned break (1 minute per 5 studied).
 - **Garden**: walk about with a thumbstick (or the arrow keys), chat in speech
-  bubbles, tend your allotment (pick ripe crops within 2 days or they wither),
+  bubbles, tend your allotment (crops grow in real time over a few days; pick
+  them within 2 days of ripening or they wither),
   water friends' plots, smoke, and buy and sell at the market with friends
   standing next to you.
 - **Shed**: vehicles, desk things, seeds and cigarettes.
@@ -27,15 +28,17 @@ up and shipping each update is in **[deployment/](deployment/)**, starting with
 1. **SQL Editor → New query**: paste and run each file in
    `supabase/migrations/` that your database hasn't had yet, in order
    (`0001_init.sql`, `0002_game.sql`, `0003_community.sql`,
-   `0004_withering.sql`, `0005_testing.sql`). Each file runs once, ever: re-running one fails with
-   "already exists" and changes nothing.
+   `0004_withering.sql`, `0005_testing.sql`, `0006_growing_and_desks.sql`).
+   Each file runs once, ever: re-running one fails with "already exists" and
+   changes nothing.
 2. **Authentication → Sign In / Providers**: turn *Allow new users to sign up*
    on and *Confirm email* off. Sign-up is invite-only; the database checks.
 3. **SQL Editor**: `select private.make_invite();` returns an invite code. Open
    the app, tap *Got an invite? Join*, and use it.
 
-For testing, `0005_testing.sql` adds a **Test** button (chips, skipping ahead,
-items, ripe crops) for accounts you mark as testers: see
+For testing on your own machine, add `EXPO_PUBLIC_TESTING=true` to `.env` and
+mark your account as a tester: a **Test** button then finishes sessions, skips
+ahead in time (so crops grow), and hands out chips, items and ripe crops. See
 [deployment/0002-testing-tools.md](deployment/0002-testing-tools.md).
 
 The full walkthrough, with checks and troubleshooting, is

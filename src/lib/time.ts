@@ -24,3 +24,10 @@ export function formatSpan(ms: number) {
   if (hours < 48) return `${hours} hours`;
   return `${Math.round(hours / 24)} days`;
 }
+
+/** A crop's growing time: 24 -> "1 day", 36 -> "1.5 days", 120 -> "5 days", 12 -> "12 hours". */
+export function formatHours(hours: number) {
+  if (hours < 24) return `${hours} hours`;
+  const days = Math.round((hours / 24) * 10) / 10;
+  return `${days} day${days === 1 ? '' : 's'}`;
+}

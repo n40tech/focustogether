@@ -20,9 +20,10 @@ const WINDOWS = Array.from({ length: 33 }, (_, i) => 140 + (i - 16) * 112);
 
 /**
  * The open-plan floor and everyone at work on it, by desk (see seatsOf).
- * Friends sit at their desks while they study; you're at yours while you're in
- * the office. `closeUp` is a desk seen from just behind its chair, as at the
- * end of a session: empty, with the screen on.
+ * People sit at their desks while they study, and stay there afterwards until
+ * they get up and go (to the garden, out, or home); you're at yours while
+ * you're in the office. `closeUp` is your desk seen from just behind you, as
+ * at the end of a session: you've pushed your chair back, and the screen's on.
  */
 export function OfficeFloor({
   seats,
@@ -44,15 +45,16 @@ export function OfficeFloor({
       <Surroundings />
       {DESK_SPOTS.map(({ x, y }, i) => {
         const seat = seats[i];
-        const sitting =
-          i !== closeUp && seat && (seat.isMe || seat.studying) ? seat.username : null;
+        const here = i === closeUp || seat?.isMe || seat?.atDesk;
+        const sitting = seat && here ? seat.username : null;
         return (
           <Desk
             key={i}
             x={x}
             y={y}
             occupant={sitting}
-            screenOn={i === closeUp || !!seat?.studying}
+            leanBack={i === closeUp ? 16 : 0}
+            screenOn={i === closeUp || !!sitting}
             items={seat?.deskItems ?? []}
           />
         );
@@ -146,6 +148,7 @@ export function Desk({
   y,
   occupant,
   screenOn = !!occupant,
+  leanBack = 0,
   items = [],
   scale = 1,
 }: {
@@ -153,6 +156,8 @@ export function Desk({
   y: number;
   /** Username of whoever is sitting here, if anyone. */
   occupant?: string | null;
+  /** How far they've pushed their chair back from the desk, in desk units. */
+  leanBack?: number;
   /** Whether the monitor is on; by default, whenever someone's sitting here. */
   screenOn?: boolean;
   items?: string[];
@@ -189,7 +194,7 @@ export function Desk({
         />
       ))}
       {occupant ? (
-        <Person username={occupant} x={x} y={y + 12 * s} pose="sit" />
+        <Person username={occupant} x={x} y={y + (12 + leanBack) * s} pose="sit" />
       ) : (
         // An empty chair, pushed in.
         <>

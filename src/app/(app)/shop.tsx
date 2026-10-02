@@ -12,7 +12,7 @@ import { ChipIcon, Muted, SceneHeader } from '@/components/Chrome';
 import { api, type ItemKind, type Shop, type ShopItem } from '@/lib/api';
 import { itemInfo } from '@/lib/catalog';
 import { font } from '@/lib/theme';
-import { formatMinutes } from '@/lib/time';
+import { formatHours } from '@/lib/time';
 import { useConditions } from '@/weather/useConditions';
 import { useGo, useWorld } from '@/world/World';
 
@@ -171,7 +171,7 @@ function Row({
   const owned = oneOff && item.owned > 0;
   const detail =
     item.kind === 'seed'
-      ? `Packet of ${item.pack_size} · ripe after ${formatMinutes((item.grow_min ?? 0) * 60_000)} of study · ${item.yield} per harvest`
+      ? `Packet of ${item.pack_size} · ripe in ${formatHours(item.grow_hours ?? 0)}, sooner if watered · ${item.yield} per harvest`
       : item.kind === 'cigarette'
         ? `Pack of ${item.pack_size}`
         : null;

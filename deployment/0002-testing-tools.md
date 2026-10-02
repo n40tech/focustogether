@@ -1,37 +1,66 @@
-# 0002 · Testing tools
+# 0002 · Testing mode
 
-Hacks for testing the game without studying for real: give yourself chips and
-items, skip ahead in time, and ripen your crops. They only work for accounts
-you mark as testers, and only you can do that, from the SQL Editor.
+Hacks for testing the game on your own machine without studying for real:
+finish a session at once, skip ahead in time (so crops grow and wither), and
+give yourself chips, items and ripe crops.
 
-## 1. Run migration 0005
+Two switches keep this away from real players:
+
+- the **Test** button only exists in a build made with
+  `EXPO_PUBLIC_TESTING=true`, which you set in your local `.env` and nowhere
+  else (not in GitHub, so the deployed site never has it), and
+- the server only lets accounts you've marked as testers use the tools, so
+  nobody can cheat with a modified app either.
+
+## 1. Run migrations 0005 and 0006
 
 Supabase dashboard → **SQL Editor** → **New query** → paste the whole of
-`supabase/migrations/0005_testing.sql` → **Run**. (Run it once, after 0004.)
+`supabase/migrations/0005_testing.sql` → **Run**. Then do the same with
+`0006_growing_and_desks.sql`. (Each runs once, in order, after 0004.)
 
-## 2. Turn the tools on for your account
+## 2. Turn testing mode on locally
+
+Add this line to `.env` on your machine:
+
+```
+EXPO_PUBLIC_TESTING=true
+```
+
+Then restart the dev server with its cache cleared, or the old setting sticks:
+
+```bash
+npx expo start --web --clear
+```
+
+## 3. Mark your account as a tester
 
 ```sql
 update public.profiles set tester = true where username = 'your-username';
 ```
 
-Within about 10 seconds (or after a refresh), a small **Test** button appears
-under the place name, on every screen, including the office during a session.
+A small **Test** button appears under the place name on every screen,
+including the office during a session. (If you press it before running the
+SQL, it shows you this line with your username filled in.)
 
-## 3. What the Test button does
+## 4. What the Test button does
 
 | Button | What happens |
 |---|---|
-| **+100 / +1000 / −100** chips | Changes your chip balance (never below 0). |
 | **Finish my session** | Shown while you're studying: skips to the end of the session, so it pays out and the payout screen opens. |
-| **5 min / 30 min / 2 hours / 1 day** | Skips you ahead. Sessions that would have ended do, breaks run out (you're idle, then away), and crops age and wither as if that time had passed. |
-| **Ripen my crops** | Everything planted in your beds is ripe now. Skip 2 days afterwards to see them wither. |
+| **5 min … 3 days** | Skips you ahead. Sessions that would have ended do, breaks run out (you're idle, then away), and crops grow, ripen and wither as if that time had passed. |
+| **+100 / +1000 / −100** chips | Changes your chip balance (never below 0). |
+| **Ripen my crops** | Everything growing in your beds is ripe now. Skip 2 days afterwards to see them wither. |
 | **3 of each seed / 3 of each crop / 5 cigarettes** | Puts them in your basket. |
 
 Skipping only moves **your own** clock: your sessions, arrival, going home,
 smoking, and your beds. Friends' clocks don't move, and the weather and time of
 day follow the real clock (preview other weather with `?weather=rain&hour=22`
 in the URL).
+
+Crops grow by the real clock: radishes take a day, carrots a day and a half,
+strawberries 2 days, tomatoes 3, sunflowers 4 and pumpkins 5, and a watered bed
+grows half as fast again for a day. So **1 day** then **1 day** grows radishes;
+water in between and they're ready sooner.
 
 ## The same from the SQL Editor
 
@@ -47,13 +76,15 @@ select id, 'tomato_seeds', 6 from public.profiles where username = 'alice'
 on conflict (user_id, item) do update set qty = public.inventory.qty + excluded.qty;
 
 -- Ripen everything alice has planted
-update public.plots b set growth_min = c.grow_min, ripe_at = now()
+update public.plots b set grown_s = c.grow_hours * 3600.0, settled_at = now()
 from public.crops c
-where c.produce = b.crop and b.growth_min < c.grow_min
+where c.produce = b.crop
   and b.user_id = (select id from public.profiles where username = 'alice');
 ```
 
-## Turning them off
+## Turning it off
+
+Remove `EXPO_PUBLIC_TESTING=true` from `.env` (and restart with `--clear`), and:
 
 ```sql
 update public.profiles set tester = false where username = 'your-username';

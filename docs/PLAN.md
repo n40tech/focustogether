@@ -123,12 +123,17 @@ Derived on the server from timestamps and never stored, so it can't drift.
 | Status | When | Car park | Office | Garden |
 |---|---|---|---|---|
 | `focused` | a session is running | vehicle shown | at their desk | – |
-| `on_break` | finished a session less than their earned break ago, and hasn't gone home | vehicle shown | their desk, empty chair | walking about, if they have the garden open |
-| `idle` | arrived, or a break (or a given-up session) ended, less than 15 min ago | vehicle shown | their desk, empty chair | – |
+| `on_break` | finished a session less than their earned break ago, and hasn't gone home | vehicle shown | at their desk until they get up, then an empty chair | walking about, if they have the garden open |
+| `idle` | arrived, or a break (or a given-up session) ended, less than 15 min ago; or their app is open at their desk or in the garden | vehicle shown | at their desk until they get up, then an empty chair | – |
 | `absent` | otherwise, or they went home | – | – (desk given up) | – |
 
 A desk (and with it a bay and a rack slot) is held for as long as you're not
-`absent`.
+`absent`. Where you are at work is kept too (`profiles.place`): walking into
+the office sits you at your desk, and you stay there, for friends to see,
+through the end of a session and the payout, until you get up and go to the
+garden, walk out to the car park, or go home. While your app is open at your
+desk or in the garden (it checks in every few seconds), you count as at work
+however long ago your break ended; close it and the usual timings apply.
 
 ### Sessions, chips and breaks
 - Sessions last 1–120 minutes. Completing one earns **about 1 chip per
@@ -155,12 +160,13 @@ touching code.
 
 ### Allotment
 - Every player has a plot with **4 beds**.
-- Plant a seed in an empty bed. **Crops grow by the minutes you study**, but
-  only in beds watered within the last 24 hours. When it's raining and you're in
-  the garden, the rain waters them for you.
-- An unwatered bed just pauses; nothing dies of thirst.
-- **A ripe crop keeps for 2 days** after it ripens (as the session that ripened
-  it ends). In its last 12 hours it starts to go over (yellowing leaves, dull
+- Plant a seed in an empty bed. **Crops grow in real time**, studying or not:
+  from a day for radishes to five for a pumpkin. A watering lasts a day, and
+  meanwhile the bed grows **half as fast again**; nothing dies of thirst, it
+  just grows at its own pace. When it's raining and you're in the garden, the
+  rain waters your beds for you. A bed's sheet says when it'll be ripe.
+- **A ripe crop keeps for 2 days** after it ripens. In its last 12 hours it
+  starts to go over (yellowing leaves, dull
   fruit), then it **withers**: it gives nothing, and stays in its bed until
   you clear it onto the compost. The payout and the car park mention what's
   ripe and how long it keeps, and friends can see a withered plot.
@@ -172,14 +178,14 @@ touching code.
 - You can **water a friend's beds** (standing next to their plot), but only
   they can plant and harvest them.
 
-| Crop | Study minutes to ripen | Harvest | Seeds saved per crop |
-|---|---|---|---|
-| Radish | 25 | 3 | 2 |
-| Carrot | 50 | 3 | 2 |
-| Strawberry | 90 | 4 | 2 |
-| Tomato | 120 | 4 | 3 |
-| Sunflower | 180 | 1 | 6 |
-| Pumpkin | 300 | 1 | 4 |
+| Crop | Ripe after (never watered) | Kept watered | Harvest | Seeds saved per crop |
+|---|---|---|---|---|
+| Radish | 1 day | 16 hours | 3 | 2 |
+| Carrot | 1.5 days | 1 day | 3 | 2 |
+| Strawberry | 2 days | 32 hours | 4 | 2 |
+| Tomato | 3 days | 2 days | 4 | 3 |
+| Sunflower | 4 days | 64 hours | 1 | 6 |
+| Pumpkin | 5 days | 80 hours | 1 | 4 |
 
 ### Market
 - Put produce, seeds or cigarettes on **your stall** at a price per item
@@ -316,7 +322,7 @@ src/
   components/             UI pieces: buttons, header, toast, timer, thumbstick, sheets
   lib/                    Supabase client, typed RPC wrappers, catalogue art, time
 supabase/migrations/      0001 init (MVP), 0002 game, 0003 community, 0004 withering,
-                          0005 testing tools
+                          0005 testing tools, 0006 real-time growth and desks
 supabase/tests/           scenario tests for the game rules (plain Postgres + stubs)
 deployment/               numbered runbooks for setting up and shipping each update
 ```
@@ -356,7 +362,8 @@ deployment/               numbered runbooks for setting up and shipping each upd
 | `items` | catalogue: slug, kind, name, price, pack size |
 | `crops` | per crop: its seed, study minutes to ripen, harvest size, seeds saved |
 | `inventory` | (player, item) → quantity |
-| `plots` | (player, bed 0–3) → crop, planted at, growth, last watered, when it ripened (0004) |
+| `plots` | (player, bed 0–3) → crop, planted at, growth so far (`grown_s` as of `settled_at`, 0006), last watered |
+| `crops` | + `grow_hours` (0006): hours to ripen unwatered |
 | `trades` | offers in escrow: what's given, what's wanted, status |
 | `listings` | market stalls: seller, item, quantity, price per item (0003) |
 | `invites` | code, who made it, expiry, who used it (0003) |
@@ -371,6 +378,8 @@ deployment/               numbered runbooks for setting up and shipping each upd
 | `get_shop()`, `buy(item)` | not studying | shop |
 | `get_garden()` | signed in | garden |
 | `plant(bed, seed)`, `water()`, `harvest(bed)`, `clear_bed(bed)` | on a break | garden |
+| `set_place(place)` | signed in ('office' also hands you a desk) | me |
+| `dev_skip(minutes)`, `dev_chips(n)`, `dev_item(item, n)`, `dev_ripen()` | testers only (0005) | me |
 | `eat(item)`, `save_seeds(item)`, `smoke()` | on a break | garden |
 | `water_friend(username)` | on a break | garden |
 | `offer_trade(...)`, `respond_trade(id, accept)` | on a break | garden |
@@ -433,7 +442,10 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
       and have to be cleared (40 scenario tests in all)
 - [x] Migration `0005_testing.sql`: testing tools for accounts flagged as
       testers (chips, skipping ahead, items, ripe crops), and a Test button
-- [ ] Run `0003_community.sql` and `0004_withering.sql`, switch sign-ups on,
+- [x] Migration `0006_growing_and_desks.sql`: crops grow in real time (faster
+      while watered); people stay at their desks after a session until they
+      leave; testing mode only in local builds (`EXPO_PUBLIC_TESTING`)
+- [ ] Run `0003` to `0006`, switch sign-ups on,
       make the first invites, and do the first deploy:
       `deployment/0001-setup-and-launch.md`
 - [ ] Try it with friends, then tune prices, break length and the mix
@@ -458,7 +470,7 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 | Question | Decision |
 |---|---|
 | Where does the weather come from? | A shared, procedural cycle seeded by the clock: the same for everyone. |
-| How does the allotment grow? | By the minutes you study. Crops are never sold for chips; they're eaten, traded or saved for seeds. |
+| How does the allotment grow? | In real time over a few days, depending on the crop (it used to be by the minutes studied); watering speeds it up. Crops are never sold to the game for chips; they're eaten, sold to friends, traded or saved for seeds. |
 | How do friends without a car appear in the car park? | They don't. You can buy a bike (shown in the bike rack) or a car. |
 | How does a break end? | An earned break timer (1 min per 5 studied), then a bell and a choice of office or home. |
 | Perspective | Top-front for every place, with no sky: time of day only shows as the scene's changing hues. |
@@ -473,6 +485,8 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 | The garden | Walkable with a thumbstick, three phones wide and one tall, with every allotment on one grid in a fixed place. |
 | Trading | A market: stalls with prices, bought from face to face in the garden. Swaps and gifts by offer stay too. |
 | Unpicked crops | Wither 2 days after ripening (going over for the last 12 hours), give nothing, and must be cleared before replanting. |
+| After a session | You stay at your desk (friends see you there) until you choose to leave it. |
+| Testing | A Test button, only in local builds with `EXPO_PUBLIC_TESTING=true` and only for accounts marked as testers. |
 | Payout | A closer look at your own office desk, at the same proportions. |
 
 ## 13. Open questions

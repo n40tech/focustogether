@@ -5,6 +5,8 @@ import { supabase } from './supabase';
 export type Status = 'focused' | 'on_break' | 'idle' | 'absent';
 export type Activity = 'smoking' | null;
 export type ItemKind = 'vehicle' | 'desk' | 'seed' | 'produce' | 'cigarette';
+/** Where someone is at work: at their desk, in the garden, or out in the car park. */
+export type Place = 'office' | 'garden' | 'outside';
 /** Item slug -> how many you have. */
 export type Inventory = Record<string, number>;
 
@@ -18,6 +20,8 @@ export type Me = {
   break_ends_at: string | null;
   /** Your desk (0 to DESKS - 1) while you're at work. */
   desk: number | null;
+  /** Where you are while you're at work ('office' = at your desk). */
+  place: Place | null;
   vehicle: string | null;
   activity: Activity;
   activity_until: string | null;
@@ -47,6 +51,8 @@ export type Friend = {
   break_ends_at: string | null;
   /** Their desk while they're at work, else null. */
   desk: number | null;
+  /** Where they are while they're at work: 'office' means sitting at their desk. */
+  place: Place | null;
   arrived_at: string | null;
   vehicle: string | null;
   /** Desk item slugs, in display order. */
@@ -62,8 +68,8 @@ export type ShopItem = {
   pack_size: number;
   /** How many you already have. */
   owned: number;
-  /** Seeds only: study minutes to ripen, and the harvest. */
-  grow_min: number | null;
+  /** Seeds only: hours to ripen in a bed nobody waters, and the harvest. */
+  grow_hours: number | null;
   yield: number | null;
 };
 
@@ -72,16 +78,22 @@ export type Shop = { chips: number; items: ShopItem[] };
 export type Plot = {
   bed: number;
   crop: string;
-  growth_min: number;
-  grow_min: number;
+  /** 0 to 1: how far it has grown. Crops grow in real time, faster while watered. */
+  progress: number;
+  /** Hours to ripen if nobody waters it. */
+  grow_hours: number;
   /** Ready to pick (and not yet withered). */
   ripe: boolean;
   /** Left too long after ripening: gives nothing, and has to be cleared. */
   withered: boolean;
-  ripe_at: string | null;
+  /** When it ripens (or ripened), if it isn't watered again. */
+  ripe_at: string;
   /** When a ripe crop withers if it isn't picked (KEEPS_FOR_DAYS after ripening). */
-  withers_at: string | null;
+  withers_at: string;
+  /** Watered recently enough to be growing faster. */
   watered: boolean;
+  /** When the last watering wears off (null if it was never watered). */
+  dry_at: string | null;
   planted_at: string;
 };
 
@@ -145,7 +157,8 @@ export const api = {
   addFriend: (username: string) =>
     rpc<{ username: string }>('add_friend', { p_username: username }),
 
-  arrive: () => rpc<Me>('arrive'),
+  /** Moves you (going to the office hands you a desk if you've just arrived). */
+  setPlace: (place: Place) => rpc<Me>('set_place', { p_place: place }),
   startSession: (minutes: number) => rpc<Me>('start_session', { p_minutes: minutes }),
   cancelSession: () => rpc<Me>('cancel_session'),
   goHome: () => rpc<Me>('go_home'),
@@ -209,5 +222,9 @@ export const breakMinutes = (sessionMin: number) => Math.max(1, Math.round(sessi
 export const BEDS = 4;
 /** Mirrors private.keeps_for: a ripe crop withers this many days after it ripens. */
 export const KEEPS_FOR_DAYS = 2;
+/** Mirrors private.moist_for and private.watered_speed: a watering lasts a day, and
+ *  meanwhile the bed grows half as fast again. */
+export const WATERING_LASTS_HOURS = 24;
+export const WATERED_SPEED = 1.5;
 /** Mirrors profiles.desk (0-11): the office has twelve desks. */
 export const DESKS = 12;

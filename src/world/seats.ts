@@ -7,6 +7,8 @@ export type Seat = {
   display_name: string;
   isMe: boolean;
   studying: boolean;
+  /** Sitting at their desk: studying, or still there after a session until they get up. */
+  atDesk: boolean;
   vehicle: string | null;
   deskItems: string[];
 };
@@ -35,6 +37,7 @@ export function seatsOf(me: Me, friends: Friend[]): (Seat | null)[] {
       display_name: me.display_name,
       isMe: true,
       studying: me.status === 'focused',
+      atDesk: me.status === 'focused' || me.place === 'office',
       vehicle: me.vehicle,
       deskItems: deskItemsOf(me.inventory),
     });
@@ -48,6 +51,7 @@ export function seatsOf(me: Me, friends: Friend[]): (Seat | null)[] {
         display_name: f.display_name,
         isMe: false,
         studying: f.status === 'focused',
+        atDesk: f.status === 'focused' || f.place === 'office',
         vehicle: f.vehicle,
         deskItems: f.desk_items,
       })

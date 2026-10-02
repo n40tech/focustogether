@@ -35,6 +35,7 @@ import { usePolled } from '@/hooks/usePolled';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { api, BEDS, type Garden, type Gardener, type Plot } from '@/lib/api';
 import { itemInfo } from '@/lib/catalog';
+import { onTimeSkipped } from '@/lib/testing';
 import { palette } from '@/lib/theme';
 import { useConditions } from '@/weather/useConditions';
 import {
@@ -88,6 +89,9 @@ type Near =
 
 const sameNear = (a: Near | null, b: Near | null) => JSON.stringify(a) === JSON.stringify(b);
 
+/** Still growing, and would grow faster for a watering. */
+const isDry = (p: Plot) => !p.watered && !p.ripe && !p.withered;
+
 type SheetState =
   | { kind: 'seed'; bed: number }
   | { kind: 'bed'; plot: Plot }
@@ -109,6 +113,8 @@ export default function GardenScene() {
   const polled = usePolled(api.getGarden, 5000);
   const setGarden = polled.setData;
   const garden = polled.data;
+  const refreshGarden = polled.refresh;
+  useEffect(() => onTimeSkipped(() => void refreshGarden()), [refreshGarden]);
   const [sheet, setSheet] = useState<SheetState>(null);
   const [notice, setNotice] = useState<{ id: number; text: string } | null>(null);
   const say = useCallback((text: string) => setNotice({ id: Date.now(), text }), []);
@@ -219,6 +225,12 @@ export default function GardenScene() {
   );
 
   // The break timer ran out (or the server says so): ring the bell once.
+  // You're in the garden now: friends see your desk empty until you're back.
+  const setMe = world.setMe;
+  useEffect(() => {
+    if (onBreak) api.setPlace('garden').then(setMe, () => {});
+  }, [onBreak, setMe]);
+
   const refreshWorld = world.refresh;
   const ended = useRef(false);
   const endBreak = useCallback(() => {
@@ -242,7 +254,7 @@ export default function GardenScene() {
 
   // Rain waters your beds for you.
   const raining = conditions.weather.rain > 0.2;
-  const dry = !!garden?.me.plots.some((p) => !p.watered);
+  const dry = !!garden?.me.plots.some(isDry);
   const rained = useRef(false);
   useEffect(() => {
     if (!raining || !dry || !onBreak || rained.current) return;
@@ -432,7 +444,7 @@ export default function GardenScene() {
             onPress: () => void act(() => api.harvest(near.bed), 'pluck'),
           });
         } else {
-          const share = Math.min(99, Math.floor((100 * plot.growth_min) / plot.grow_min));
+          const share = Math.min(99, Math.floor(100 * plot.progress));
           actions.push({
             title: `${info.name} · ${share}%`,
             quiet: true,
@@ -441,7 +453,7 @@ export default function GardenScene() {
         }
         // Watering (all your beds) goes alongside planting or looking at a
         // bed; picking and clearing need the room for their labels.
-        if ((!plot || (!plot.ripe && !plot.withered)) && myPlots.some((p) => !p.watered))
+        if ((!plot || (!plot.ripe && !plot.withered)) && myPlots.some(isDry))
           actions.push({
             title: 'Water',
             quiet: true,

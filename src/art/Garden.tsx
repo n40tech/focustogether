@@ -69,7 +69,7 @@ export function RaisedBed({
       {plot && (
         <Crop
           crop={plot.crop}
-          progress={plot.growth_min / plot.grow_min}
+          progress={plot.progress}
           ripe={plot.ripe || plot.withered}
           look={lookOf(plot, now)}
           x={x + BED.w / 2}

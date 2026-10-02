@@ -19,11 +19,16 @@ export default function Office() {
   const go = useGo();
   const studying = me.status === 'focused';
 
-  // Walking in hands you a random free desk, kept until you go home.
-  const atWork = me.desk !== null;
+  // Walking in sits you at your desk: a random free one when you've just
+  // arrived, kept until you go home. You stay there (for friends too) until you
+  // get up and go somewhere.
   useEffect(() => {
-    if (!atWork) api.arrive().then(setMe, () => {});
-  }, [atWork, setMe]);
+    api.setPlace('office').then(setMe, () => {});
+  }, [setMe]);
+  const walkOut = () => {
+    api.setPlace('outside').then(setMe, () => {});
+    go('/');
+  };
 
   const seats = seatsOf(me, friends);
 
@@ -54,7 +59,7 @@ export default function Office() {
       overlay={overlay}
     >
       <SceneHeader place="Office" chips={studying ? undefined : me.chips} />
-      <StudyPanel me={me} setMe={setMe} refresh={refresh} onWalkOut={() => go('/')} />
+      <StudyPanel me={me} setMe={setMe} refresh={refresh} onWalkOut={walkOut} />
     </Scene>
   );
 }

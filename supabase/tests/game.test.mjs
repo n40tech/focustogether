@@ -80,11 +80,11 @@ async function travel(minutes) {
   await q(`update public.sessions set started_at = started_at - ${m}, ended_at = ended_at - ${m}`);
   await q(
     `update public.profiles set went_home_at = went_home_at - ${m}, activity_until = activity_until - ${m},
-       arrived_at = arrived_at - ${m}`
+       arrived_at = arrived_at - ${m}, seen_at = seen_at - ${m}`
   );
   await q(
     `update public.plots set planted_at = planted_at - ${m}, watered_at = watered_at - ${m},
-       ripe_at = ripe_at - ${m}`
+       settled_at = settled_at - ${m}`
   );
   await q(`update public.trades set created_at = created_at - ${m}, closed_at = closed_at - ${m}`);
   await q(`update public.invites set expires_at = expires_at - ${m}`);
@@ -118,6 +118,17 @@ async function rejects(promise, pattern) {
     assert.match(e.message, pattern);
     return true;
   });
+}
+
+const MIN = 60_000;
+const HOUR = 60 * MIN;
+const DAY = 24 * HOUR;
+
+function assertNear(actual, expected, tolerance, what = '') {
+  assert.ok(
+    Math.abs(actual - expected) <= tolerance,
+    `${what} ${actual} is not within ${tolerance} of ${expected}`
+  );
 }
 
 /** A session pays its minutes, give or take up to 12%. */
@@ -159,7 +170,8 @@ beforeEach(async () => {
   );
   await q(
     `update public.profiles set chips = 0, vehicle = null, went_home_at = null, activity = null,
-       activity_until = null, arrived_at = null, desk = null, tester = false`
+       activity_until = null, arrived_at = null, desk = null, tester = false, place = null,
+       seen_at = null`
   );
 });
 
@@ -301,14 +313,59 @@ describe('arriving and desks', () => {
     assert.equal(me.desk, null);
   });
 
-  test('arriving and doing nothing for 15 minutes counts as going home', async () => {
+  test('arriving, then closing the app for 15 minutes, counts as going home', async () => {
     await call('alice', 'arrive');
-    await travel(14);
-    assert.equal((await call('alice', 'get_me')).status, 'idle');
-    await travel(2);
+    await travel(16);
     const me = await call('alice', 'get_me');
     assert.equal(me.status, 'absent');
     assert.equal(me.desk, null);
+  });
+
+  test('after a session you stay at your desk until you get up and go somewhere', async () => {
+    const seen = async () => {
+      const a = (await call('bob', 'get_friends_board')).find((f) => f.username === 'alice');
+      return [a.status, a.place];
+    };
+    await call('alice', 'set_place', 'office');
+    assert.deepEqual(await seen(), ['idle', 'office']);
+    await study('alice', 25);
+    assert.deepEqual(await seen(), ['on_break', 'office'], 'still at the desk after the session');
+
+    let me = await call('alice', 'set_place', 'garden');
+    assert.equal(me.place, 'garden');
+    assert.deepEqual(await seen(), ['on_break', 'garden']);
+    await call('alice', 'set_place', 'outside');
+    assert.deepEqual(await seen(), ['on_break', 'outside']);
+
+    me = await call('alice', 'go_home');
+    assert.deepEqual([me.status, me.place, me.desk], ['absent', null, null]);
+    assert.deepEqual(await seen(), ['absent', null]);
+    await rejects(call('alice', 'set_place', 'kitchen'), /nowhere called kitchen/);
+  });
+
+  test("mid-session you're at your desk, and when you're not at work you're nowhere", async () => {
+    let me = await call('alice', 'set_place', 'garden');
+    assert.deepEqual([me.status, me.place], ['absent', null]);
+    me = await call('alice', 'start_session', 25);
+    assert.equal(me.place, 'office');
+    me = await call('alice', 'set_place', 'garden');
+    assert.equal(me.place, 'office');
+  });
+
+  test('with your app open at your desk you stay at work; closed, you drift off as before', async () => {
+    await call('alice', 'set_place', 'office');
+    // The app checks in every few seconds while it's open.
+    for (let minute = 1; minute <= 20; minute++) {
+      await travel(1);
+      assert.equal((await call('alice', 'get_me')).status, 'idle', `after ${minute} min`);
+    }
+    // Closed: nothing checks in, and the 15 minutes after arriving are long gone.
+    await travel(3);
+    let me = await call('alice', 'get_me');
+    assert.deepEqual([me.status, me.desk], ['absent', null]);
+    // Opening the app again doesn't put you back at your desk.
+    me = await call('alice', 'get_me');
+    assert.equal(me.status, 'absent');
   });
 
   test('starting a session without arriving first still gets you a desk', async () => {
@@ -364,60 +421,72 @@ describe('the kiosk', () => {
     // Produce is never on sale; the catalogue lists vehicles first.
     assert.ok(shop.items.every((i) => i.kind !== 'produce'));
     assert.equal(shop.items[0].kind, 'vehicle');
-    assert.equal(shop.items.find((i) => i.slug === 'tomato_seeds').grow_min, 120);
+    assert.equal(shop.items.find((i) => i.slug === 'tomato_seeds').grow_hours, 72);
   });
 });
 
 describe('the allotment', () => {
-  test('crops grow by the minutes studied while watered, then harvest into produce', async () => {
-    await give('alice', 'tomato_seeds', 3);
-    await study('alice', 25);
-    let garden = await call('alice', 'plant', 0, 'tomato_seeds');
-    assert.equal(garden.me.inventory.tomato_seeds, 2);
+  test('crops grow in real time at their own pace, and half as fast again while watered', async () => {
+    await give('alice', 'radish_seeds', 2);
+    await study('alice', 5);
+    let garden = await call('alice', 'plant', 0, 'radish_seeds');
+    assert.equal(garden.me.inventory.radish_seeds, 1);
+    let [plot] = garden.me.plots;
     assert.deepEqual(
-      garden.me.plots.map((p) => [p.bed, p.crop, p.growth_min, p.ripe, p.watered]),
-      [[0, 'tomato', 0, false, true]]
+      [plot.bed, plot.crop, plot.grow_hours, plot.ripe, plot.watered],
+      [0, 'radish', 24, false, false]
     );
-    await rejects(call('alice', 'plant', 0, 'tomato_seeds'), /already growing/);
-    await rejects(call('alice', 'plant', 4, 'tomato_seeds'), /no bed 4/);
-    await rejects(call('alice', 'plant', 1, 'tomato'), /aren't seeds/);
+    assert.ok(plot.progress < 0.001);
+    assertNear(Date.parse(plot.ripe_at) - Date.now(), DAY, MIN, 'ripe in a day, unwatered');
+    await rejects(call('alice', 'plant', 0, 'radish_seeds'), /already growing/);
+    await rejects(call('alice', 'plant', 4, 'radish_seeds'), /no bed 4/);
+    await rejects(call('alice', 'plant', 1, 'radish'), /aren't seeds/);
     await rejects(call('alice', 'harvest', 0), /Nothing is ripe/);
 
-    await travel(1);
-    await study('alice', 60);
-    garden = await call('alice', 'get_garden');
-    assert.equal(garden.me.plots[0].growth_min, 60);
+    // Half a day on it's half grown, studying or not.
+    await travel(12 * 60);
+    [plot] = (await call('alice', 'get_garden')).me.plots;
+    assertNear(plot.progress, 0.5, 0.001, 'progress');
 
-    await travel(1);
-    await study('alice', 90); // growth is capped at grow_min
-    garden = await call('alice', 'get_garden');
-    assert.equal(garden.me.plots[0].growth_min, 120);
-    assert.equal(garden.me.plots[0].ripe, true);
+    // Watered, the rest grows half as fast again.
+    await study('alice', 5);
+    garden = await call('alice', 'water');
+    [plot] = garden.me.plots;
+    assert.equal(plot.watered, true);
+    assertNear(Date.parse(plot.dry_at) - Date.now(), DAY, MIN, 'a watering lasts a day');
+    const left = DAY - (12 * HOUR + 5 * MIN);
+    assertNear(Date.parse(plot.ripe_at) - Date.now(), left / 1.5, MIN, 'ripe sooner');
 
+    await travel(8 * 60);
+    [plot] = (await call('alice', 'get_garden')).me.plots;
+    assert.deepEqual([plot.ripe, plot.progress], [true, 1]);
+    await study('alice', 5);
     garden = await call('alice', 'harvest', 0);
     assert.deepEqual(garden.me.plots, []);
-    assert.equal(garden.me.inventory.tomato, 4);
+    assert.equal(garden.me.inventory.radish, 3);
   });
 
   test('a ripe crop keeps for 2 days, then withers to nothing until the bed is cleared', async () => {
     await give('alice', 'radish_seeds', 2);
-    await study('alice', 25);
+    await study('alice', 5);
     await call('alice', 'plant', 0, 'radish_seeds');
-    await travel(1);
-    let me = await study('alice', 25); // the radishes ripen as this session ends
+    await travel(24 * 60); // ripe now
+    let me = await study('alice', 5);
     assert.deepEqual(
       me.ripe.map((r) => [r.bed, r.crop]),
       [[0, 'radish']]
     );
     let [plot] = (await call('alice', 'get_garden')).me.plots;
     assert.deepEqual([plot.ripe, plot.withered], [true, false]);
-    assert.equal(Date.parse(plot.withers_at) - Date.parse(plot.ripe_at), 2 * 24 * 60 * 60 * 1000);
+    assert.equal(Date.parse(plot.withers_at) - Date.parse(plot.ripe_at), 2 * DAY);
     assert.equal(me.ripe[0].withers_at, plot.withers_at);
     await rejects(call('alice', 'clear_bed', 0), /nothing withered/);
+    // Watering a ripe crop doesn't buy it more time.
+    [plot] = (await call('alice', 'water')).me.plots;
+    assert.equal(Date.parse(plot.withers_at) - Date.parse(me.ripe[0].withers_at), 0);
 
-    // A day and 23 hours on (and another short session), they're still good...
-    await travel(47 * 60);
-    await study('alice', 5);
+    // 47 hours after ripening they're still good...
+    await travel(47 * 60 - 5);
     [plot] = (await call('alice', 'get_garden')).me.plots;
     assert.deepEqual([plot.ripe, plot.withered], [true, false]);
 
@@ -436,47 +505,35 @@ describe('the allotment', () => {
     await call('alice', 'plant', 0, 'radish_seeds');
   });
 
-  test('a crop ripens when its session ends, even if nobody looks until later', async () => {
+  test('crops grow and wither on time while nobody is looking', async () => {
     await give('alice', 'radish_seeds', 1);
-    await study('alice', 25);
+    await study('alice', 5);
     await call('alice', 'plant', 0, 'radish_seeds');
-    await travel(1);
-    await call('alice', 'start_session', 25);
-    // The session ended three days ago, and this is the first anyone has asked.
-    await travel(25 + 3 * 24 * 60);
+    // A day to ripen and two to keep: three days and a minute later, it's gone over.
+    await travel(3 * 24 * 60 + 1);
     const [plot] = (await call('alice', 'get_garden')).me.plots;
-    assert.deepEqual([plot.growth_min, plot.withered], [25, true]);
+    assert.deepEqual([plot.progress, plot.withered], [1, true]);
   });
 
-  test('unwatered beds pause, and planting during a break only counts from the next session', async () => {
-    await give('alice', 'radish_seeds', 2);
-    await study('alice', 25);
-    await call('alice', 'plant', 0, 'radish_seeds');
-    await call('alice', 'plant', 1, 'radish_seeds');
-    // Bed 1 dries out: watered more than a day before the next session ends.
-    await q(`update public.plots set watered_at = now() - interval '2 days' where bed = 1`);
-    await travel(1);
-    await study('alice', 30);
-    let garden = await call('alice', 'get_garden');
-    assert.deepEqual(
-      garden.me.plots.map((p) => [p.bed, p.growth_min, p.watered]),
-      [
-        [0, 25, true],
-        [1, 0, false],
-      ]
+  test('every crop takes its own time: a day for radishes, five for a pumpkin', async () => {
+    const shop = await call('alice', 'get_shop');
+    const hours = Object.fromEntries(
+      shop.items.filter((i) => i.kind === 'seed').map((i) => [i.slug, i.grow_hours])
     );
-
-    garden = await call('alice', 'water');
-    assert.ok(garden.me.plots.every((p) => p.watered));
+    assert.deepEqual(hours, {
+      radish_seeds: 24,
+      carrot_seeds: 36,
+      sunflower_seeds: 96,
+      strawberry_seeds: 48,
+      tomato_seeds: 72,
+      pumpkin_seeds: 120,
+    });
   });
 
   test("you can water a friend's beds, but not harvest them", async () => {
     await give('bob', 'radish_seeds', 1);
     await study(['alice', 'bob'], 25);
     await call('bob', 'plant', 0, 'radish_seeds');
-    await q(`update public.plots set watered_at = now() - interval '2 days' where user_id = $1`, [
-      ids.bob,
-    ]);
 
     const garden = await call('alice', 'water_friend', 'bob');
     assert.equal(garden.neighbours.find((n) => n.username === 'bob').plots[0].watered, true);
@@ -871,7 +928,19 @@ describe('testing tools', () => {
     me = await call('alice', 'dev_skip', 60);
     assert.equal(me.status, 'absent');
 
-    // A ripe crop skipped past its two days withers.
+    // Skipping grows crops as if the time had passed...
+    await study('alice', 5);
+    await call('alice', 'dev_item', 'radish_seeds', 2);
+    await call('alice', 'plant', 1, 'radish_seeds');
+    await call('alice', 'dev_skip', 12 * 60);
+    let [half] = (await call('alice', 'get_garden')).me.plots;
+    assertNear(half.progress, 0.5, 0.001, 'progress');
+    await call('alice', 'dev_skip', 12 * 60);
+    [half] = (await call('alice', 'get_garden')).me.plots;
+    assert.equal(half.ripe, true);
+    await q('delete from public.plots');
+
+    // ...and a ripe crop skipped past its two days withers.
     await study('alice', 5);
     await call('alice', 'dev_item', 'radish_seeds', 1);
     await call('alice', 'plant', 0, 'radish_seeds');
