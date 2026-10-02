@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Platform, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Box, Dot } from '@/art/primitives';
 import { BLEED, Scene, useTone } from '@/art/Scene';
@@ -7,8 +7,9 @@ import { playSound, useAmbience } from '@/audio/sound';
 import { Button } from '@/components/Button';
 import { Muted, Panel, SceneHeader } from '@/components/Chrome';
 import { Countdown } from '@/components/Countdown';
-import { api, type Friend } from '@/lib/api';
+import { api, type Friend, type Invite } from '@/lib/api';
 import { personColour } from '@/lib/catalog';
+import { formatInvite } from '@/lib/invites';
 import { font, palette } from '@/lib/theme';
 import { useConditions } from '@/weather/useConditions';
 import { useGo, useWorld } from '@/world/World';
@@ -75,6 +76,7 @@ function Board({
   onLeave: () => void;
 }) {
   const tone = useTone();
+  const invites = useInvites();
   return (
     <Panel style={styles.board}>
       <Text style={[font.label, { color: tone.muted }]}>Friends</Text>
@@ -108,9 +110,31 @@ function Board({
             </Text>
           </View>
         ))}
+        <InviteList invites={invites.list} onSend={invites.send} />
       </ScrollView>
       <AddFriend onAdded={onAdded} />
-      <Button title="Back to the car park" variant="ghost" small onPress={onLeave} />
+      {invites.message && (
+        <Text style={{ color: invites.message.ok ? tone.accent : tone.danger, fontSize: 13 }}>
+          {invites.message.text}
+        </Text>
+      )}
+      <View style={styles.row}>
+        <Button
+          title="Make an invite"
+          variant="quiet"
+          small
+          style={styles.flex}
+          onPress={invites.make}
+          disabled={invites.busy}
+        />
+        <Button
+          title="Back to the car park"
+          variant="ghost"
+          small
+          style={styles.flex}
+          onPress={onLeave}
+        />
+      </View>
     </Panel>
   );
 }
@@ -166,7 +190,99 @@ function AddFriend({ onAdded }: { onAdded: () => void }) {
   );
 }
 
+/** Where an invite link points: the sign-up form, with the code filled in. */
+const inviteLink = (code: string) =>
+  Platform.OS === 'web' && typeof window !== 'undefined'
+    ? `${window.location.origin}/login?invite=${code}`
+    : null;
+
+const until = (iso: string) =>
+  new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+
+/**
+ * Focus is invite-only: make an invite, send the link (or the code), and
+ * whoever joins with it starts out as your friend.
+ */
+function useInvites() {
+  const [list, setList] = useState<Invite[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
+
+  useEffect(() => {
+    api.getInvites().then(setList, () => {});
+  }, []);
+
+  const send = async (code: string) => {
+    const link = inviteLink(code);
+    const text = `Come and study with me on Focus. Your invite code: ${formatInvite(code)}`;
+    try {
+      if (link && typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(link);
+        setMessage({
+          text: `Invite link copied (${formatInvite(code)}). Send it to a friend.`,
+          ok: true,
+        });
+      } else {
+        await Share.share({ message: link ? `${text}\n${link}` : text });
+      }
+    } catch {
+      setMessage({ text: link ?? text, ok: true });
+    }
+  };
+
+  const make = async () => {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const { code } = await api.createInvite();
+      playSound('paper');
+      setList(await api.getInvites());
+      await send(code);
+    } catch (e) {
+      setMessage({ text: e instanceof Error ? e.message : String(e), ok: false });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return { list, busy, message, make, send };
+}
+
+function InviteList({ invites, onSend }: { invites: Invite[]; onSend: (code: string) => void }) {
+  const tone = useTone();
+  return (
+    <View style={styles.invites}>
+      <Text style={[font.label, { color: tone.muted }]}>Invites</Text>
+      {invites.length === 0 && (
+        <Muted>
+          Focus is invite-only. Whoever joins with your invite starts out as your friend.
+        </Muted>
+      )}
+      {invites.map((i) => (
+        <View key={i.code} style={[styles.card, { borderColor: tone.line }]}>
+          <Text style={[styles.code, { color: i.used_by ? tone.muted : tone.text }]}>
+            {formatInvite(i.code)}
+          </Text>
+          <Muted style={styles.flex}>
+            {i.used_by ? `${i.used_by} joined` : `Unused, until ${until(i.expires_at)}`}
+          </Muted>
+          {!i.used_by && (
+            <Button
+              title={inviteLink(i.code) ? 'Copy link' : 'Share'}
+              small
+              variant="quiet"
+              onPress={() => onSend(i.code)}
+            />
+          )}
+        </View>
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  invites: { gap: 8, marginTop: 10 },
+  code: { fontSize: 15, fontWeight: '600', letterSpacing: 1.5, fontVariant: ['tabular-nums'] },
   board: { maxHeight: 560 },
   list: { gap: 8 },
   card: {
