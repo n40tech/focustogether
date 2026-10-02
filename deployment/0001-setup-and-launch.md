@@ -167,6 +167,11 @@ With two players (A and B) who are friends:
 
 ## Troubleshooting
 
+- **`relation "profiles" already exists`** (or any "already exists") when
+  running a migration: that file has already been run on this database, so
+  nothing was changed. Skip it and run the next one. This runbook starts from
+  0003: don't re-run `0001_init.sql` or `0002_game.sql`.
+
 - **"Focus is invite-only, and that invite code isn't valid"**, or **"Couldn't
   join with that invite"**: the code was used, has expired, or was mistyped.
   Make a new one.
