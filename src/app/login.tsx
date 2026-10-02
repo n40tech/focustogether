@@ -25,9 +25,10 @@ const C = palette.carpark;
 
 /**
  * An invite link (/login?invite=CODE) opens the sign-up form. Read once as the
- * app loads on the web, because the router may rewrite the URL as it starts.
+ * app loads on the web, because the router may rewrite the URL as it starts,
+ * and forgotten once used, so logging out later shows the sign-in form.
  */
-const INVITE_IN_URL =
+let inviteInUrl =
   Platform.OS === 'web' && typeof window !== 'undefined'
     ? (new URLSearchParams(window.location.search).get('invite') ?? '')
     : '';
@@ -36,8 +37,11 @@ export default function Login() {
   useAmbience('quiet');
   const conditions = useConditions();
   const params = useLocalSearchParams<{ invite?: string }>();
-  const invite = normaliseInvite(params.invite || INVITE_IN_URL);
+  const [invite] = useState(() => normaliseInvite(params.invite || inviteInUrl));
   const [joining, setJoining] = useState(invite !== '');
+  useEffect(() => {
+    inviteInUrl = '';
+  }, []);
   const art = (
     <>
       {Array.from({ length: 6 }, (_, i) => (

@@ -119,7 +119,7 @@ export function StudyPanel({ me, setMe, refresh, onWalkOut }: Props) {
         ))}
       </View>
       <Muted style={styles.centerText}>
-        {`Earns ${minutes} chip${minutes === 1 ? '' : 's'} and a ${breakMinutes(minutes)} min break.`}
+        {`Earns about ${minutes} chip${minutes === 1 ? '' : 's'} and a ${breakMinutes(minutes)} min break.`}
       </Muted>
       <Button title={`Start ${minutes} min`} onPress={start} disabled={busy} />
       <Button title="Walk out" variant="ghost" small onPress={onWalkOut} />
