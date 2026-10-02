@@ -30,6 +30,8 @@ export type Me = {
     chips: number;
     break_min: number;
   } | null;
+  /** Your crops that are ready to pick, soonest to wither first. */
+  ripe: { bed: number; crop: string; withers_at: string | null }[];
   inventory: Inventory;
   server_now: string;
 };
@@ -70,7 +72,13 @@ export type Plot = {
   crop: string;
   growth_min: number;
   grow_min: number;
+  /** Ready to pick (and not yet withered). */
   ripe: boolean;
+  /** Left too long after ripening: gives nothing, and has to be cleared. */
+  withered: boolean;
+  ripe_at: string | null;
+  /** When a ripe crop withers if it isn't picked (KEEPS_FOR_DAYS after ripening). */
+  withers_at: string | null;
   watered: boolean;
   planted_at: string;
 };
@@ -148,6 +156,8 @@ export const api = {
   water: () => rpc<Garden>('water'),
   waterFriend: (username: string) => rpc<Garden>('water_friend', { p_username: username }),
   harvest: (bed: number) => rpc<Garden>('harvest', { p_bed: bed }),
+  /** Puts a withered crop on the compost, freeing the bed. */
+  clearBed: (bed: number) => rpc<Garden>('clear_bed', { p_bed: bed }),
   eat: (item: string) => rpc<Garden>('eat', { p_item: item }),
   saveSeeds: (item: string) => rpc<Garden>('save_seeds', { p_item: item }),
   smoke: () => rpc<Garden>('smoke'),
@@ -186,5 +196,7 @@ export const MAX_SESSION_MIN = 120;
 export const breakMinutes = (sessionMin: number) => Math.max(1, Math.round(sessionMin / 5));
 /** Mirrors the 4 beds per plot in public.plots. */
 export const BEDS = 4;
+/** Mirrors private.keeps_for: a ripe crop withers this many days after it ripens. */
+export const KEEPS_FOR_DAYS = 2;
 /** Mirrors profiles.desk (0-11): the office has twelve desks. */
 export const DESKS = 12;

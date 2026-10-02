@@ -17,15 +17,16 @@ up and shipping each update is in **[deployment/](deployment/)**, starting with
 - **Payout**: a closer look at your desk, about 1 chip per minute (give or take a
   little luck), and an earned break (1 minute per 5 studied).
 - **Garden**: walk about with a thumbstick (or the arrow keys), chat in speech
-  bubbles, tend your allotment, water friends' plots, smoke, and buy and sell
-  at the market with friends standing next to you.
+  bubbles, tend your allotment (pick ripe crops within 2 days or they wither),
+  water friends' plots, smoke, and buy and sell at the market with friends
+  standing next to you.
 - **Shed**: vehicles, desk things, seeds and cigarettes.
 - **Noticeboard**: friends and invites.
 
 ## One-time Supabase setup
 1. **SQL Editor → New query**: paste and run each file in
    `supabase/migrations/`, in order (`0001_init.sql`, `0002_game.sql`,
-   `0003_community.sql`).
+   `0003_community.sql`, `0004_withering.sql`).
 2. **Authentication → Sign In / Providers**: turn *Allow new users to sign up*
    on and *Confirm email* off. Sign-up is invite-only; the database checks.
 3. **SQL Editor**: `select private.make_invite();` returns an invite code. Open

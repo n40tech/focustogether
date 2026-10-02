@@ -147,6 +147,8 @@ class WebAudioEngine implements AudioEngine {
         return this.pop(t);
       case 'paper':
         return this.paper(t);
+      case 'rustle':
+        return this.rustle(t);
       case 'step':
         return this.step(t, options?.gain ?? 1, options?.pan ?? 0);
       case 'gravel':
@@ -727,6 +729,30 @@ class WebAudioEngine implements AudioEngine {
     this.tone(t, this.n!.sfx, { freq: 520, to: 840, level: 0.09, decay: 0.1 });
   }
 
+  /** Dry stalks pulled up and dropped on the compost: a papery swish, then a soft thump. */
+  private rustle(t: number) {
+    const src = this.source('pink');
+    const env = this.gainNode();
+    src
+      .connect(this.filterNode('bandpass', 2400, 0.6))
+      .connect(this.filterNode('highpass', 900))
+      .connect(env)
+      .connect(this.n!.sfx);
+    env.gain.setValueAtTime(0, t);
+    env.gain.linearRampToValueAtTime(0.16, t + 0.08);
+    env.gain.linearRampToValueAtTime(0.05, t + 0.25);
+    env.gain.linearRampToValueAtTime(0.12, t + 0.32);
+    env.gain.linearRampToValueAtTime(0, t + 0.6);
+    src.start(t, Math.random());
+    src.stop(t + 0.65);
+    this.burst(t + 0.62, this.n!.sfx, {
+      colour: 'brown',
+      type: 'lowpass',
+      freq: 260,
+      level: 0.14,
+      decay: 0.16,
+    });
+  }
   /** A soft footfall on grass: a dull thud and a whisper of blades. */
   private step(t: number, gain: number, pan: number) {
     const sfx = this.n!.sfx;

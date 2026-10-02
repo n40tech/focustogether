@@ -15,3 +15,12 @@ export function formatMinutes(ms: number) {
   const m = mins % 60;
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
+
+/** A rough span of time: "45 minutes", "20 hours", "2 days". */
+export function formatSpan(ms: number) {
+  const mins = Math.max(1, Math.round(ms / 60000));
+  if (mins < 120) return `${mins} minute${mins === 1 ? '' : 's'}`;
+  const hours = Math.round(mins / 60);
+  if (hours < 48) return `${hours} hours`;
+  return `${Math.round(hours / 24)} days`;
+}

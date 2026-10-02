@@ -15,17 +15,33 @@ export const bedOrigin = (x: number, y: number, bed: number) => ({
   y: y + Math.floor(bed / 2) * (BED.h + BED.gap),
 });
 
+/** How a ripe crop is holding up: fresh, going over (its last 12 hours), or withered. */
+export type Look = 'fresh' | 'over' | 'withered';
+
+/** Ripe crops start to go over this long before they wither. */
+const GOING_OVER_MS = 12 * 60 * 60 * 1000;
+
+export function lookOf(plot: Plot, now: number): Look {
+  if (plot.withered) return 'withered';
+  if (plot.ripe && plot.withers_at && Date.parse(plot.withers_at) - now < GOING_OVER_MS)
+    return 'over';
+  return 'fresh';
+}
+
 /** A raised bed seen from above and in front, with whatever grows in it. */
 export function RaisedBed({
   x,
   y,
   plot,
   wet,
+  now,
 }: {
   x: number;
   y: number;
   plot?: Plot;
   wet: boolean;
+  /** Server-corrected time, for crops going over. */
+  now: number;
 }) {
   return (
     <>
@@ -40,11 +56,22 @@ export function RaisedBed({
         r={2}
       />
       <Box x={x} y={y + BED.h - 6} w={BED.w} h={6} c="#85633f" r={2} />
+      {/* A withered bed has dropped a few leaves. */}
+      {plot?.withered &&
+        [
+          [10, 8],
+          [44, 12],
+          [30, 24],
+          [16, 26],
+        ].map(([dx, dy]) => (
+          <Dot key={dx} x={x + dx} y={y + dy} d={5} h={2.5} c="#7a6748" o={0.9} />
+        ))}
       {plot && (
         <Crop
           crop={plot.crop}
           progress={plot.growth_min / plot.grow_min}
-          ripe={plot.ripe}
+          ripe={plot.ripe || plot.withered}
+          look={lookOf(plot, now)}
           x={x + BED.w / 2}
           y={y + 18}
         />
@@ -53,20 +80,37 @@ export function RaisedBed({
   );
 }
 
-const LEAF = '#6f9a5c';
-const LEAF_DARK = '#5b844b';
+/** Leaf and fruit colours as a crop goes over, then withers. */
+const LOOKS: Record<
+  Look,
+  { leaf: string; dark: string; rot: number; droop: number; size: number }
+> = {
+  fresh: { leaf: '#6f9a5c', dark: '#5b844b', rot: 0, droop: 0, size: 1 },
+  over: { leaf: '#8f9b5a', dark: '#7a874b', rot: 0.25, droop: 1.5, size: 0.95 },
+  withered: { leaf: '#8a7650', dark: '#6f5e42', rot: 0.72, droop: 4, size: 0.8 },
+};
+const ROT = '#5a4632';
+
+/** Blends two #rrggbb colours: t = 0 gives a, 1 gives b. */
+function mix(a: string, b: string, t: number) {
+  const ch = (hex: string, i: number) => parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16);
+  const out = [0, 1, 2].map((i) => Math.round(ch(a, i) + (ch(b, i) - ch(a, i)) * t));
+  return `#${out.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+}
 
 /** A crop at its growth stage, centred on (x, y). */
 export function Crop({
   crop,
   progress,
   ripe,
+  look = 'fresh',
   x,
   y,
 }: {
   crop: string;
   progress: number;
   ripe: boolean;
+  look?: Look;
   x: number;
   y: number;
 }) {
@@ -75,7 +119,12 @@ export function Crop({
     [0, 3],
     [12, -3],
   ];
-  const fruit = itemInfo(crop).colour;
+  const L = LOOKS[look];
+  const LEAF = L.leaf;
+  const LEAF_DARK = L.dark;
+  const fruit = mix(itemInfo(crop).colour, ROT, L.rot);
+  const k = L.size;
+  const sag = L.droop;
 
   if (progress <= 0) {
     return (
@@ -90,7 +139,7 @@ export function Crop({
     return (
       <>
         {spots.map(([dx, dy]) => (
-          <Sprout key={dx} x={x + dx} y={y + dy} size={4} />
+          <Sprout key={dx} x={x + dx} y={y + dy} size={4} leaf={LEAF} dark={LEAF_DARK} />
         ))}
       </>
     );
@@ -99,32 +148,47 @@ export function Crop({
     return (
       <>
         {spots.map(([dx, dy]) => (
-          <Sprout key={dx} x={x + dx} y={y + dy} size={7} />
+          <Sprout key={dx} x={x + dx} y={y + dy} size={7} leaf={LEAF} dark={LEAF_DARK} />
         ))}
       </>
     );
   }
 
-  // Mature, then with fruit once ripe.
+  // Mature, then with fruit once ripe; going over, then withered, if it's left.
   switch (crop) {
-    case 'sunflower':
+    case 'sunflower': {
+      // The head nods further over as it goes.
+      const head = { x: x + sag * 1.5, y: y - 26 + sag * 2.5 };
       return (
         <>
-          <Box x={x - 1.5} y={y - 22} w={3} h={24} c={LEAF_DARK} />
-          <Dot x={x - 6} y={y - 6} d={9} h={5} c={LEAF} />
-          <Dot x={x + 6} y={y - 12} d={9} h={5} c={LEAF} />
-          <Dot x={x} y={y - 26} d={ripe ? 20 : 12} c={ripe ? fruit : LEAF} />
-          {ripe && <Dot x={x} y={y - 26} d={8} c="#6b4a2f" />}
+          <Box x={x - 1.5} y={head.y + 4} w={3} h={y + 2 - head.y - 4} c={LEAF_DARK} />
+          <Dot x={x - 6} y={y - 6 + sag} d={9 * k} h={5 * k} c={LEAF} />
+          <Dot x={x + 6} y={y - 12 + sag} d={9 * k} h={5 * k} c={LEAF} />
+          <Dot
+            x={head.x}
+            y={head.y}
+            d={(ripe ? 20 : 12) * k}
+            h={(ripe ? 20 : 12) * k - sag}
+            c={ripe ? fruit : LEAF}
+          />
+          {ripe && <Dot x={head.x} y={head.y} d={8 * k} h={8 * k - sag / 2} c="#6b4a2f" />}
         </>
       );
+    }
     case 'pumpkin':
       return (
         <>
-          <Box x={x - 20} y={y - 1} w={40} h={2.5} c={LEAF_DARK} r={1} />
-          <Dot x={x - 15} y={y - 4} d={11} h={8} c={LEAF} />
-          <Dot x={x + 15} y={y + 1} d={11} h={8} c={LEAF} />
-          <Dot x={x} y={y} d={ripe ? 22 : 10} h={ripe ? 16 : 8} c={ripe ? fruit : '#9fb76a'} />
-          {ripe && <Box x={x - 1} y={y - 11} w={2.5} h={5} c="#6b5a3a" />}
+          <Box x={x - 20} y={y - 1 + sag / 2} w={40} h={2.5} c={LEAF_DARK} r={1} />
+          <Dot x={x - 15} y={y - 4 + sag} d={11 * k} h={8 * k} c={LEAF} />
+          <Dot x={x + 15} y={y + 1 + sag} d={11 * k} h={8 * k} c={LEAF} />
+          <Dot
+            x={x}
+            y={y + sag / 2}
+            d={(ripe ? 22 : 10) * k}
+            h={(ripe ? 16 : 8) * k - sag / 2}
+            c={ripe ? fruit : '#9fb76a'}
+          />
+          {ripe && <Box x={x - 1} y={y - 11 + sag} w={2.5} h={5} c="#6b5a3a" />}
         </>
       );
     case 'carrot':
@@ -132,11 +196,20 @@ export function Crop({
       return (
         <>
           {spots.map(([dx, dy]) => (
-            <Leaves key={dx} x={x + dx} y={y + dy} size={9} feathery={crop === 'carrot'} />
+            <Leaves
+              key={dx}
+              x={x + dx}
+              y={y + dy + sag / 2}
+              size={9 - sag / 2}
+              feathery={crop === 'carrot'}
+              limp={look === 'withered'}
+              leaf={LEAF}
+              dark={LEAF_DARK}
+            />
           ))}
           {ripe &&
             spots.map(([dx, dy]) => (
-              <Dot key={`f${dx}`} x={x + dx} y={y + dy + 4} d={6} h={4} c={fruit} />
+              <Dot key={`f${dx}`} x={x + dx} y={y + dy + 4} d={6 * k} h={4 * k} c={fruit} />
             ))}
         </>
       );
@@ -144,9 +217,9 @@ export function Crop({
       // tomato, strawberry and anything new: a bushy plant with fruit.
       return (
         <>
-          <Dot x={x - 8} y={y} d={16} h={13} c={LEAF} />
-          <Dot x={x + 8} y={y - 2} d={16} h={13} c={LEAF_DARK} />
-          <Dot x={x} y={y - 6} d={14} h={11} c={LEAF} />
+          <Dot x={x - 8} y={y + sag / 2} d={16 * k} h={13 * k - sag} c={LEAF} />
+          <Dot x={x + 8} y={y - 2 + sag / 2} d={16 * k} h={13 * k - sag} c={LEAF_DARK} />
+          <Dot x={x} y={y - 6 + sag} d={14 * k} h={11 * k - sag} c={LEAF} />
           {ripe &&
             [
               [-9, 1],
@@ -157,8 +230,8 @@ export function Crop({
               <Dot
                 key={`${dx}${dy}`}
                 x={x + dx}
-                y={y + dy}
-                d={crop === 'strawberry' ? 4 : 5.5}
+                y={y + dy + sag}
+                d={(crop === 'strawberry' ? 4 : 5.5) * k}
                 c={fruit}
               />
             ))}
@@ -167,11 +240,28 @@ export function Crop({
   }
 }
 
-function Sprout({ x, y, size }: { x: number; y: number; size: number }) {
+function Sprout({
+  x,
+  y,
+  size,
+  leaf,
+  dark,
+  limp = false,
+}: {
+  x: number;
+  y: number;
+  size: number;
+  leaf: string;
+  dark: string;
+  /** Withered: the leaves lie flat. */
+  limp?: boolean;
+}) {
+  const h = size * (limp ? 0.38 : 0.6);
+  const spread = limp ? 0.5 : 0.35;
   return (
     <>
-      <Dot x={x - size * 0.35} y={y} d={size} h={size * 0.6} c={LEAF} />
-      <Dot x={x + size * 0.35} y={y - size * 0.15} d={size} h={size * 0.6} c={LEAF_DARK} />
+      <Dot x={x - size * spread} y={y} d={size} h={h} c={leaf} />
+      <Dot x={x + size * spread} y={y - size * 0.1} d={size} h={h} c={dark} />
     </>
   );
 }
@@ -181,20 +271,34 @@ function Leaves({
   y,
   size,
   feathery,
+  limp = false,
+  leaf,
+  dark,
 }: {
   x: number;
   y: number;
   size: number;
   feathery: boolean;
+  limp?: boolean;
+  leaf: string;
+  dark: string;
 }) {
+  if (feathery && limp)
+    // Withered carrot tops flop over to either side.
+    return (
+      <>
+        <Box x={x - size} y={y - 2} w={size} h={2} c={leaf} r={1} />
+        <Box x={x} y={y - 3} w={size} h={2} c={dark} r={1} />
+      </>
+    );
   return feathery ? (
     <>
       {[-3, 0, 3].map((dx) => (
-        <Box key={dx} x={x + dx - 1} y={y - size} w={2} h={size} c={LEAF} r={1} />
+        <Box key={dx} x={x + dx - 1} y={y - size} w={2} h={size} c={leaf} r={1} />
       ))}
     </>
   ) : (
-    <Sprout x={x} y={y - 2} size={size} />
+    <Sprout x={x} y={y - 2} size={size} leaf={leaf} dark={dark} limp={limp} />
   );
 }
 
@@ -204,18 +308,27 @@ export function AllotmentPlot({
   y,
   plots,
   wet,
+  now,
 }: {
   x: number;
   y: number;
   plots: Plot[];
   wet: boolean;
+  now: number;
 }) {
   return (
     <>
       {[0, 1, 2, 3].map((bed) => {
         const o = bedOrigin(x, y, bed);
         return (
-          <RaisedBed key={bed} x={o.x} y={o.y} plot={plots.find((p) => p.bed === bed)} wet={wet} />
+          <RaisedBed
+            key={bed}
+            x={o.x}
+            y={o.y}
+            plot={plots.find((p) => p.bed === bed)}
+            wet={wet}
+            now={now}
+          />
         );
       })}
     </>

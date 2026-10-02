@@ -8,6 +8,7 @@ import { playSound, useAmbience } from '@/audio/sound';
 import { Button } from '@/components/Button';
 import { Body, Muted, Panel, SceneHeader } from '@/components/Chrome';
 import { Countdown } from '@/components/Countdown';
+import { RipeNote } from '@/components/RipeNote';
 import { api } from '@/lib/api';
 import { cancelSessionEnd } from '@/lib/notifications';
 import { palette } from '@/lib/theme';
@@ -153,6 +154,7 @@ export default function Payout() {
       <Panel>
         <Earned earned={earned} minutes={session.duration_min} />
         {me.break_ends_at && <BreakEarned minutes={session.break_min} until={me.break_ends_at} />}
+        <RipeNote ripe={me.ripe} style={styles.centerText} />
         <Button title="Take a break" onPress={() => go('/garden')} />
         <View style={styles.row}>
           <Button

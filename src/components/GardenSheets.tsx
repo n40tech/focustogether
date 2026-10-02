@@ -6,7 +6,7 @@ import { useTone } from '@/art/Scene';
 import type { Sfx } from '@/audio/sound';
 import { Button } from '@/components/Button';
 import { Body, Muted, Sheet } from '@/components/Chrome';
-import { api, type Garden, type Plot, type Trade } from '@/lib/api';
+import { api, KEEPS_FOR_DAYS, type Garden, type Plot, type Trade } from '@/lib/api';
 import { countOf, ITEMS, itemInfo } from '@/lib/catalog';
 import { font } from '@/lib/theme';
 import { formatMinutes } from '@/lib/time';
@@ -202,6 +202,7 @@ export function BedSheet({ plot, onClose }: { plot: Plot; onClose: () => void })
           ? 'Watered: it grows while you study.'
           : "It's dry, so it's paused. Water it before your next session."}
       </Muted>
+      <Muted>{`Once it's ripe, pick it within ${KEEPS_FOR_DAYS} days, or it withers.`}</Muted>
     </Sheet>
   );
 }

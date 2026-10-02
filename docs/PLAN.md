@@ -158,7 +158,12 @@ touching code.
 - Plant a seed in an empty bed. **Crops grow by the minutes you study**, but
   only in beds watered within the last 24 hours. When it's raining and you're in
   the garden, the rain waters them for you.
-- Nothing dies; an unwatered bed just pauses.
+- An unwatered bed just pauses; nothing dies of thirst.
+- **A ripe crop keeps for 2 days** after it ripens (as the session that ripened
+  it ends). In its last 12 hours it starts to go over (yellowing leaves, dull
+  fruit), then it **withers**: it gives nothing, and stays in its bed until
+  you clear it onto the compost. The payout and the car park mention what's
+  ripe and how long it keeps, and friends can see a withered plot.
 - A ripe crop is harvested into your basket as produce. **Produce is never
   exchanged for chips by the game.** You can:
   - **eat** it (a munching sound, nothing more),
@@ -310,7 +315,7 @@ src/
                           vehicles, desks, people, beds
   components/             UI pieces: buttons, header, toast, timer, thumbstick, sheets
   lib/                    Supabase client, typed RPC wrappers, catalogue art, time
-supabase/migrations/      0001 init (MVP), 0002 game, 0003 community
+supabase/migrations/      0001 init (MVP), 0002 game, 0003 community, 0004 withering
 supabase/tests/           scenario tests for the game rules (plain Postgres + stubs)
 deployment/               numbered runbooks for setting up and shipping each update
 ```
@@ -350,7 +355,7 @@ deployment/               numbered runbooks for setting up and shipping each upd
 | `items` | catalogue: slug, kind, name, price, pack size |
 | `crops` | per crop: its seed, study minutes to ripen, harvest size, seeds saved |
 | `inventory` | (player, item) → quantity |
-| `plots` | (player, bed 0–3) → crop, planted at, growth, last watered |
+| `plots` | (player, bed 0–3) → crop, planted at, growth, last watered, when it ripened (0004) |
 | `trades` | offers in escrow: what's given, what's wanted, status |
 | `listings` | market stalls: seller, item, quantity, price per item (0003) |
 | `invites` | code, who made it, expiry, who used it (0003) |
@@ -364,7 +369,7 @@ deployment/               numbered runbooks for setting up and shipping each upd
 | `go_home()` | on a break or idle | me |
 | `get_shop()`, `buy(item)` | not studying | shop |
 | `get_garden()` | signed in | garden |
-| `plant(bed, seed)`, `water()`, `harvest(bed)` | on a break | garden |
+| `plant(bed, seed)`, `water()`, `harvest(bed)`, `clear_bed(bed)` | on a break | garden |
 | `eat(item)`, `save_seeds(item)`, `smoke()` | on a break | garden |
 | `water_friend(username)` | on a break | garden |
 | `offer_trade(...)`, `respond_trade(id, accept)` | on a break | garden |
@@ -423,8 +428,11 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
       plot grid, live positions, footsteps, actions by where you stand
 - [x] Market stalls and buying face to face
 - [x] Invite links and the Join form
-- [ ] Run `0003_community.sql`, switch sign-ups on, make the first invites,
-      and do the first deploy: `deployment/0001-setup-and-launch.md`
+- [x] Migration `0004_withering.sql`: ripe crops keep for 2 days, then wither
+      and have to be cleared (40 scenario tests in all)
+- [ ] Run `0003_community.sql` and `0004_withering.sql`, switch sign-ups on,
+      make the first invites, and do the first deploy:
+      `deployment/0001-setup-and-launch.md`
 - [ ] Try it with friends, then tune prices, break length and the mix
 
 **M2: feel**
@@ -461,6 +469,7 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 | Car park | No kiosk; three even rows of bays that follow the desks. |
 | The garden | Walkable with a thumbstick, three phones wide and one tall, with every allotment on one grid in a fixed place. |
 | Trading | A market: stalls with prices, bought from face to face in the garden. Swaps and gifts by offer stay too. |
+| Unpicked crops | Wither 2 days after ripening (going over for the last 12 hours), give nothing, and must be cleared before replanting. |
 | Payout | A closer look at your own office desk, at the same proportions. |
 
 ## 13. Open questions

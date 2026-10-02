@@ -8,8 +8,9 @@ invite-only sign-up. It takes about 20 minutes.
 even rows in the car park (no kiosk), a closer look at your own desk at payout,
 a walkable garden three phones wide with everyone's allotment on one grid, a
 market for buying and selling between friends standing next to each other,
-watering friends' plots, payouts of about 1 chip a minute with a little luck,
-and invite-only sign-up.
+watering friends' plots, crops that wither if they're left unpicked for two
+days, payouts of about 1 chip a minute with a little luck, and invite-only
+sign-up.
 
 ---
 
@@ -22,14 +23,16 @@ git pull
 npm install
 ```
 
-## 2. Run migration 0003
+## 2. Run migrations 0003 and 0004
 
 1. Supabase dashboard → **SQL Editor** → **New query**.
 2. Paste the whole of `supabase/migrations/0003_community.sql` and press **Run**.
+3. Do the same with `supabase/migrations/0004_withering.sql`.
 
-It runs as a single transaction: if anything fails, nothing is changed, so you
-can fix the problem and run it again. Once it has succeeded, don't run it a
-second time. It would fail on its first line, and nothing would change.
+Each one runs as a single transaction: if anything fails, nothing is changed,
+so you can fix the problem and run it again. Once one has succeeded, don't run
+it a second time. It would fail on its first line, and nothing would change.
+(If you already ran 0003, just run 0004.)
 
 What it does to your existing data:
 
@@ -39,6 +42,8 @@ What it does to your existing data:
 - Desks are handed out from now on, the next time each player walks into the
   office.
 - A trigger on `auth.users` makes sign-up invite-only (step 3).
+- From 0004: crops that are already ripe get two days from now before they
+  wither.
 
 To check it worked, run this in the SQL Editor. Every player should have a
 `plot_slot`:
@@ -155,6 +160,10 @@ With two players (A and B) who are friends:
       it from **A's stall**.
 - [ ] B waters A's beds by standing next to A's plot, but can't harvest them.
 - [ ] Eating a crop (**Basket → Eat**) just makes a munching sound.
+- [ ] A crop left ripe for two days withers. Walking up to it offers **Clear
+      the withered ...**, and the bed is free again afterwards. (To try it
+      without waiting, age a ripe crop in the SQL Editor:
+      `update public.plots set ripe_at = now() - interval '2 days' where ripe_at is not null;`)
 
 ## Troubleshooting
 

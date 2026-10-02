@@ -82,7 +82,10 @@ async function travel(minutes) {
     `update public.profiles set went_home_at = went_home_at - ${m}, activity_until = activity_until - ${m},
        arrived_at = arrived_at - ${m}`
   );
-  await q(`update public.plots set planted_at = planted_at - ${m}, watered_at = watered_at - ${m}`);
+  await q(
+    `update public.plots set planted_at = planted_at - ${m}, watered_at = watered_at - ${m},
+       ripe_at = ripe_at - ${m}`
+  );
   await q(`update public.trades set created_at = created_at - ${m}, closed_at = closed_at - ${m}`);
   await q(`update public.invites set expires_at = expires_at - ${m}`);
 }
@@ -394,6 +397,55 @@ describe('the allotment', () => {
     garden = await call('alice', 'harvest', 0);
     assert.deepEqual(garden.me.plots, []);
     assert.equal(garden.me.inventory.tomato, 4);
+  });
+
+  test('a ripe crop keeps for 2 days, then withers to nothing until the bed is cleared', async () => {
+    await give('alice', 'radish_seeds', 2);
+    await study('alice', 25);
+    await call('alice', 'plant', 0, 'radish_seeds');
+    await travel(1);
+    let me = await study('alice', 25); // the radishes ripen as this session ends
+    assert.deepEqual(
+      me.ripe.map((r) => [r.bed, r.crop]),
+      [[0, 'radish']]
+    );
+    let [plot] = (await call('alice', 'get_garden')).me.plots;
+    assert.deepEqual([plot.ripe, plot.withered], [true, false]);
+    assert.equal(Date.parse(plot.withers_at) - Date.parse(plot.ripe_at), 2 * 24 * 60 * 60 * 1000);
+    assert.equal(me.ripe[0].withers_at, plot.withers_at);
+    await rejects(call('alice', 'clear_bed', 0), /nothing withered/);
+
+    // A day and 23 hours on (and another short session), they're still good...
+    await travel(47 * 60);
+    await study('alice', 5);
+    [plot] = (await call('alice', 'get_garden')).me.plots;
+    assert.deepEqual([plot.ripe, plot.withered], [true, false]);
+
+    // ...but an hour later they've withered: nothing to pick, and not "ripe" any more.
+    await travel(60);
+    [plot] = (await call('alice', 'get_garden')).me.plots;
+    assert.deepEqual([plot.ripe, plot.withered], [false, true]);
+    assert.deepEqual((await call('alice', 'get_me')).ripe, []);
+    await study('alice', 5);
+    await rejects(call('alice', 'harvest', 0), /withered/);
+    await rejects(call('alice', 'plant', 0, 'radish_seeds'), /already growing/);
+
+    const garden = await call('alice', 'clear_bed', 0);
+    assert.deepEqual(garden.me.plots, []);
+    assert.equal(garden.me.inventory.radish, undefined, 'a withered crop gives nothing');
+    await call('alice', 'plant', 0, 'radish_seeds');
+  });
+
+  test('a crop ripens when its session ends, even if nobody looks until later', async () => {
+    await give('alice', 'radish_seeds', 1);
+    await study('alice', 25);
+    await call('alice', 'plant', 0, 'radish_seeds');
+    await travel(1);
+    await call('alice', 'start_session', 25);
+    // The session ended three days ago, and this is the first anyone has asked.
+    await travel(25 + 3 * 24 * 60);
+    const [plot] = (await call('alice', 'get_garden')).me.plots;
+    assert.deepEqual([plot.growth_min, plot.withered], [25, true]);
   });
 
   test('unwatered beds pause, and planting during a break only counts from the next session', async () => {

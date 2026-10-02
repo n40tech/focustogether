@@ -14,6 +14,7 @@ export type Sfx =
   | 'munch' // eating
   | 'pop' // a chat bubble
   | 'paper' // a trade offer
+  | 'rustle' // clearing a withered crop
   | 'step' // a footstep on grass
   | 'gravel'; // a footstep on the gravel path
 

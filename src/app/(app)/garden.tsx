@@ -30,6 +30,7 @@ import {
   type Act,
 } from '@/components/GardenSheets';
 import { Joystick } from '@/components/Joystick';
+import { useNow } from '@/hooks/useNow';
 import { usePolled } from '@/hooks/usePolled';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { api, BEDS, type Garden, type Gardener, type Plot } from '@/lib/api';
@@ -103,6 +104,8 @@ export default function GardenScene() {
   const conditions = useConditions();
   const go = useGo();
   const reduceMotion = useReducedMotion();
+  // For ripe crops going over (once a minute is plenty).
+  const now = useNow(60_000);
   const polled = usePolled(api.getGarden, 5000);
   const setGarden = polled.setData;
   const garden = polled.data;
@@ -293,7 +296,14 @@ export default function GardenScene() {
       <Box x={PATH.x} y={PATH.y} w={PATH.w} h={PATH.h} c={G.path} />
       <Box x={MARKET.x} y={MARKET.y} w={MARKET.w} h={MARKET.h} c={G.path} o={0.75} r={8} />
       {[...spots.entries()].map(([username, at]) => (
-        <AllotmentPlot key={username} x={at.x} y={at.y} plots={plotsOf(username)} wet={wet} />
+        <AllotmentPlot
+          key={username}
+          x={at.x}
+          y={at.y}
+          plots={plotsOf(username)}
+          wet={wet}
+          now={now}
+        />
       ))}
       {myPlot && incoming.length > 0 && <Parcel x={myPlot.x + PLOT.w + 8} y={myPlot.y + 62} />}
       <Shed x={SHED.x} y={SHED.y} />
@@ -411,6 +421,11 @@ export default function GardenScene() {
             title: 'Plant something',
             onPress: () => setSheet({ kind: 'seed', bed: near.bed }),
           });
+        } else if (plot.withered) {
+          actions.push({
+            title: `Clear the withered ${(info.plural ?? info.name).toLowerCase()}`,
+            onPress: () => void act(() => api.clearBed(near.bed), 'rustle'),
+          });
         } else if (plot.ripe) {
           actions.push({
             title: `Harvest the ${(info.plural ?? info.name).toLowerCase()}`,
@@ -424,7 +439,9 @@ export default function GardenScene() {
             onPress: () => setSheet({ kind: 'bed', plot }),
           });
         }
-        if (myPlots.some((p) => !p.watered))
+        // Watering (all your beds) goes alongside planting or looking at a
+        // bed; picking and clearing need the room for their labels.
+        if ((!plot || (!plot.ripe && !plot.withered)) && myPlots.some((p) => !p.watered))
           actions.push({
             title: 'Water',
             quiet: true,

@@ -8,6 +8,7 @@ import { useAmbience } from '@/audio/sound';
 import { Button } from '@/components/Button';
 import { Body, HeaderDetail, Muted, Panel, SceneHeader } from '@/components/Chrome';
 import { Countdown } from '@/components/Countdown';
+import { RipeNote } from '@/components/RipeNote';
 import { api, DESKS, type Me } from '@/lib/api';
 import { itemInfo } from '@/lib/catalog';
 import { cancelSessionEnd } from '@/lib/notifications';
@@ -272,15 +273,18 @@ function Greeting({ me, inCount }: { me: Me; inCount: number }) {
   const tone = useTone();
   if (me.status === 'on_break' && me.break_ends_at) {
     return (
-      <Body>
-        {"You're on a break: "}
-        <Countdown
-          until={me.break_ends_at}
-          minutes
-          style={{ color: tone.text, fontWeight: '600' }}
-        />
-        {" left. The garden's through the gate."}
-      </Body>
+      <View style={{ gap: 2 }}>
+        <Body>
+          {"You're on a break: "}
+          <Countdown
+            until={me.break_ends_at}
+            minutes
+            style={{ color: tone.text, fontWeight: '600' }}
+          />
+          {" left. The garden's through the gate."}
+        </Body>
+        <RipeNote ripe={me.ripe} />
+      </View>
     );
   }
   const who =
@@ -297,6 +301,7 @@ function Greeting({ me, inCount }: { me: Me; inCount: number }) {
           ? `You came by ${itemInfo(me.vehicle).name.toLowerCase()}.`
           : 'You came on foot. The garden shed sells bikes.'}
       </Muted>
+      <RipeNote ripe={me.ripe} />
     </View>
   );
 }
