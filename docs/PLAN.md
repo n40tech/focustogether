@@ -315,7 +315,8 @@ src/
                           vehicles, desks, people, beds
   components/             UI pieces: buttons, header, toast, timer, thumbstick, sheets
   lib/                    Supabase client, typed RPC wrappers, catalogue art, time
-supabase/migrations/      0001 init (MVP), 0002 game, 0003 community, 0004 withering
+supabase/migrations/      0001 init (MVP), 0002 game, 0003 community, 0004 withering,
+                          0005 testing tools
 supabase/tests/           scenario tests for the game rules (plain Postgres + stubs)
 deployment/               numbered runbooks for setting up and shipping each update
 ```
@@ -430,6 +431,8 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 - [x] Invite links and the Join form
 - [x] Migration `0004_withering.sql`: ripe crops keep for 2 days, then wither
       and have to be cleared (40 scenario tests in all)
+- [x] Migration `0005_testing.sql`: testing tools for accounts flagged as
+      testers (chips, skipping ahead, items, ripe crops), and a Test button
 - [ ] Run `0003_community.sql` and `0004_withering.sql`, switch sign-ups on,
       make the first invites, and do the first deploy:
       `deployment/0001-setup-and-launch.md`

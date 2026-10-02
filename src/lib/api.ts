@@ -33,6 +33,8 @@ export type Me = {
   /** Your crops that are ready to pick, soonest to wither first. */
   ripe: { bed: number; crop: string; withers_at: string | null }[];
   inventory: Inventory;
+  /** Testing tools on (profiles.tester, set in the SQL editor). */
+  tester: boolean;
   server_now: string;
 };
 
@@ -186,6 +188,15 @@ export const api = {
 
   createInvite: () => rpc<{ code: string; expires_at: string }>('create_invite'),
   getInvites: () => rpc<Invite[]>('get_invites'),
+  /** Testing tools (testers only, see 0005_testing.sql). */
+  dev: {
+    chips: (amount: number) => rpc<Me>('dev_chips', { p_amount: amount }),
+    /** Moves your own timestamps back, which is the same as time passing for you. */
+    skip: (minutes: number) => rpc<Me>('dev_skip', { p_minutes: minutes }),
+    item: (item: string, qty: number) => rpc<Me>('dev_item', { p_item: item, p_qty: qty }),
+    ripen: () => rpc<Me>('dev_ripen'),
+  },
+
   /** Works signed out: checks an invite code and a username before sign-up. */
   checkSignup: (code: string, username: string) =>
     rpc<SignupCheck>('check_signup', { p_code: code, p_username: username }),

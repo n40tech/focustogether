@@ -27,12 +27,16 @@ up and shipping each update is in **[deployment/](deployment/)**, starting with
 1. **SQL Editor → New query**: paste and run each file in
    `supabase/migrations/` that your database hasn't had yet, in order
    (`0001_init.sql`, `0002_game.sql`, `0003_community.sql`,
-   `0004_withering.sql`). Each file runs once, ever: re-running one fails with
+   `0004_withering.sql`, `0005_testing.sql`). Each file runs once, ever: re-running one fails with
    "already exists" and changes nothing.
 2. **Authentication → Sign In / Providers**: turn *Allow new users to sign up*
    on and *Confirm email* off. Sign-up is invite-only; the database checks.
 3. **SQL Editor**: `select private.make_invite();` returns an invite code. Open
    the app, tap *Got an invite? Join*, and use it.
+
+For testing, `0005_testing.sql` adds a **Test** button (chips, skipping ahead,
+items, ripe crops) for accounts you mark as testers: see
+[deployment/0002-testing-tools.md](deployment/0002-testing-tools.md).
 
 The full walkthrough, with checks and troubleshooting, is
 [deployment/0001-setup-and-launch.md](deployment/0001-setup-and-launch.md).

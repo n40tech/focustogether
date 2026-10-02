@@ -1,13 +1,23 @@
 import { Stack, usePathname, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 
+import { TestPanel } from '@/components/TestPanel';
 import { isPayoutSeen, loadSeenPayout, useWorld, WorldProvider } from '@/world/World';
 
 export default function AppLayout() {
   return (
     <WorldProvider>
-      <Places />
+      <World />
     </WorldProvider>
+  );
+}
+
+function World() {
+  return (
+    <>
+      <Places />
+      <TestPanel />
+    </>
   );
 }
 

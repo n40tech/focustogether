@@ -159,7 +159,7 @@ beforeEach(async () => {
   );
   await q(
     `update public.profiles set chips = 0, vehicle = null, went_home_at = null, activity = null,
-       activity_until = null, arrived_at = null, desk = null`
+       activity_until = null, arrived_at = null, desk = null, tester = false`
   );
 });
 
@@ -818,6 +818,68 @@ describe('invites', () => {
     await q(`delete from public.invites where created_by = $1 and used_by is null`, [ids.bob]);
     for (let i = 0; i < 5; i++) await call('bob', 'create_invite');
     await rejects(call('bob', 'create_invite'), /5 unused invites/);
+  });
+});
+
+describe('testing tools', () => {
+  test('are off unless the account is marked as a tester in the SQL editor', async () => {
+    assert.equal((await call('alice', 'get_me')).tester, false);
+    await rejects(call('alice', 'dev_chips', 500), /testing tools are off/);
+    await rejects(call('alice', 'dev_skip', 30), /testing tools are off/);
+    await rejects(call('alice', 'dev_item', 'tomato_seeds', 3), /testing tools are off/);
+    await rejects(call('alice', 'dev_ripen'), /testing tools are off/);
+  });
+
+  test('give chips and items, and ripen crops', async () => {
+    await q(`update public.profiles set tester = true where id = $1`, [ids.alice]);
+    let me = await call('alice', 'dev_chips', 500);
+    assert.equal(me.tester, true);
+    assert.equal(me.chips, 500);
+    me = await call('alice', 'dev_chips', -800);
+    assert.equal(me.chips, 0, 'never below 0');
+
+    me = await call('alice', 'dev_item', 'tomato_seeds', 3);
+    assert.equal(me.inventory.tomato_seeds, 3);
+    me = await call('alice', 'dev_item', 'hatchback', 5);
+    assert.equal(me.inventory.hatchback, 1, 'vehicles are one-offs');
+    assert.equal(me.vehicle, 'hatchback');
+    await rejects(call('alice', 'dev_item', 'unicorn', 1), /no item called unicorn/);
+
+    await study('alice', 5);
+    await call('alice', 'plant', 0, 'tomato_seeds');
+    me = await call('alice', 'dev_ripen');
+    assert.deepEqual(
+      me.ripe.map((r) => [r.bed, r.crop]),
+      [[0, 'tomato']]
+    );
+    const garden = await call('alice', 'harvest', 0);
+    assert.equal(garden.me.inventory.tomato, 4);
+  });
+
+  test('skipping ahead finishes a session, runs down the break, and ages crops', async () => {
+    await q(`update public.profiles set tester = true where id = $1`, [ids.alice]);
+    await call('alice', 'start_session', 50);
+    let me = await call('alice', 'dev_skip', 49);
+    assert.equal(me.status, 'focused');
+    me = await call('alice', 'dev_skip', 2);
+    assert.equal(me.status, 'on_break');
+    assertPayout(me.chips, 50);
+    assert.ok(Date.parse(me.break_ends_at) - Date.now() < 9 * 60_000, 'a minute of break gone');
+
+    me = await call('alice', 'dev_skip', 10);
+    assert.equal(me.status, 'idle');
+    me = await call('alice', 'dev_skip', 60);
+    assert.equal(me.status, 'absent');
+
+    // A ripe crop skipped past its two days withers.
+    await study('alice', 5);
+    await call('alice', 'dev_item', 'radish_seeds', 1);
+    await call('alice', 'plant', 0, 'radish_seeds');
+    await call('alice', 'dev_ripen');
+    await call('alice', 'dev_skip', 2 * 24 * 60);
+    const [plot] = (await call('alice', 'get_garden')).me.plots;
+    assert.equal(plot.withered, true);
+    await rejects(call('alice', 'dev_skip', 0), /1 minute to 2 weeks/);
   });
 });
 
