@@ -43,8 +43,6 @@ export const palette = {
     lit: '#f2d8a2',
     hedge: '#5d7a5a',
     tree: '#6b8a62',
-    kiosk: '#b5866a',
-    awning: '#d9c9b0',
   },
   office: {
     ground: '#c9b9a2',

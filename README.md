@@ -4,27 +4,37 @@ A calm, sound-first study game for friends. Park up, study at your desk in a
 shared office, earn poker chips for every minute, and spend your earned breaks
 in the allotment garden. Expo (web now; iOS / Android later) + Supabase.
 
-The design, rules and roadmap are in **[docs/PLAN.md](docs/PLAN.md)**.
+The design, rules and roadmap are in **[docs/PLAN.md](docs/PLAN.md)**. Setting
+up and shipping each update is in **[deployment/](deployment/)**, starting with
+**[0001: set up and launch](deployment/0001-setup-and-launch.md)**.
 
 ## The places
-- **Car park**: where the app opens. Friends who are in show as their car or bike.
-- **Office**: set a timer and study. Friends sit at their desks while they study.
-  While a session runs, nothing else is reachable.
-- **Payout**: chips (1 per minute) and an earned break (1 minute per 5 studied).
-- **Garden**: chat in speech bubbles, tend your allotment, eat, trade, smoke.
-- **Kiosk**: vehicles, desk things, seeds and cigarettes.
-- **Noticeboard**: add friends.
+- **Car park**: where the app opens. Friends who are in show as their car or bike,
+  in the bay that goes with their desk.
+- **Office**: twelve identical desks. You get a random one when you walk in and
+  keep it until you go home. Set a timer and study; while a session runs,
+  nothing else is reachable.
+- **Payout**: a closer look at your desk, about 1 chip per minute (give or take a
+  little luck), and an earned break (1 minute per 5 studied).
+- **Garden**: walk about with a thumbstick (or the arrow keys), chat in speech
+  bubbles, tend your allotment, water friends' plots, smoke, and buy and sell
+  at the market with friends standing next to you.
+- **Shed**: vehicles, desk things, seeds and cigarettes.
+- **Noticeboard**: friends and invites.
 
 ## One-time Supabase setup
-1. **SQL Editor → New query**: paste and run `supabase/migrations/0001_init.sql`,
-   then `supabase/migrations/0002_game.sql`. (Already ran 0001? Just run 0002:
-   it migrates in place, and points become chips.)
-2. **Authentication → Users → Add user → Create new user** (tick *Auto Confirm User*):
-   `alice@focus.test` and `bob@focus.test`.
-3. **SQL Editor**: run `supabase/seed.sql`. It creates their profiles, makes them
-   friends, and lists `alice` and `bob`.
+1. **SQL Editor → New query**: paste and run each file in
+   `supabase/migrations/`, in order (`0001_init.sql`, `0002_game.sql`,
+   `0003_community.sql`).
+2. **Authentication → Sign In / Providers**: turn *Allow new users to sign up*
+   on and *Confirm email* off. Sign-up is invite-only; the database checks.
+3. **SQL Editor**: `select private.make_invite();` returns an invite code. Open
+   the app, tap *Got an invite? Join*, and use it.
 
-Sign in with the username (`alice` / `bob`) and the password you set.
+The full walkthrough, with checks and troubleshooting, is
+[deployment/0001-setup-and-launch.md](deployment/0001-setup-and-launch.md).
+(`supabase/seed.sql` was for the MVP's hand-made accounts; with 0003 those are
+refused, and invites replace it.)
 
 ## Run locally
 ```bash
@@ -37,7 +47,8 @@ npx expo start --web    # or `npx expo start` and scan the QR code with Expo Go
 Sound starts after your first tap or click; browsers don't allow it sooner.
 To preview other weather or another time of day, add
 `?weather=clear|cloudy|windy|rain|storm|mist` and/or `?hour=0-23` to the URL. This
-only changes what you see and hear.
+only changes what you see and hear. To try two players at once, use a normal and
+a private window.
 
 ## Deploy the web app
 The web build is a static export (`web.output: "static"`), hosted on
@@ -77,7 +88,8 @@ CI (`.github/workflows/ci.yml`) runs all three on every push and pull request.
 ## How it fits together
 - All game rules live in Postgres functions (`supabase/migrations`). The app only
   calls `supabase.rpc(...)`, and RLS allows reads only.
-- Garden chat uses Supabase Realtime Broadcast on private channels; nothing is stored.
+- Garden chat and positions use Supabase Realtime Broadcast on private channels;
+  nothing is stored.
 - The weather is a deterministic function of the clock (`src/weather`), so every
   player sees and hears the same sky with no server involved.
 - Sound is synthesised live with the Web Audio API (`src/audio`); there are no

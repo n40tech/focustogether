@@ -158,7 +158,7 @@ export function Tag({ x, y, text, dim }: { x: number; y: number; text: string; d
   );
 }
 
-/** A tappable region of the scene (a door, the kiosk, a bed). */
+/** A tappable region of the scene (a door, the noticeboard). */
 export function Hotspot({
   x,
   y,

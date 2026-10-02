@@ -1,4 +1,7 @@
--- Dummy accounts for the MVP.
+-- Dummy accounts for the MVP. NOT NEEDED since 0003_community.sql: sign-up is
+-- invite-only, and accounts made in the dashboard are refused. Make an invite
+-- instead (select private.make_invite();) and join through the app; see
+-- deployment/0001-setup-and-launch.md. Kept for databases without 0003.
 --
 -- 1. Supabase dashboard -> Authentication -> Users -> "Add user" -> "Create new user":
 --      alice@focus.test   (tick "Auto Confirm User")

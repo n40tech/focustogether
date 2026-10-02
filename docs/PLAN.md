@@ -24,6 +24,9 @@ agreed; **Open questions** lists what hasn't.
    the office window, wind through the allotments, birds when it clears.
 5. **Presence, not pressure.** You see friends' cars, desks and avatars. There
    are no leaderboards and nobody else's chip count.
+6. **Community first, you second.** You're never centre stage: your desk is one
+   of twelve identical desks, your car takes a bay like anyone else's, and your
+   allotment is one plot in a shared grid.
 
 ## 2. The loop
 
@@ -33,39 +36,44 @@ agreed; **Open questions** lists what hasn't.
                    ▼
    ┌───────────────────────────┐   walk in    ┌──────────────────────┐
    │         CAR PARK          │ ───────────▶ │        OFFICE        │
-   │ friends' cars & bikes     │              │ set a timer, study   │
-   │ (if they're at work)      │ ◀─────────── │ friends at desks     │
+   │ friends' cars & bikes     │              │ get a desk, set a    │
+   │ (if they're at work)      │ ◀─────────── │ timer, study         │
    └───────────────────────────┘   walk out   └──────────┬───────────┘
           ▲            ▲                                 │ timer ends
           │            │ go home              ┌──────────▼───────────┐
-          │            └───────────────────── │        PAYOUT        │──▶ SHOP
+          │            └───────────────────── │        PAYOUT        │──▶ SHED (shop)
           │                                   │ chips + earned break │
           │ go home                           └──────────┬───────────┘
           │                                              │ take a break
           │                                   ┌──────────▼───────────┐
-          └────────────────────────────────── │        GARDEN        │
-                                              │ chat, smoke, allot-  │
-                         back to work ◀────── │ ment; bell when the  │
-                         (office)             │ break is over        │
+          └────────────────────────────────── │        GARDEN        │──▶ SHED (shop)
+                                              │ walk about, chat,    │
+                         back to work ◀────── │ allotment, market;   │
+                         (office)             │ bell when it's over  │
                                               └──────────────────────┘
 ```
 
 ## 3. Places
 
 ### Car park (where the app opens)
-- **See:** the office building and its door, a parking bay per friend and a bike
-  rack. Friends who are *at work* (studying, on a break, or just between the
-  two) appear as their **car** in a bay or their **bike** in the rack. Friends
-  with neither aren't shown. Your own bay stays empty until you buy a vehicle.
-- **Do:** walk in (office) · the kiosk (shop) · the noticeboard (friends) · the
-  garden gate (only while you're on a break) · log out.
+- **See:** the office building and its door, three even rows of four bays and
+  a bike rack. Bays and rack slots follow desks: whoever has desk 5 parks in
+  bay 5 (or rack slot 5). Friends who are *at work* (arrived, studying, on a
+  break, or between the two) appear as their **car** or **bike**; friends with
+  neither aren't shown. Nobody's bay is reserved, yours included.
+- **Do:** walk in (office) · the noticeboard (friends and invites) · the garden
+  gate (only while you're on a break) · go home (while you're at work) · log out.
 - **Hear:** open-air weather, distant traffic.
 
 ### Office
-- **See:** your desk at the front with everything you've bought for it, and a
-  desk per friend: someone sitting at it (back to you, monitor glowing) if
-  they're studying, an empty chair if not. Frosted windows with blinds let the
-  light in, and rain runs down the glass, but they show no sky.
+- **See:** twelve identical desks in four rows of three. When you walk in you
+  get a random desk that none of your friends at work is using, and it stays
+  yours (across breaks) until you go home. Friends appear at their desks as
+  they arrive: sitting with their back to you and their monitor glowing while
+  they study, an empty chair otherwise. You sit at yours while you're in the
+  office, among them rather than in front. Everyone's desk shows what they've
+  bought for it. Frosted windows with blinds let the light in, and rain runs
+  down the glass, but they show no sky.
 - **Do, before a session:** choose a length (1–120 min) and start, or walk out.
 - **Do, during a session:** nothing else. There's the countdown and a small
   *give up* link, which forfeits the session. The chip balance, shop and all
@@ -74,27 +82,38 @@ agreed; **Open questions** lists what hasn't.
   tapping on the glass.
 
 ### Payout (end of a session)
-- **See:** chips counted out (1 per minute) and the break you've earned.
-- **Do:** *Take a break* (garden) · *Go home* (car park) · *Spend chips* (shop).
+- **See:** a closer look at your own desk (the same desk as in the office, monitor
+  and all, at the same proportions), with chips counted out onto it, and the
+  break you've earned. Neighbouring desks show at the edges on wide screens.
+- **Do:** *Take a break* (garden) · *Go home* (car park) · *Spend chips* (shed).
 - **Hear:** a soft chime, then chips clinking.
 
 ### Garden (on a break)
-- **See:** an allotment plot for you and one for each friend, with crops at
-  their growth stage. Friends on a break stand at their plots, with Club
-  Penguin-style chat bubbles over their heads and smoke if they're having a
-  cigarette. A quiet break timer.
-- **Do:** say something · water your beds · plant · harvest · eat a crop or save
-  its seeds · offer a trade · smoke · *Back to work* (office) · *Go home*.
+- **See:** a garden three phones wide. Everyone's allotment sits on one 7 × 3
+  grid by a slot handed out when they joined, so a plot is always in the same
+  place for everyone who can see it; friends' plots appear as you add them.
+  Along the front: a gravel path, the shed, a little market square with trestle
+  tables, benches and the gate. Friends in the garden walk about too, with
+  Club Penguin-style chat bubbles over their heads, smoke if they're having a
+  cigarette and a basket if they've something on their stall. A quiet break
+  timer.
+- **Do:** walk with the thumbstick (or the arrow keys / WASD) · say something.
+  What else you can do depends on where you're standing: plant, look at or
+  harvest your beds and water them; water a friend's beds; go into the shed;
+  buy from a friend's stall, or offer them a swap, when you're next to them.
+  From anywhere: smoke · your basket (eat, save seeds, sell, offer, and
+  answer offers) · your stall · *Back to work* (office) · *Go home*.
 - **Hear:** the weather in full, birds when it's dry, crickets at night, wind
-  chimes when it gusts.
+  chimes when it gusts, and footsteps (yours, and friends' from their side of
+  you) on grass and gravel.
 - When the break runs out, a bell rings and you choose the office or home.
 
-### Shop (the kiosk)
-Reached from the payout screen, the car park kiosk or the garden. It's never
-available during a session.
+### Shed (the shop)
+Reached from the shed door in the garden and from the payout screen. It's
+never available during a session.
 
-### Friends (the noticeboard)
-Add a friend by username and see where everyone is.
+### Noticeboard (friends and invites)
+See where everyone is, add a friend by username, and make invites.
 
 ## 4. Rules
 
@@ -104,13 +123,18 @@ Derived on the server from timestamps and never stored, so it can't drift.
 | Status | When | Car park | Office | Garden |
 |---|---|---|---|---|
 | `focused` | a session is running | vehicle shown | at their desk | – |
-| `on_break` | finished a session less than their earned break ago, and hasn't gone home | vehicle shown | empty desk | at their plot |
-| `idle` | up to 10 min after a break (or a given-up session) ends | vehicle shown | empty desk | – |
-| `absent` | otherwise, or they went home | – | empty desk | – |
+| `on_break` | finished a session less than their earned break ago, and hasn't gone home | vehicle shown | their desk, empty chair | walking about, if they have the garden open |
+| `idle` | arrived, or a break (or a given-up session) ended, less than 15 min ago | vehicle shown | their desk, empty chair | – |
+| `absent` | otherwise, or they went home | – | – (desk given up) | – |
+
+A desk (and with it a bay and a rack slot) is held for as long as you're not
+`absent`.
 
 ### Sessions, chips and breaks
-- Sessions last 1–120 minutes. Completing one earns **1 chip per minute**.
-  Giving up earns nothing, and no break.
+- Sessions last 1–120 minutes. Completing one earns **about 1 chip per
+  minute**: the minutes, give or take a little luck (up to 12% either way,
+  usually much less; at least 1 chip). The payout says when luck added or
+  took some. Giving up earns nothing, and no break.
 - **Earned break: 1 minute per 5 studied** (at least 1). So 25 min earns 5,
   50 earns 10, 90 earns 18 and 120 earns 24.
 - When the break runs out, a soft bell rings and you choose office or home.
@@ -136,10 +160,12 @@ touching code.
   the garden, the rain waters them for you.
 - Nothing dies; an unwatered bed just pauses.
 - A ripe crop is harvested into your basket as produce. **Produce is never
-  exchanged for chips.** You can:
-  - **eat** it (for now your avatar has a snack; see open questions),
+  exchanged for chips by the game.** You can:
+  - **eat** it (a munching sound, nothing more),
   - **save seeds** from it (one crop gives 2–6 seeds of its kind),
-  - **trade** it with a friend.
+  - **sell** it to friends at the market, or **trade** it.
+- You can **water a friend's beds** (standing next to their plot), but only
+  they can plant and harvest them.
 
 | Crop | Study minutes to ripen | Harvest | Seeds saved per crop |
 |---|---|---|---|
@@ -150,12 +176,28 @@ touching code.
 | Sunflower | 180 | 1 | 6 |
 | Pumpkin | 300 | 1 | 4 |
 
-### Trades
+### Market
+- Put produce, seeds or cigarettes on **your stall** at a price per item
+  (1–999 chips; up to 12 different things). What's on the stall leaves your
+  basket until it sells or you take it back.
+- A friend **standing next to you** in the garden can buy from it, one or all;
+  the chips go straight to you. Both of you have to be on a break, and you
+  have to be friends (the server checks both; the client checks you're close).
+- The market tables show what's on the stalls of whoever's in the garden.
+
+### Trades (swaps and gifts)
 - Offer some produce, seeds or cigarettes to a friend, optionally asking for
   something back. Asking for nothing makes it a gift.
 - The offered items are held in escrow until your friend accepts or declines,
   or you withdraw the offer, so nobody can be short-changed.
-- Offers are made and answered in the garden, never during a session.
+- Offers are made and answered in the garden (from your basket, or face to
+  face), never during a session.
+
+### Invites
+- Sign-up is invite-only. Invites are 8-character codes (no look-alike
+  characters) that last 14 days; you can hold 5 unused ones at a time.
+- Whoever joins with your invite starts out as your friend. Friendships stay
+  pairwise: you see your friends, not your friends' friends.
 
 ### Cigarettes
 Smoked in the garden, one at a time. Your friends see about 5 minutes of smoke
@@ -165,6 +207,13 @@ and hear a lighter flick and a quiet crackle.
 Messages of up to 80 characters appear as a bubble over your head for a few
 seconds, Club Penguin style. Only friends who are in the garden at that moment
 see them, and nothing is stored.
+
+### Walking about
+Positions aren't stored either. While you walk, your position goes out on
+your garden channel about 5 times a second, and friends' screens ease between
+updates. You say hello when you arrive (friends reply with where they are),
+bye when you leave, and where you are every 20 seconds while you stand still;
+a friend not heard from for 50 seconds has gone.
 
 ## 5. Weather
 
@@ -207,7 +256,8 @@ later.
 | Room tone | — | office |
 
 - One-shots: door, bell, chips, lighter, watering can, bubble pop, harvest,
-  purchase.
+  purchase, munching, and footsteps on grass and gravel (friends' quieter
+  with distance and panned to their side).
 - Scenes crossfade over about 3 s. Indoors, the weather passes through a
   low-pass "window" filter. Weather changes ramp over about 10 s, so the sound
   never jumps.
@@ -230,6 +280,7 @@ later.
   gentle brightening, never a strobe. With *reduce motion* turned on, the
   weather is drawn still.
 - UI chrome is a thin header (place, chips, sound) and a bottom action panel.
+  Errors and notes appear as a short toast under the header and fade away.
 - Placeholder art is built from simple shapes on a fixed 360×640 "stage" that
   scales to fit between the header and the bottom panel. Backdrops (walls,
   roads, hedges, spare beds and trees) run past the stage edges, so wide
@@ -248,17 +299,20 @@ src/
     (app)/office.tsx      office + timer
     (app)/payout.tsx      end of session
     (app)/garden.tsx      garden
-    (app)/shop.tsx        kiosk
+    (app)/shop.tsx        shed (shop)
     (app)/friends.tsx     noticeboard
-  world/                  client game state (polling, payout prompt, garden chat)
+  world/                  client game state: polling and the payout prompt (World),
+                          who sits where (seats), the garden's layout (gardenMap),
+                          walking (useWalker), the garden channel (useGardenChannel)
   weather/                shared weather algorithm + scene lighting
   audio/                  sound engine: engine.web.ts (Web Audio), engine.ts (native stub)
   art/                    placeholder art: the scene stage and its light, weather,
                           vehicles, desks, people, beds
-  components/             UI pieces: buttons, header, timer, chat bubble, sheets
+  components/             UI pieces: buttons, header, toast, timer, thumbstick, sheets
   lib/                    Supabase client, typed RPC wrappers, catalogue art, time
-supabase/migrations/      0001 init (MVP), 0002 game
+supabase/migrations/      0001 init (MVP), 0002 game, 0003 community
 supabase/tests/           scenario tests for the game rules (plain Postgres + stubs)
+deployment/               numbered runbooks for setting up and shipping each update
 ```
 
 - **The server is the source of truth** for anything that matters: chips,
@@ -267,9 +321,14 @@ supabase/tests/           scenario tests for the game rules (plain Postgres + st
   allows reads.
 - **Polling:** the world polls `get_me` and `get_friends_board` every 10 s and
   when the app regains focus. The garden polls `get_garden` every 5 s.
-- **Chat:** Supabase Realtime Broadcast on private channels named
-  `garden:<username>`. RLS on `realtime.messages` lets you listen to your own
-  and your friends' channels, and speak only on your own.
+- **Garden channel:** Supabase Realtime Broadcast on private channels named
+  `garden:<username>`, carrying chat and positions. RLS on `realtime.messages`
+  lets you listen to your own and your friends' channels, and speak only on
+  your own.
+- **Seats:** the server hands out desks so friends at work never share one.
+  Two of your friends who aren't friends with each other can hold the same
+  number, though; then the later arrival moves along to the next free desk on
+  your screen. Plot slots past the 21 cells of the grid wrap round the same way.
 - **Clock:** every RPC returns `server_now` and the client corrects its
   countdowns with it.
 - **Routing:** while a session runs, every place except the office is removed
@@ -285,18 +344,21 @@ supabase/tests/           scenario tests for the game rules (plain Postgres + st
 
 | Table | Holds |
 |---|---|
-| `profiles` | + `chips` (was `points`), `went_home_at` (was `left_at`), `vehicle`, `activity`, `activity_until` |
-| `sessions` | unchanged |
+| `profiles` | + `chips` (was `points`), `went_home_at` (was `left_at`), `vehicle`, `activity`, `activity_until`; + `arrived_at`, `desk` (0–11), `plot_slot` (0003) |
+| `sessions` | + `chips`: what a completed session paid (0003) |
 | `friendships` | unchanged |
 | `items` | catalogue: slug, kind, name, price, pack size |
 | `crops` | per crop: its seed, study minutes to ripen, harvest size, seeds saved |
 | `inventory` | (player, item) → quantity |
 | `plots` | (player, bed 0–3) → crop, planted at, growth, last watered |
 | `trades` | offers in escrow: what's given, what's wanted, status |
+| `listings` | market stalls: seller, item, quantity, price per item (0003) |
+| `invites` | code, who made it, expiry, who used it (0003) |
 
 | RPC | Allowed when | Returns |
 |---|---|---|
 | `get_me`, `get_friends_board`, `add_friend` | signed in | me / friends |
+| `arrive()` | signed in (gives you a desk if you haven't one) | me |
 | `start_session(minutes)` | not studying | me |
 | `cancel_session()` | studying | me |
 | `go_home()` | on a break or idle | me |
@@ -304,8 +366,17 @@ supabase/tests/           scenario tests for the game rules (plain Postgres + st
 | `get_garden()` | signed in | garden |
 | `plant(bed, seed)`, `water()`, `harvest(bed)` | on a break | garden |
 | `eat(item)`, `save_seeds(item)`, `smoke()` | on a break | garden |
+| `water_friend(username)` | on a break | garden |
 | `offer_trade(...)`, `respond_trade(id, accept)` | on a break | garden |
 | `cancel_trade(id)` | signed in | garden |
+| `list_item(item, qty, price)`, `unlist(id)` | on a break | garden |
+| `buy_listing(id, qty)` | both on a break, and friends | garden |
+| `create_invite()`, `get_invites()` | signed in | invite / invites |
+| `check_signup(code, username)` | anyone, signed in or not | whether that sign-up would work, and whose invite it is |
+
+Sign-up itself is Supabase Auth's: a trigger on `auth.users` (0003) refuses
+any account without a valid invite in its metadata, then makes the profile,
+uses up the invite and befriends whoever made it.
 
 ## 10. Web deployment stack
 
@@ -317,7 +388,7 @@ supabase/tests/           scenario tests for the game rules (plain Postgres + st
 | Backend | **Supabase**: Postgres, Auth, Realtime | Already in use. RLS and RPCs keep the rules server-side, and Realtime Broadcast carries chat |
 | CI | GitHub Actions: lint, typecheck, web export and the database tests, on pull requests and pushes to `main` | Catches a broken build or rule before it ships |
 | CD | GitHub Actions: `eas deploy --prod` on push to `main`, a preview deploy for each PR | |
-| DB migrations | SQL files in `supabase/migrations/`, run in the SQL editor (or `supabase db push`) | |
+| DB migrations | SQL files in `supabase/migrations/`, run in the SQL editor (or `supabase db push`) | Step-by-step runbooks in `deployment/` |
 
 **Secrets and variables (GitHub → Settings → Secrets and variables → Actions)**
 - Secret `EXPO_TOKEN`: an access token from expo.dev (Account settings → Access
@@ -338,23 +409,32 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
       scenario tests (`npm run test:db`)
 - [x] Shared weather algorithm and top-front scene lighting
 - [x] Procedural sound engine (web)
-- [x] Scenes: car park, office, payout, garden, kiosk, noticeboard
+- [x] Scenes: car park, office, payout, garden, shop, noticeboard
 - [x] CI and EAS Hosting deploy workflows
-- [ ] Run `0002_game.sql` on the Supabase project, add the deploy secrets, and
-      do the first `eas deploy` (needs your accounts; see README)
+- [x] Run `0002_game.sql` on the Supabase project
+
+**M1.5: community (this branch)**
+- [x] Migration `0003_community.sql`: random desks kept until you go home,
+      fixed plot slots, the market, watering friends' plots, luck in payouts,
+      invite-only sign-up (38 scenario tests in all)
+- [x] Even car park rows and no kiosk; twelve identical desks; the payout is a
+      close-up of your own office desk
+- [x] Walkable garden, three phones wide: thumbstick and keys, camera, shared
+      plot grid, live positions, footsteps, actions by where you stand
+- [x] Market stalls and buying face to face
+- [x] Invite links and the Join form
+- [ ] Run `0003_community.sql`, switch sign-ups on, make the first invites,
+      and do the first deploy: `deployment/0001-setup-and-launch.md`
 - [ ] Try it with friends, then tune prices, break length and the mix
 
 **M2: feel**
 - Illustrated art, recorded audio (layer by layer), a typeface, gentle
   character animation.
-- Presence: show who is actually looking at the garden right now (Realtime
-  Presence).
+- Walking animation (legs, a gentle bob), sitting on benches, and people
+  drawn in depth order as they pass each other.
 - Server-side weather, so rain waters everyone's plots.
 - "Session over" and "break over" notifications (web push on web).
-- Self-serve sign-up and invites. Accounts are created by hand in the
-  Supabase dashboard today.
-- Effects for eating, arranging your desk, and choosing which owned vehicle
-  to arrive in.
+- Arranging your desk, and choosing which owned vehicle to arrive in.
 
 **M3: native apps**
 - Development build (`eas build --profile development`), the native audio
@@ -372,19 +452,30 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 | How does a break end? | An earned break timer (1 min per 5 studied), then a bell and a choice of office or home. |
 | Perspective | Top-front for every place, with no sky: time of day only shows as the scene's changing hues. |
 | Web hosting | EAS Hosting with a static export; Supabase for the backend. |
-| Social model | Pairwise friendships, as in the MVP. See open questions. |
+| Social model | Pairwise friendships, as in the MVP. |
+| Eating | Just a munching sound. Nothing to see, no effect. |
+| Friends' plots | You can water them, but not plant or harvest. |
+| Sign-ups | Invite-only for now. Whoever invites you starts as your friend. |
+| "Roughly" 1 chip a minute | The minutes, plus or minus a little random luck (up to 12%, usually far less). |
+| Where you sit | Not at the front: the office starts as twelve empty desks, and everyone (you included) gets a random one on arrival, kept across breaks until they go home. |
+| Car park | No kiosk; three even rows of bays that follow the desks. |
+| The garden | Walkable with a thumbstick, three phones wide and one tall, with every allotment on one grid in a fixed place. |
+| Trading | A market: stalls with prices, bought from face to face in the garden. Swaps and gifts by offer stay too. |
+| Payout | A closer look at your own office desk, at the same proportions. |
 
 ## 13. Open questions
 
-1. **Eating:** what should eating a crop do? It's cosmetic for now.
-2. **Neighbourly gardening:** can you water or harvest a friend's plot?
-3. **Sign-ups:** invite-only (friend codes) or open?
-4. **Friend groups:** keep pairwise friendships, or move to shared "offices"
-   where everyone in the office sees everyone? This matters once friend
-   circles overlap: today, two of your friends who aren't friends with each
-   other can't see each other's chat.
-5. **"Roughly" one chip a minute:** exactly 1 per minute, or small random
-   bonuses?
+1. **Overlapping friend circles:** with pairwise friendships, two of your
+   friends who aren't friends with each other can hold the same desk number.
+   Each viewer then sees one of them moved along a desk, so people can sit in
+   slightly different places on different screens. Rare in a friend group;
+   shared "offices" (groups) would remove it.
+2. **Swaps by offer:** keep asynchronous offers alongside the face-to-face
+   market, or make all trading face to face?
+3. **Thumbstick on computers:** keep it on screen when there's a keyboard, or
+   hide it after the first arrow-key press?
+4. **Market prices:** leave them entirely to players, or suggest a price per
+   item?
 
 ## 14. Risks
 
@@ -401,3 +492,11 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
   nothing to moderate after the fact, but also no history.
 - **Scale:** each open client polls every 10 s, which is fine for tens of
   players. Move to Realtime Postgres Changes if it grows.
+- **Realtime volume:** a walking player sends about 5 position messages a
+  second, and each is delivered to every friend listening. That's comfortable
+  for a friend group on Supabase's free Realtime quotas, but worth watching if
+  the group grows.
+- **Proximity is client-side:** the server checks that buyer and seller are
+  friends and both on a break, not that they're standing together. A modified
+  client could buy from a friend's stall from across the garden (but only at
+  the seller's price).

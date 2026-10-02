@@ -37,7 +37,8 @@ const BACK: Record<string, { href: Href; label: string }> = {
   index: { href: '/', label: 'Back to the car park' },
 };
 
-export default function Kiosk() {
+/** The garden shed: everything you can spend chips on. */
+export default function ShedShop() {
   useAmbience('indoors');
   const { from } = useLocalSearchParams<{ from?: string }>();
   const back = BACK[from ?? 'index'] ?? BACK.index;
@@ -71,8 +72,11 @@ export default function Kiosk() {
 
   const art = (
     <>
-      {/* Behind the counter: shelves of things. */}
-      <Box x={BLEED.x} y={-400} w={BLEED.w} h={560} c="#d8cdbb" />
+      {/* Inside the shed: plank walls and shelves of things. */}
+      <Box x={BLEED.x} y={-400} w={BLEED.w} h={560} c="#cdb595" />
+      {Array.from({ length: 40 }, (_, i) => (
+        <Box key={`p${i}`} x={-1000 + i * 58} y={-400} w={2} h={560} c="#b89d7b" o={0.6} />
+      ))}
       {[40, 90, 140].map((y) => (
         <Box key={y} x={BLEED.x} y={y} w={BLEED.w} h={5} c="#9c8063" />
       ))}
@@ -95,7 +99,7 @@ export default function Kiosk() {
 
   return (
     <Scene conditions={conditions} ground="#cbbfae" art={art} reserve={{ top: 56, bottom: 420 }}>
-      <SceneHeader place="Kiosk" chips={shop?.chips} />
+      <SceneHeader place="Shed" chips={shop?.chips} />
       <Catalogue shop={shop} busy={busy} error={error} onBuy={buy} />
       <Leave label={back.label} onPress={() => go(back.href, null)} />
     </Scene>
