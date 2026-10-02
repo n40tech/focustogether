@@ -278,3 +278,113 @@ export function Hedge({ y, h }: { y: number; h: number }) {
     </>
   );
 }
+
+/** A trestle table at the market, with crates of whatever's going. */
+export function MarketTable({ x, y, goods }: { x: number; y: number; goods: string[] }) {
+  return (
+    <>
+      <Shadow x={x + 35} y={y + 26} w={84} o={0.14} />
+      <Box x={x + 4} y={y + 16} w={3} h={10} c="#6e5640" />
+      <Box x={x + 63} y={y + 16} w={3} h={10} c="#6e5640" />
+      <Box x={x} y={y} w={70} h={18} c="#b89870" r={2} />
+      <Box x={x} y={y + 16} w={70} h={4} c="#94785a" r={1} />
+      {goods.slice(0, 3).map((colour, i) => (
+        <Crate key={i} x={x + 6 + i * 21} y={y - 8} colour={colour} />
+      ))}
+    </>
+  );
+}
+
+function Crate({ x, y, colour }: { x: number; y: number; colour: string }) {
+  return (
+    <>
+      <Box x={x} y={y} w={17} h={13} c="#a07c55" r={1.5} />
+      <Box x={x} y={y + 6} w={17} h={1.5} c="#87663f" />
+      {[3, 8.5, 14].map((dx) => (
+        <Dot key={dx} x={x + dx} y={y + 2} d={5} c={colour} />
+      ))}
+    </>
+  );
+}
+
+/** A chalkboard sign on legs. */
+export function Sign({ x, y }: { x: number; y: number }) {
+  return (
+    <>
+      <Shadow x={x + 12} y={y + 30} w={30} />
+      <Box x={x + 3} y={y + 18} w={2} h={12} c="#6e5640" />
+      <Box x={x + 19} y={y + 18} w={2} h={12} c="#6e5640" />
+      <Box
+        x={x}
+        y={y}
+        w={24}
+        h={20}
+        c="#3f4643"
+        r={2}
+        style={{ borderWidth: 2, borderColor: '#8d6f50' }}
+      />
+      <Box x={x + 5} y={y + 6} w={14} h={1.5} c="#d9d6cf" o={0.8} />
+      <Box x={x + 5} y={y + 11} w={10} h={1.5} c="#d9d6cf" o={0.6} />
+    </>
+  );
+}
+
+/** A slatted compost bin. */
+export function Compost({ x, y }: { x: number; y: number }) {
+  return (
+    <>
+      <Shadow x={x} y={y + 2} w={70} o={0.14} />
+      <Box x={x - 28} y={y - 34} w={56} h={34} c="#7d6146" r={2} />
+      <Box x={x - 24} y={y - 32} w={48} h={12} c="#4f3b2c" r={2} />
+      {[0, 1, 2].map((i) => (
+        <Box key={i} x={x - 28} y={y - 20 + i * 7} w={56} h={2} c="#6a523b" />
+      ))}
+    </>
+  );
+}
+
+/**
+ * The low hedge along the front of the garden, with a gap for the gate, and
+ * the tall hedges either side. `gateX` is the middle of the gap.
+ */
+export function Boundary({ y, gateX, width }: { y: number; gateX: number; width: number }) {
+  const gap = 56;
+  return (
+    <>
+      <Box x={BLEED.x} y={y} w={gateX - gap / 2 - BLEED.x} h={40} c={G.hedge} />
+      <Box x={gateX + gap / 2} y={y} w={BLEED.x + BLEED.w - gateX - gap / 2} h={40} c={G.hedge} />
+      {Array.from({ length: 128 }, (_, i) => {
+        const x = -1980 + i * 34;
+        return Math.abs(x - gateX) < gap / 2 + 12 ? null : (
+          <Dot
+            key={i}
+            x={x}
+            y={y + 2 + (i % 3) * 2}
+            d={30}
+            h={14}
+            c={i % 2 ? '#6a8a63' : '#557352'}
+          />
+        );
+      })}
+      {/* Gateposts, and the gate swung open. */}
+      <Box x={gateX - gap / 2 - 5} y={y - 14} w={6} h={30} c="#8d6f50" r={1} />
+      <Box x={gateX + gap / 2 - 1} y={y - 14} w={6} h={30} c="#8d6f50" r={1} />
+      <Box x={gateX + gap / 2 + 4} y={y - 8} w={4} h={22} c="#b19370" r={1} />
+      {/* Tall hedges down both sides, past the ends of the garden. */}
+      {[-140, width].map((x) => (
+        <Box key={x} x={x} y={-400} w={140} h={y + 440} c={G.hedge}>
+          {Array.from({ length: Math.floor((y + 30) / 28) }, (_, i) => (
+            <Dot
+              key={i}
+              x={x < 0 ? 132 : 8}
+              y={410 + i * 28}
+              d={22}
+              h={30}
+              c={i % 2 ? '#6a8a63' : '#557352'}
+            />
+          ))}
+        </Box>
+      ))}
+    </>
+  );
+}

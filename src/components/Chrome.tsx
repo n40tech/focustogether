@@ -1,7 +1,16 @@
-import { useEffect, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useEffect, useState, type ReactNode } from 'react';
+import {
+  Animated,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { nativeDriver } from '@/art/motion';
 import { useReportPanelHeight, useTone } from '@/art/Scene';
 import { setSoundSettings, useSound } from '@/audio/sound';
 import { font, palette } from '@/lib/theme';
@@ -145,16 +154,60 @@ export function Sheet({
   );
 }
 
+/**
+ * A short message under the header that fades away by itself: what went wrong,
+ * or something like the rain watering your beds. Shows over sheets too. Give
+ * each message its own `key` so a repeat shows again.
+ */
+export function Toast({ text, onDone }: { text: string; onDone: () => void }) {
+  const tone = useTone();
+  const insets = useSafeAreaInsets();
+  const [fade] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    const show = Animated.sequence([
+      Animated.timing(fade, { toValue: 1, duration: 220, useNativeDriver: nativeDriver }),
+      Animated.delay(Math.min(6000, 2600 + text.length * 40)),
+      Animated.timing(fade, { toValue: 0, duration: 500, useNativeDriver: nativeDriver }),
+    ]);
+    show.start(({ finished }) => {
+      if (finished) onDone();
+    });
+    return () => show.stop();
+  }, [fade, text, onDone]);
+  return (
+    <Animated.View
+      pointerEvents="none"
+      accessibilityLiveRegion="polite"
+      style={[styles.toastWrap, { top: insets.top + 60, opacity: fade }]}
+    >
+      <Text style={[styles.toast, { backgroundColor: tone.panel, color: tone.text }]}>{text}</Text>
+    </Animated.View>
+  );
+}
+
 /** A quiet note beside the place name in the header, like the weather. */
 export function HeaderDetail({ children }: { children: ReactNode }) {
   const tone = useTone();
   return <Text style={{ color: tone.muted, fontSize: 12 }}>· {children}</Text>;
 }
 
-export function Muted({ children, style }: { children: ReactNode; style?: object }) {
+export function Muted({
+  children,
+  style,
+  numberOfLines,
+}: {
+  children: ReactNode;
+  style?: object;
+  numberOfLines?: number;
+}) {
   const tone = useTone();
   return (
-    <Text style={[{ color: tone.muted, fontSize: 13, lineHeight: 18 }, style]}>{children}</Text>
+    <Text
+      numberOfLines={numberOfLines}
+      style={[{ color: tone.muted, fontSize: 13, lineHeight: 18 }, style]}
+    >
+      {children}
+    </Text>
   );
 }
 
@@ -200,6 +253,17 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   backdrop: { backgroundColor: 'rgba(20, 22, 26, 0.35)' },
+  toastWrap: { position: 'absolute', left: 16, right: 16, alignItems: 'center' },
+  toast: {
+    maxWidth: 420,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    overflow: 'hidden',
+    fontSize: 14,
+    lineHeight: 19,
+    textAlign: 'center',
+  },
   sheetWrap: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', padding: 12 },
   sheet: {
     width: '100%',

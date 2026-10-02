@@ -13,7 +13,7 @@ import { conditionsAt } from '@/weather/conditions';
 import { gustAt, smoothstep, strikeDistance, strikesBetween } from '@/weather/weather';
 
 import { loopingNoise, type NoiseColour } from './noise';
-import type { Ambience, AudioEngine, Sfx, SoundSettings } from './types';
+import type { Ambience, AudioEngine, Sfx, SfxOptions, SoundSettings } from './types';
 
 /** How each place mixes the layers. `window` is the cutoff (Hz) for outside sounds. */
 type Mix = {
@@ -120,7 +120,7 @@ class WebAudioEngine implements AudioEngine {
     };
   }
 
-  play(sfx: Sfx, options?: { count?: number }) {
+  play(sfx: Sfx, options?: SfxOptions) {
     const ctx = this.ctx;
     if (!ctx || !this.n || ctx.state !== 'running') return;
     const t = ctx.currentTime + 0.01;
@@ -147,6 +147,10 @@ class WebAudioEngine implements AudioEngine {
         return this.pop(t);
       case 'paper':
         return this.paper(t);
+      case 'step':
+        return this.step(t, options?.gain ?? 1, options?.pan ?? 0);
+      case 'gravel':
+        return this.gravelStep(t, options?.gain ?? 1, options?.pan ?? 0);
     }
   }
 
@@ -723,6 +727,48 @@ class WebAudioEngine implements AudioEngine {
     this.tone(t, this.n!.sfx, { freq: 520, to: 840, level: 0.09, decay: 0.1 });
   }
 
+  /** A soft footfall on grass: a dull thud and a whisper of blades. */
+  private step(t: number, gain: number, pan: number) {
+    const sfx = this.n!.sfx;
+    const p = pan + (Math.random() - 0.5) * 0.12;
+    this.burst(t, sfx, {
+      colour: 'pink',
+      type: 'lowpass',
+      freq: 380 + Math.random() * 220,
+      level: 0.11 * gain,
+      decay: 0.09,
+      pan: p,
+    });
+    this.burst(t + 0.012, sfx, {
+      freq: 2600 + Math.random() * 1600,
+      Q: 0.7,
+      level: 0.018 * gain,
+      decay: 0.07,
+      pan: p,
+    });
+  }
+  /** A footfall on gravel: a few tiny stones shifting. */
+  private gravelStep(t: number, gain: number, pan: number) {
+    const sfx = this.n!.sfx;
+    const p = pan + (Math.random() - 0.5) * 0.12;
+    this.burst(t, sfx, {
+      colour: 'pink',
+      type: 'lowpass',
+      freq: 650,
+      level: 0.06 * gain,
+      decay: 0.06,
+      pan: p,
+    });
+    for (let i = 0, at = t; i < 5; i++, at += 0.006 + Math.random() * 0.014) {
+      this.burst(at, sfx, {
+        freq: 2200 + Math.random() * 2800,
+        Q: 2.2,
+        level: (0.025 + Math.random() * 0.03) * gain,
+        decay: 0.025,
+        pan: p,
+      });
+    }
+  }
   private paper(t: number) {
     const src = this.source('pink');
     const env = this.gainNode();

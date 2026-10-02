@@ -3,7 +3,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 
 import { engine } from './engine';
-import type { Ambience, Sfx, SoundSettings } from './types';
+import type { Ambience, Sfx, SfxOptions, SoundSettings } from './types';
 
 export type { Ambience, Sfx } from './types';
 
@@ -68,7 +68,7 @@ export function useAmbience(ambience: Ambience) {
   );
 }
 
-export function playSound(sfx: Sfx, options?: { count?: number }) {
+export function playSound(sfx: Sfx, options?: SfxOptions) {
   engine.play(sfx, options);
 }
 

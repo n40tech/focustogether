@@ -30,12 +30,15 @@ export function Person({
   y,
   pose = 'stand',
   activity = null,
+  basket = false,
 }: {
   username: string;
   x: number;
   y: number;
   pose?: 'stand' | 'sit';
   activity?: Activity;
+  /** Carrying a basket: they've something on their stall. */
+  basket?: boolean;
 }) {
   const { shirt, skin, hair } = looks(username);
   if (pose === 'sit') {
@@ -58,6 +61,20 @@ export function Person({
       <Box x={x - 7} y={y - 41} w={14} h={6} c={hair} r={5} />
       <Dot x={x - 3} y={y - 33} d={1.8} c="#2b2622" />
       <Dot x={x + 3} y={y - 33} d={1.8} c="#2b2622" />
+      {basket && (
+        <>
+          <Box
+            x={x - 16}
+            y={y - 21}
+            w={8}
+            h={7}
+            r={4}
+            style={{ borderWidth: 1.2, borderColor: '#8d6c47' }}
+          />
+          <Box x={x - 18} y={y - 17} w={12} h={8} c="#b08a5f" r={2} />
+          <Box x={x - 18} y={y - 14} w={12} h={1.2} c="#8d6c47" />
+        </>
+      )}
       {activity === 'smoking' && (
         <>
           <Box x={x + 7} y={y - 22} w={7} h={1.6} c="#efe9de" />

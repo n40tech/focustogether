@@ -18,13 +18,23 @@ const TRADEABLE = Object.keys(ITEMS).filter((slug) =>
   ['produce', 'seed', 'cigarette'].includes(ITEMS[slug].kind)
 );
 
-const describeTrade = (t: Trade, viewer: 'from' | 'to') => {
+/** "Bob offers 3 strawberries for 1 carrot", using friends' display names. */
+const describeTrade = (t: Trade, viewer: 'from' | 'to', garden: Garden) => {
+  const name = (username: string) =>
+    garden.neighbours.find((n) => n.username === username)?.display_name ?? username;
   const give = countOf(t.give_item, t.give_qty);
   const want = t.want_item && t.want_qty ? countOf(t.want_item, t.want_qty) : null;
   if (viewer === 'to')
-    return want ? `${t.from} offers ${give} for ${want}` : `${t.from} is giving you ${give}`;
-  return want ? `${give} to ${t.to}, for ${want}` : `${give} to ${t.to}, as a gift`;
+    return want
+      ? `${name(t.from)} offers ${give} for ${want}`
+      : `${name(t.from)} is giving you ${give}`;
+  return want ? `${give} to ${name(t.to)}, for ${want}` : `${give} to ${name(t.to)}, as a gift`;
 };
+
+/** Produce first (what people mostly sell), then seeds, then cigarettes. */
+const KIND_ORDER = ['produce', 'seed', 'cigarette'];
+const byKind = ([a]: [string, number], [b]: [string, number]) =>
+  KIND_ORDER.indexOf(itemInfo(a).kind) - KIND_ORDER.indexOf(itemInfo(b).kind);
 
 function Choice({
   label,
@@ -105,22 +115,31 @@ function Row({
   slug,
   title,
   detail,
+  stacked = false,
   children,
 }: {
   slug: string;
   title: string;
   detail?: string;
+  /** Put the buttons under the title, for rows with several. */
+  stacked?: boolean;
   children?: ReactNode;
 }) {
   const tone = useTone();
+  const words = (
+    <>
+      <Text style={{ color: tone.text, fontSize: 15, fontWeight: '600' }}>{title}</Text>
+      {detail ? <Muted>{detail}</Muted> : null}
+    </>
+  );
   return (
     <View style={[styles.row, { borderColor: tone.line }]}>
       <ItemIcon slug={slug} size={40} />
       <View style={styles.rowText}>
-        <Text style={{ color: tone.text, fontSize: 15, fontWeight: '600' }}>{title}</Text>
-        {detail ? <Muted>{detail}</Muted> : null}
+        {words}
+        {stacked && <View style={styles.rowActionsBelow}>{children}</View>}
       </View>
-      <View style={styles.rowActions}>{children}</View>
+      {!stacked && <View style={styles.rowActions}>{children}</View>}
     </View>
   );
 }
@@ -191,27 +210,51 @@ export function BasketSheet({
   garden,
   act,
   onOffer,
+  onSell,
   onClose,
 }: {
   garden: Garden;
   act: Act;
   onOffer: (item: string) => void;
+  onSell: (item: string) => void;
   onClose: () => void;
 }) {
   const tone = useTone();
   const items = Object.entries(garden.me.inventory).filter(([slug]) => TRADEABLE.includes(slug));
   const produce = items.filter(([slug]) => itemInfo(slug).kind === 'produce');
   const other = items.filter(([slug]) => itemInfo(slug).kind !== 'produce');
+  const incoming = garden.trades.filter((t) => t.incoming);
   const outgoing = garden.trades.filter((t) => !t.incoming);
 
   return (
     <Sheet title="Your basket" onClose={onClose}>
       <ScrollView contentContainerStyle={styles.list}>
+        {incoming.length > 0 && (
+          <Text style={[font.label, { color: tone.muted }]}>Offers for you</Text>
+        )}
+        {incoming.map((t) => (
+          <Row key={t.id} slug={t.give_item} title={describeTrade(t, 'to', garden)} stacked>
+            <Button
+              title="Accept"
+              small
+              onPress={() => act(() => api.respondTrade(t.id, true), 'coin')}
+            />
+            <Button
+              title="Decline"
+              small
+              variant="ghost"
+              onPress={() => act(() => api.respondTrade(t.id, false), 'paper')}
+            />
+          </Row>
+        ))}
+        {incoming.length > 0 && items.length > 0 && (
+          <Text style={[font.label, { color: tone.muted, marginTop: 8 }]}>In your basket</Text>
+        )}
         {items.length === 0 && (
           <Body>Your basket is empty. Ripe crops end up here when you harvest them.</Body>
         )}
         {produce.map(([slug, qty]) => (
-          <Row key={slug} slug={slug} title={countOf(slug, qty)}>
+          <Row key={slug} slug={slug} title={countOf(slug, qty)} stacked>
             <Button
               title="Eat"
               small
@@ -224,11 +267,13 @@ export function BasketSheet({
               variant="quiet"
               onPress={() => act(() => api.saveSeeds(slug), 'pluck')}
             />
+            <Button title="Sell" small variant="quiet" onPress={() => onSell(slug)} />
             <Button title="Offer" small variant="quiet" onPress={() => onOffer(slug)} />
           </Row>
         ))}
         {other.map(([slug, qty]) => (
           <Row key={slug} slug={slug} title={countOf(slug, qty)}>
+            <Button title="Sell" small variant="quiet" onPress={() => onSell(slug)} />
             <Button title="Offer" small variant="quiet" onPress={() => onOffer(slug)} />
           </Row>
         ))}
@@ -238,7 +283,7 @@ export function BasketSheet({
           </Text>
         )}
         {outgoing.map((t) => (
-          <Row key={t.id} slug={t.give_item} title={describeTrade(t, 'from')}>
+          <Row key={t.id} slug={t.give_item} title={describeTrade(t, 'from', garden)}>
             <Button
               title="Withdraw"
               small
@@ -256,18 +301,22 @@ export function TradeSheet({
   garden,
   initialTo,
   initialGive,
+  fixedTo = false,
   act,
   onClose,
 }: {
   garden: Garden;
   initialTo?: string;
   initialGive?: string;
+  /** You're standing next to them: no need to pick who it's for. */
+  fixedTo?: boolean;
   act: Act;
   onClose: () => void;
 }) {
   const tone = useTone();
   const mine = Object.entries(garden.me.inventory).filter(([slug]) => TRADEABLE.includes(slug));
   const friends = garden.neighbours;
+  const recipient = friends.find((f) => f.username === initialTo);
   const [to, setTo] = useState(initialTo ?? friends[0]?.username);
   const [give, setGive] = useState(initialGive ?? mine[0]?.[0]);
   const [giveQty, setGiveQty] = useState(1);
@@ -288,19 +337,26 @@ export function TradeSheet({
   }
 
   return (
-    <Sheet title="Offer a trade" onClose={onClose}>
+    <Sheet
+      title={fixedTo && recipient ? `Offer ${recipient.display_name} a swap` : 'Offer a trade'}
+      onClose={onClose}
+    >
       <ScrollView contentContainerStyle={styles.list}>
-        <Text style={[font.label, { color: tone.muted }]}>To</Text>
-        <View style={styles.choices}>
-          {friends.map((f) => (
-            <Choice
-              key={f.username}
-              label={f.display_name}
-              selected={to === f.username}
-              onPress={() => setTo(f.username)}
-            />
-          ))}
-        </View>
+        {!(fixedTo && recipient) && (
+          <>
+            <Text style={[font.label, { color: tone.muted }]}>To</Text>
+            <View style={styles.choices}>
+              {friends.map((f) => (
+                <Choice
+                  key={f.username}
+                  label={f.display_name}
+                  selected={to === f.username}
+                  onPress={() => setTo(f.username)}
+                />
+              ))}
+            </View>
+          </>
+        )}
         <Text style={[font.label, { color: tone.muted }]}>You give</Text>
         <View style={styles.choices}>
           {mine.map(([slug]) => (
@@ -349,35 +405,151 @@ export function TradeSheet({
   );
 }
 
-export function OffersSheet({
+/** Prices to choose from, per item. */
+const PRICES = [1, 2, 3, 5, 8, 12, 20, 30, 50];
+
+/**
+ * Your market stall: what you've put out for friends to buy while you're both
+ * in the garden. Things on the stall are set aside until they sell or you take
+ * them back.
+ */
+export function StallSheet({
   garden,
+  initialItem,
   act,
   onClose,
 }: {
   garden: Garden;
+  initialItem?: string;
   act: Act;
   onClose: () => void;
 }) {
-  const incoming = garden.trades.filter((t) => t.incoming);
+  const tone = useTone();
+  const stall = garden.me.stall;
+  const mine = Object.entries(garden.me.inventory)
+    .filter(([slug]) => TRADEABLE.includes(slug))
+    .sort(byKind);
+  const [item, setItem] = useState<string | undefined>(initialItem ?? mine[0]?.[0]);
+  const [qty, setQty] = useState(1);
+  const [price, setPrice] = useState(3);
+  const have = (item && garden.me.inventory[item]) || 0;
+
   return (
-    <Sheet title="Offers for you" onClose={onClose}>
+    <Sheet title="Your stall" onClose={onClose}>
       <ScrollView contentContainerStyle={styles.list}>
-        {incoming.length === 0 && <Body>No offers waiting.</Body>}
-        {incoming.map((t) => (
-          <Row key={t.id} slug={t.give_item} title={describeTrade(t, 'to')}>
+        {stall.length === 0 ? (
+          <Muted>
+            {"Nothing out yet. Friends can buy what you put out when they're standing next to you."}
+          </Muted>
+        ) : (
+          stall.map((l) => (
+            <Row key={l.id} slug={l.item} title={countOf(l.item, l.qty)} detail={`${l.price} each`}>
+              <Button
+                title="Take back"
+                small
+                variant="ghost"
+                onPress={() => act(() => api.unlist(l.id), 'paper')}
+              />
+            </Row>
+          ))
+        )}
+        <Text style={[font.label, { color: tone.muted, marginTop: 6 }]}>Put something out</Text>
+        {mine.length === 0 ? (
+          <Muted>Your basket is empty: crops, seeds and cigarettes can go on a stall.</Muted>
+        ) : (
+          <>
+            <View style={styles.choices}>
+              {mine.map(([slug, n]) => (
+                <Choice
+                  key={slug}
+                  label={`${itemInfo(slug).name} (${n})`}
+                  selected={item === slug}
+                  onPress={() => {
+                    setItem(slug);
+                    setQty(1);
+                  }}
+                />
+              ))}
+            </View>
+            <View style={styles.inline}>
+              <Muted>How many</Muted>
+              <Stepper
+                value={Math.min(qty, Math.max(1, have))}
+                min={1}
+                max={Math.max(1, have)}
+                onChange={setQty}
+              />
+            </View>
+            <Text style={[font.label, { color: tone.muted }]}>Chips each</Text>
+            <View style={styles.choices}>
+              {PRICES.map((p) => (
+                <Choice
+                  key={p}
+                  label={String(p)}
+                  selected={price === p}
+                  onPress={() => setPrice(p)}
+                />
+              ))}
+            </View>
             <Button
-              title="Accept"
-              small
-              onPress={() => act(() => api.respondTrade(t.id, true), 'coin')}
+              title={item ? `Put out ${countOf(item, Math.min(qty, have))}` : 'Put out'}
+              disabled={!item || have < 1}
+              onPress={() => {
+                if (item) act(() => api.listItem(item, Math.min(qty, have), price), 'paper');
+              }}
             />
-            <Button
-              title="Decline"
-              small
-              variant="ghost"
-              onPress={() => act(() => api.respondTrade(t.id, false), 'paper')}
-            />
-          </Row>
-        ))}
+          </>
+        )}
+      </ScrollView>
+    </Sheet>
+  );
+}
+
+/** Standing next to a friend: buy from their stall, or offer them a swap. */
+export function FriendSheet({
+  garden,
+  username,
+  act,
+  onSwap,
+  onClose,
+}: {
+  garden: Garden;
+  username: string;
+  act: Act;
+  onSwap: () => void;
+  onClose: () => void;
+}) {
+  const friend = garden.neighbours.find((n) => n.username === username);
+  if (!friend) return null;
+  const chips = garden.me.chips;
+  return (
+    <Sheet title={`${friend.display_name}'s stall`} onClose={onClose}>
+      <ScrollView contentContainerStyle={styles.list}>
+        {friend.stall.length === 0 ? (
+          <Body>{`${friend.display_name} hasn't put anything out.`}</Body>
+        ) : (
+          friend.stall.map((l) => (
+            <Row key={l.id} slug={l.item} title={countOf(l.item, l.qty)} detail={`${l.price} each`}>
+              <Button
+                title={`Buy 1 · ${l.price}`}
+                small
+                disabled={chips < l.price}
+                onPress={() => act(() => api.buyListing(l.id, 1), 'coin')}
+              />
+              {l.qty > 1 && (
+                <Button
+                  title={`All · ${l.qty * l.price}`}
+                  small
+                  variant="quiet"
+                  disabled={chips < l.qty * l.price}
+                  onPress={() => act(() => api.buyListing(l.id, l.qty), 'coin')}
+                />
+              )}
+            </Row>
+          ))
+        )}
+        <Muted>{`You have ${chips} chips.`}</Muted>
+        <Button title="Offer a swap" variant="quiet" onPress={onSwap} />
       </ScrollView>
     </Sheet>
   );
@@ -393,6 +565,7 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   rowText: { flex: 1, gap: 2 },
+  rowActionsBelow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
   rowActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -403,6 +576,7 @@ const styles = StyleSheet.create({
   choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   choice: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1 },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  inline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   track: { height: 8, borderRadius: 4, overflow: 'hidden' },
   fill: { height: '100%' },
 });

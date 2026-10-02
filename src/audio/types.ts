@@ -13,7 +13,12 @@ export type Sfx =
   | 'pluck' // planting or harvesting
   | 'munch' // eating
   | 'pop' // a chat bubble
-  | 'paper'; // a trade offer
+  | 'paper' // a trade offer
+  | 'step' // a footstep on grass
+  | 'gravel'; // a footstep on the gravel path
+
+/** Footsteps can be someone else's: quieter further off, and to one side. */
+export type SfxOptions = { count?: number; gain?: number; pan?: number };
 
 export type SoundSettings = { muted: boolean; volume: number };
 
@@ -23,7 +28,7 @@ export interface AudioEngine {
   setAmbience(ambience: Ambience): void;
   /** Quiet crackle while your cigarette lasts. */
   setSmoking(on: boolean): void;
-  play(sfx: Sfx, options?: { count?: number }): void;
+  play(sfx: Sfx, options?: SfxOptions): void;
   setSettings(settings: SoundSettings): void;
   /** Notified when `unlocked` changes. */
   subscribe(listener: () => void): () => void;

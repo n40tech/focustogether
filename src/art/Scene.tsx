@@ -37,6 +37,8 @@ type Props = {
    * fits between them. A <Panel> reports its own height, which wins over `bottom`.
    */
   reserve?: { top: number; bottom: number };
+  /** Told the stage's scale, and how wide the screen is in stage units, as they change. */
+  onStage?: (stage: { scale: number; viewWidth: number }) => void;
   /** UI: header, panels and sheets, drawn above the scene and never tinted. */
   children?: ReactNode;
 };
@@ -49,6 +51,7 @@ export function Scene({
   glow,
   overlay,
   reserve = { top: 56, bottom: 120 },
+  onStage,
   children,
 }: Props) {
   const insets = useSafeAreaInsets();
@@ -77,6 +80,11 @@ export function Scene({
     top: top + (available - STAGE.height) / 2,
     transform: [{ scale }],
   };
+
+  const viewWidth = scale > 0 ? size.width / scale : STAGE.width;
+  useEffect(() => {
+    if (scale > 0 && Number.isFinite(scale)) onStage?.({ scale, viewWidth });
+  }, [scale, viewWidth, onStage]);
 
   const { light } = conditions;
   const tone = light.daylight < 0.4 ? tones.night : tones.day;
