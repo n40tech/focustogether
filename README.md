@@ -6,7 +6,8 @@ in the allotment garden. Expo (web now; iOS / Android later) + Supabase.
 
 The design, rules and roadmap are in **[docs/PLAN.md](docs/PLAN.md)**. Setting
 up and shipping each update is in **[deployment/](deployment/)**, starting with
-**[0001: set up and launch](deployment/0001-setup-and-launch.md)**.
+**[0001: set up and launch](deployment/0001-setup-and-launch.md)**. Testing a
+change before a pull request is in **[docs/TESTING.md](docs/TESTING.md)**.
 
 ## The places
 - **Car park**: where the app opens. Friends who are in show as their car or bike,
@@ -96,12 +97,14 @@ Database changes are not deployed automatically: run new files from
 ```bash
 npm run lint
 npm run typecheck
-npm run test:db   # the migrations' game rules, on a throwaway Postgres
+npx expo export --platform web   # the web build
+npm run test:db                  # the migrations' game rules, on a throwaway Postgres
 ```
-`test:db` needs a Postgres it can create a scratch database in, given by
-`DATABASE_URL` (default `postgres://postgres:postgres@localhost:5432/postgres`).
-For example: `docker run -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:16`.
-CI (`.github/workflows/ci.yml`) runs all three on every push and pull request.
+CI (`.github/workflows/ci.yml`) runs all four on every push and pull request.
+`test:db` needs a local Postgres (`DATABASE_URL`, default
+`postgres://postgres:postgres@localhost:5432/postgres`). How to set that up, a
+Supabase project just for testing, and what to click through before a pull
+request are all in **[docs/TESTING.md](docs/TESTING.md)**.
 
 ## How it fits together
 - All game rules live in Postgres functions (`supabase/migrations`). The app only
