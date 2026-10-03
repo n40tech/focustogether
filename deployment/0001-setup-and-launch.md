@@ -80,7 +80,8 @@ invite code, so Supabase itself has to allow sign-ups. In the dashboard:
 
 From now on, **Authentication → Users → Add user** fails with "Database error
 creating new user". That is the invite check working: everyone joins through
-the app. `supabase/seed.sql` is no longer needed.
+the app. (`supabase/seed.sql` is only for the local Supabase used in testing:
+see `docs/TESTING.md`.)
 
 ## 4. Make the first invites
 

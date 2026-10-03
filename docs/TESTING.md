@@ -1,89 +1,79 @@
 # Testing Focus before a pull request
 
 How to check a change on your own machine before you open a pull request. It's
-the same every time. Sections 1 and 2 are one-off setup, and the checklist at
-the end is what to tick off before each pull request.
+the same every time. Section 1 is one-off setup, and the checklist in section 6
+is what to tick off before each pull request.
+
+Everything runs against a **local Supabase**: a full copy of Supabase
+(database, sign-in, the API and realtime) running in Docker on your computer,
+built from `supabase/migrations/`. Your friends' real data is never involved,
+and you can skip time, reset and break things freely.
 
 Short version, once you're set up:
 
 ```bash
+npx supabase start                       # the local Supabase (Docker must be running)
 npm run lint
 npm run typecheck
 npx expo export --platform web           # the web build CI makes
-npm run test:db                          # needs Postgres running (section 2)
+npm run test:db
 npx prettier --check "src/**/*.{ts,tsx}" "supabase/tests/*.mjs"
 npx expo start --web                     # then click through (section 5)
 ```
 
-The first four are what CI runs on every pull request, so if they pass here
-they'll pass there. Formatting isn't checked by CI, but keeping to it keeps
-your diffs to what you changed.
+Lint, typecheck, the web build and the database tests are what CI runs on
+every pull request, so if they pass here they'll pass there. Formatting isn't
+checked by CI, but keeping to it keeps your diffs to what you changed.
 
 ---
 
-## 1. A Supabase project just for testing (one-off)
+## 1. Setting up (once)
 
-Don't test against the real project: your friends' chips, plots and letters
-are in it, and the testing tools move time for whoever uses them. Make a
-second, free project (Supabase allows two) and point your local app at it.
-
-1. [supabase.com](https://supabase.com) → **New project**, called something like
-   `focus-dev`. Any region and password.
-2. **SQL Editor → New query**: paste and run every file in
-   `supabase/migrations/`, one at a time, in number order (`0001_init.sql`
-   first). Each runs once.
-3. **Authentication → Sign In / Providers**: turn **Allow new users to sign up**
-   on and **Confirm email** off, then **Save**.
-4. **SQL Editor**: `select private.make_invite();` gives you an invite code.
-5. Put the project's values in `.env` (copy `.env.example`; both values are
-   under the dashboard's **Connect** button), plus the testing switch:
+1. Install **Docker Desktop** (Mac or Windows; on Linux, Docker Engine) from
+   [docker.com](https://www.docker.com/products/docker-desktop/), and start it.
+2. In the repo: `npm install`.
+3. Start the local Supabase:
+   ```bash
+   npx supabase start
    ```
-   EXPO_PUBLIC_SUPABASE_URL=https://<dev-project-ref>.supabase.co
-   EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+   The first time, this downloads Supabase's images (a few GB, so give it a few
+   minutes); after that it starts in seconds. It applies every migration in
+   `supabase/migrations/`, then `supabase/seed.sql`, which makes three test
+   players:
+
+   | Username | Password | |
+   |---|---|---|
+   | `alice` | `focus-dev` | friends with bob and carol |
+   | `bob` | `focus-dev` | friends with alice and carol |
+   | `carol` | `focus-dev` | friends with alice and bob |
+
+   All three are testers (they get the **Test** button), and there's a spare
+   invite, `TESTJOIN`, for trying the Join form.
+4. Point the app at it. `npx supabase status` prints the local addresses and
+   keys. Put these in `.env` (copy `.env.example` if you haven't got one):
+   ```
+   EXPO_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+   EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<the "Publishable" key from npx supabase status>
    EXPO_PUBLIC_TESTING=true
    ```
    `.env` is never committed (it's in `.gitignore`), and deploys get their
    values from GitHub, so none of this reaches the real site. (If you ever
-   deploy by hand with `npx eas-cli@latest deploy`, switch `.env` back to the
-   real project and remove `EXPO_PUBLIC_TESTING` first.)
-6. `npm install`, then `npx expo start --web`. Join with the invite
-   (**Got an invite? Join**), then make a second player: on the first one's
-   noticeboard, **Make an invite**, and open the link in a private window.
-7. Make both of them testers, so they get the **Test** button:
-   ```sql
-   update public.profiles set tester = true;
-   ```
+   deploy by hand with `npx eas-cli@latest deploy`, switch `.env` to the real
+   project's values and remove `EXPO_PUBLIC_TESTING` first.)
+5. `npx expo start --web --clear`, and sign in as `alice`.
 
-Free projects pause after a week without use. If yours has, press **Restore**
-in the dashboard.
+## 2. Each time you sit down to work
 
-## 2. Postgres for the database tests (one-off)
-
-`npm run test:db` runs the game's rules (every function in the migrations)
-against a plain local Postgres 16. It makes a scratch database called
-`focus_test`, builds it from the migrations, and drops it again next run. It
-never touches Supabase. Pick one way to get Postgres:
-
-- **Docker** (any OS): `docker run --name focus-pg -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:16`.
-  Afterwards it's `docker start focus-pg`.
-- **macOS**: [Postgres.app](https://postgresapp.com), or
-  `brew install postgresql@16 && brew services start postgresql@16`.
-- **Windows**: the installer from [postgresql.org](https://www.postgresql.org/download/windows/).
-  Remember the password you give the `postgres` user.
-
-The tests connect with `DATABASE_URL`, which defaults to
-`postgres://postgres:postgres@localhost:5432/postgres` (the Docker setup). If
-yours differs, set it first:
-
-```bash
-# macOS / Linux
-DATABASE_URL=postgres://postgres:<password>@localhost:5432/postgres npm run test:db
-# Windows PowerShell
-$env:DATABASE_URL="postgres://postgres:<password>@localhost:5432/postgres"; npm run test:db
-```
-
-(With Postgres.app or Homebrew, the user is usually your own login name with
-no password: `postgres://<you>@localhost:5432/postgres`.)
+- Start Docker Desktop, then `npx supabase start` and `npx expo start --web`.
+- **Studio**, the local dashboard, is at <http://127.0.0.1:54323>: browse the
+  tables, or run SQL in its SQL Editor.
+- When you're done, `npx supabase stop` frees the memory. Your local players
+  and their plots are kept for next time.
+- To start afresh, `npx supabase db reset` rebuilds the local database from the
+  migrations and the seed: back to alice, bob and carol with nothing.
+- Never connect the CLI to the real project (`supabase link`, or any command
+  with `--linked`). New migrations reach the real database by hand, following
+  the runbooks in `deployment/`.
 
 ## 3. The automated checks
 
@@ -95,6 +85,10 @@ no password: `postgres://<you>@localhost:5432/postgres`.)
 | `npm run test:db` | the game rules, as scenarios (`supabase/tests/game.test.mjs`) | yes |
 | `npx prettier --check "src/**/*.{ts,tsx}" "supabase/tests/*.mjs"` | formatting (the style is in `.prettierrc.json`) | no |
 
+- `npm run test:db` uses the local Supabase's database server: with it
+  running, it just works. It builds a separate scratch database there
+  (`focus_test`) from the migrations, and never touches your local players.
+  To use another Postgres, set `DATABASE_URL` (CI uses a plain Postgres 16).
 - `npx expo export` writes to `dist/`, which is gitignored. Delete it when
   you're done if you like.
 - To fix formatting, run the same prettier command with `--write` instead of
@@ -111,18 +105,18 @@ Rules live in the migrations, so most gameplay changes are database changes.
   run on the real database, and editing them changes nothing there. Name the
   new one with the next number, e.g. `0008_<what_it_does>.sql`, with a comment
   at the top saying what it changes and which migration it runs after.
-- **It must run once, cleanly, on a database that's in use.** Postgres runs a
-  file pasted into the SQL Editor as one transaction, so if anything fails,
-  nothing changes. Think about rows that already exist: give new columns
-  defaults, and fill them in for existing players where needed.
+- **It must run once, cleanly, on a database that's in use.** Each file runs
+  as one transaction, so if anything fails, nothing changes. Think about rows
+  that already exist: give new columns defaults, and fill them in for existing
+  players where needed.
 - **Write the scenario first.** Add tests to `supabase/tests/game.test.mjs` for
   what should now happen (and what should be refused), next to the related
   ones. The helpers at the top make players (`alice`, `bob`, `carol`), give
   them things (`give`, `setChips`), study (`study`) and move time on
   (`travel`). Run `npm run test:db` until they pass.
-- **Then run it on your dev project** (SQL Editor) before trying the app. Your
-  dev project already has players and plants in it, so this is also the check
-  that it upgrades a database in use.
+- **Then `npx supabase migration up`.** It applies just the new migration to
+  your local Supabase, keeping its players and plots, so it's also the check
+  that the migration upgrades a database in use. Then try the app.
 - **Say so for the real project.** Migrations are run on the real database by
   hand, so a pull request with one needs a runbook step in `deployment/`
   (which file, in what order, and what to check afterwards).
@@ -137,30 +131,34 @@ This opens the app at `http://localhost:8081`. Changes reload as you save.
 After changing `.env`, stop the server and start it again with `--clear`, or
 the old values stick.
 
-- **Two players:** one in a normal window and one in a private window (or
-  another browser), signed in as different players. The garden, the market,
-  letters, desks and friends' cars all need two.
-- **The Test button** (with `EXPO_PUBLIC_TESTING=true`, for testers) finishes
-  a session at once, skips ahead in time (so crops grow and wither, and breaks
-  run out), and gives chips, items and ripe crops. See
-  [deployment/0002-testing-tools.md](../deployment/0002-testing-tools.md).
+- **Two players:** `alice` in a normal window and `bob` in a private window (or
+  another browser). The garden, the market, letters, desks and friends' cars
+  all need two.
+- **The Test button** finishes a session at once, skips ahead in time (so
+  crops grow and wither, and breaks run out), and gives chips, items and ripe
+  crops. See [deployment/0002-testing-tools.md](../deployment/0002-testing-tools.md).
 - **Weather and time of day:** add `?weather=clear|cloudy|windy|rain|storm|mist`
   and/or `?hour=0-23` to the address, e.g. `?hour=22&weather=rain` to check the
   night colours. This changes only what you see and hear.
-- **A first day:** the noticeboard's **Show the tips for new players again**
-  brings the tips back. For the whole first day, including skipping the first
-  session, join as a brand-new player with a fresh invite.
+- **A first day:** join as a new player with the invite `TESTJOIN`
+  (**Got an invite? Join**), or with an invite made on the noticeboard. You'll
+  see the welcome, the tips, and skipping the first session. The noticeboard's
+  **Show the tips for new players again** brings the tips back for anyone.
 - **Phone sizes:** the browser's developer tools have a device mode (in
   Chrome, F12, then the phone icon). It's good for layout, but try a real
   phone too, for touch, the thumbstick and sound.
 
 ### On your phone
 
-With `npx expo start --web` running, put the phone on the same Wi-Fi and open
-`http://<your computer's IP address>:8081`. To find the address, run
-`ipconfig getifaddr en0` on a Mac, or `ipconfig` on Windows (look for the
-IPv4 address). If your computer asks whether to let Node accept incoming
-connections, allow it.
+1. Find your computer's IP address: `ipconfig getifaddr en0` on a Mac, or
+   `ipconfig` on Windows (the IPv4 address).
+2. The phone has to reach your local Supabase too, so in `.env` swap
+   `127.0.0.1` for that address, e.g.
+   `EXPO_PUBLIC_SUPABASE_URL=http://192.168.1.20:54321`, and restart with
+   `npx expo start --web --clear`.
+3. With the phone on the same Wi-Fi, open `http://<that address>:8081`. If your
+   computer asks whether to let Node or Docker accept incoming connections,
+   allow it.
 
 Over a plain `http://` address, browsers turn off two things that need a
 secure page: keeping the screen awake during a session, and copying invite
@@ -210,8 +208,9 @@ windows. Every so often (and always for a bigger change), do the whole round:
 - [ ] `npx prettier --check ...` is clean (section 3).
 - [ ] You've clicked through what you changed, on a computer and on a phone,
       with two players where it matters.
-- [ ] A new migration has the next number, tests in `game.test.mjs`, has been
-      run on your dev project, and has a step in a `deployment/` runbook.
+- [ ] A new migration has the next number and tests in `game.test.mjs`, has
+      gone onto your local Supabase with `npx supabase migration up`, and has
+      a step in a `deployment/` runbook.
 - [ ] If the game behaves differently, `README.md` and `docs/PLAN.md` say so.
 - [ ] Nothing private or stray is committed: no `.env`, no `dist/`, no
       screenshots. `EXPO_PUBLIC_TESTING` is only ever in your local `.env`.
@@ -221,29 +220,47 @@ windows. Every so often (and always for a bigger change), do the whole round:
 CI runs the same checks, and the pull request gets its own preview address:
 open the **Deploy web** check's details on the pull request, and the address
 is near the end of its log. The preview uses the **real** Supabase project
-(the one in the repository's variables), not your dev project. So:
+(the one in the repository's variables), not your local one. So:
 
 - use it to see the change over `https` on your phone, and
 - if the pull request adds a migration, its new features won't work in the
   preview until that migration has been run on the real database. Test those
-  on your dev project instead. Run the migration on the real database just
-  before you merge, as the runbook says: until the merge, everyone is still
-  on the old app.
+  locally instead. Run the migration on the real database just before you
+  merge, as the runbook says: until the merge, everyone is still on the old
+  app.
+
+## A hosted test project instead
+
+If you'd rather test on a hosted Supabase project (to try a phone away from
+home, say), make a second project and point `.env` at it. Supabase's free plan
+allows two active projects across all your organisations, so with two already
+running you'd pause one, or upgrade. In the new project's SQL Editor, run every
+file in `supabase/migrations/` in number order, then `supabase/seed.sql` for
+the same three test players. Under **Authentication → Sign In / Providers**,
+turn sign-ups on and email confirmation off.
 
 ## Troubleshooting
 
+- **`npx supabase start` says it can't connect to the Docker daemon:** Docker
+  Desktop isn't running. Start it, wait until it says it's running, and try
+  again.
+- **`npx supabase start` says a port is already allocated:** something else
+  is using Supabase's ports (54321 to 54324), often another local Supabase
+  project. `npx supabase stop --all` stops every one of them.
 - **A change to `.env` hasn't taken effect:** restart with
   `npx expo start --web --clear`.
-- **`test:db` says `ECONNREFUSED`:** Postgres isn't running, or isn't on port
-  5432. With Docker: `docker start focus-pg`.
-- **`test:db` says `password authentication failed`:** `DATABASE_URL` has the
-  wrong user or password for your Postgres (section 2).
+- **"Invalid login credentials" for alice:** the password is `focus-dev`. If
+  the players have gone, `npx supabase db reset` brings them back (and clears
+  everything else).
+- **`test:db` says `ECONNREFUSED`:** the local Supabase isn't running
+  (`npx supabase start`), or the Postgres in `DATABASE_URL` isn't.
 - **`test:db` says `database "focus_test" is being accessed by other users`:**
-  something (a database app, or another test run) still has it open. Close it
-  and run again.
-- **"already exists" when running a migration:** that file has already been
-  run on that database, and nothing changed. Run the next one.
+  something (Studio, a database app, or another test run) still has it open.
+  Close it and run again.
+- **"already exists" when running a migration in a hosted project's SQL
+  Editor:** that file has already been run on that database, and nothing
+  changed. Run the next one.
 - **The other player doesn't show up in the garden:** both have to be on a
-  break with the garden open, signed in to the same project, and friends.
+  break with the garden open, and friends (the three test players all are).
 - **No sound:** tap or click once first, then check the phone's volume. On an
   iPhone, check Focus itself isn't muted (the Sound button).

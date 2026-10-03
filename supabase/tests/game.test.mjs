@@ -1,10 +1,12 @@
 // Scenario tests for supabase/migrations: they run on a plain Postgres with
 // supabase-stubs.sql standing in for Supabase's auth and Realtime schemas.
 //
+//   npm run test:db    with the local Supabase running (npx supabase start)
 //   DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres npm run test:db
 //
-// The database in DATABASE_URL is only used to create a scratch database,
-// focus_test, which is dropped and rebuilt from the migrations on every run.
+// The server in DATABASE_URL (by default the local Supabase's) is only used
+// to create a scratch database, focus_test, which is dropped and rebuilt from
+// the migrations on every run. Nothing else on it is touched.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -14,7 +16,8 @@ import pg from 'pg';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const migrations = path.join(here, '..', 'migrations');
-const adminUrl = process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/postgres';
+const adminUrl =
+  process.env.DATABASE_URL ?? 'postgres://postgres:postgres@127.0.0.1:54322/postgres';
 const testUrl = new URL(adminUrl);
 testUrl.pathname = '/focus_test';
 

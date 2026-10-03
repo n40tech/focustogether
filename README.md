@@ -49,16 +49,21 @@ ahead in time (so crops grow), and hands out chips, items and ripe crops. See
 
 The full walkthrough, with checks and troubleshooting, is
 [deployment/0001-setup-and-launch.md](deployment/0001-setup-and-launch.md).
-(`supabase/seed.sql` was for the MVP's hand-made accounts; with 0003 those are
-refused, and invites replace it.)
+(`supabase/seed.sql` is only for the local Supabase below: it makes test players,
+and refuses to run on a database that already has players.)
 
 ## Run locally
+Locally, Focus runs against a **local Supabase** in Docker, so your friends'
+real data is never touched:
 ```bash
 npm install
-npx expo start --web    # or `npx expo start` and scan the QR code with Expo Go
+npx supabase start      # applies the migrations and makes test players
+npx expo start --web
 ```
-`.env` needs `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-(see `.env.example`).
+Put the local address and publishable key that `npx supabase status` prints in
+`.env` (see `.env.example`), then sign in as `alice`, `bob` or `carol` (password
+`focus-dev`). The full setup, and what to test before a pull request, is in
+**[docs/TESTING.md](docs/TESTING.md)**.
 
 Sound starts after your first tap or click; browsers don't allow it sooner.
 On an iPhone it plays even with the silent switch on (which, like a video,
@@ -101,10 +106,9 @@ npx expo export --platform web   # the web build
 npm run test:db                  # the migrations' game rules, on a throwaway Postgres
 ```
 CI (`.github/workflows/ci.yml`) runs all four on every push and pull request.
-`test:db` needs a local Postgres (`DATABASE_URL`, default
-`postgres://postgres:postgres@localhost:5432/postgres`). How to set that up, a
-Supabase project just for testing, and what to click through before a pull
-request are all in **[docs/TESTING.md](docs/TESTING.md)**.
+`test:db` uses the local Supabase's Postgres (or any other, given as
+`DATABASE_URL`). What to click through before a pull request is in
+**[docs/TESTING.md](docs/TESTING.md)**.
 
 ## How it fits together
 - All game rules live in Postgres functions (`supabase/migrations`). The app only
