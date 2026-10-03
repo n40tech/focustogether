@@ -104,11 +104,13 @@ npm run lint
 npm run typecheck
 npx expo export --platform web   # the web build
 npm run test:db                  # the migrations' game rules, on a throwaway Postgres
+npm run test:web                 # click-throughs in a browser, against a pretend Supabase
 ```
-CI (`.github/workflows/ci.yml`) runs all four on every push and pull request.
-`test:db` uses the local Supabase's Postgres (or any other, given as
-`DATABASE_URL`). What to click through before a pull request is in
-**[docs/TESTING.md](docs/TESTING.md)**.
+CI (`.github/workflows/ci.yml`) runs all five on every push to `main` and every
+pull request. `test:db` uses the local Supabase's Postgres (or any other, given
+as `DATABASE_URL`). `test:web` builds the app itself and needs no Supabase;
+run `npx playwright install chromium` once first. What to click through before
+a pull request is in **[docs/TESTING.md](docs/TESTING.md)**.
 
 ## How it fits together
 - All game rules live in Postgres functions (`supabase/migrations`). The app only

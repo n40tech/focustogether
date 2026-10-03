@@ -17,13 +17,15 @@ npm run lint
 npm run typecheck
 npx expo export --platform web           # the web build CI makes
 npm run test:db
-npx prettier --check "src/**/*.{ts,tsx}" "supabase/tests/*.mjs"
+npm run test:web                         # the browser tests
+npx prettier --check "src/**/*.{ts,tsx}" "supabase/tests/*.mjs" "e2e/*.{ts,mjs}"
 npx expo start --web                     # then click through (section 5)
 ```
 
-Lint, typecheck, the web build and the database tests are what CI runs on
-every pull request, so if they pass here they'll pass there. Formatting isn't
-checked by CI, but keeping to it keeps your diffs to what you changed.
+Lint, typecheck, the web build, the database tests and the browser tests are
+what CI runs on every pull request, so if they pass here they'll pass there.
+Formatting isn't checked by CI, but keeping to it keeps your diffs to what you
+changed.
 
 ---
 
@@ -31,7 +33,8 @@ checked by CI, but keeping to it keeps your diffs to what you changed.
 
 1. Install **Docker Desktop** (Mac or Windows; on Linux, Docker Engine) from
    [docker.com](https://www.docker.com/products/docker-desktop/), and start it.
-2. In the repo: `npm install`.
+2. In the repo: `npm install`, then `npx playwright install chromium`, which
+   downloads the browser the browser tests use.
 3. Start the local Supabase:
    ```bash
    npx supabase start
@@ -83,7 +86,8 @@ checked by CI, but keeping to it keeps your diffs to what you changed.
 | `npm run typecheck` | TypeScript | yes |
 | `npx expo export --platform web` | the web build: every page builds | yes |
 | `npm run test:db` | the game rules, as scenarios (`supabase/tests/game.test.mjs`) | yes |
-| `npx prettier --check "src/**/*.{ts,tsx}" "supabase/tests/*.mjs"` | formatting (the style is in `.prettierrc.json`) | no |
+| `npm run test:web` | the main ways through the app, clicked through in a browser (`e2e/`) | yes |
+| `npx prettier --check "src/**/*.{ts,tsx}" "supabase/tests/*.mjs" "e2e/*.{ts,mjs}"` | formatting (the style is in `.prettierrc.json`) | no |
 
 - `npm run test:db` uses the local Supabase's database server: with it
   running, it just works. It builds a separate scratch database there
@@ -91,6 +95,28 @@ checked by CI, but keeping to it keeps your diffs to what you changed.
   To use another Postgres, set `DATABASE_URL` (CI uses a plain Postgres 16).
 - `npx expo export` writes to `dist/`, which is gitignored. Delete it when
   you're done if you like.
+- `npm run test:web` builds the web app (a minute or two), then clicks
+  through it in Chromium at phone size, as one player: signing in, the office,
+  the payout, the garden, the shed and a first day. It doesn't need the local
+  Supabase, and it ignores your `.env`: the tests stand in for Supabase
+  themselves (`e2e/fake-supabase.ts`), so they're quick and always start from
+  the same place. They can't check the rules (that's `test:db`) or two real
+  players (that's you, in section 5).
+- A failing browser test says which step failed, and leaves a screenshot and
+  a trace in `test-results/`. `npx playwright show-trace <the trace.zip>`
+  replays the test step by step. In CI, the report is kept with the run:
+  open the failed run on GitHub and download **playwright-report** at the
+  bottom of its Summary.
+- To watch the tests run, `npx playwright test --headed`; to pick and replay
+  them one by one, `npx playwright test --ui`. To skip the build while you
+  work on the tests themselves, run `node e2e/serve.mjs` in a terminal of its
+  own: the tests use that server while it's running. It builds as it starts,
+  so restart it after you change the app.
+- When you change something the tests click (a button's name, say, or what a
+  screen says), update the test to match. When you add something people will
+  use, add a test for it. If the app starts calling a new database function,
+  the tests fail with "calls the fake Supabase has no answer for": add the
+  function to `e2e/fake-supabase.ts`, roughly as the migration has it.
 - To fix formatting, run the same prettier command with `--write` instead of
   `--check`. Keep to the folders above (or the files you've changed): the
   config files at the top of the repo have their own style.
@@ -171,8 +197,11 @@ Expo Go runs it, but without sound.
 
 ### What to click through
 
-Go through whatever your change touches, and the places around it, in both
-windows. Every so often (and always for a bigger change), do the whole round:
+The browser tests cover the main ways through as one player. Clicking through
+yourself is for what they can't see: two players at once, realtime, how it
+looks and sounds, and a real phone. Go through whatever your change touches,
+and the places around it, in both windows. Every so often (and always for a
+bigger change), do the whole round:
 
 - [ ] **Join and sign in:** join with an invite, log out, sign in again.
       Logging out on a break counts as going home.
@@ -203,8 +232,8 @@ windows. Every so often (and always for a bigger change), do the whole round:
 
 ## 6. Before you open the pull request
 
-- [ ] `npm run lint`, `npm run typecheck`, `npx expo export --platform web`
-      and `npm run test:db` all pass.
+- [ ] `npm run lint`, `npm run typecheck`, `npx expo export --platform web`,
+      `npm run test:db` and `npm run test:web` all pass.
 - [ ] `npx prettier --check ...` is clean (section 3).
 - [ ] You've clicked through what you changed, on a computer and on a phone,
       with two players where it matters.
@@ -257,6 +286,13 @@ turn sign-ups on and email confirmation off.
 - **`test:db` says `database "focus_test" is being accessed by other users`:**
   something (Studio, a database app, or another test run) still has it open.
   Close it and run again.
+- **`test:web` says a browser "doesn't exist":** run
+  `npx playwright install chromium` (again after Playwright is updated).
+- **`test:web` stops before any test, saying the web server exited early:**
+  something else is using port 8790. Stop it and run again.
+- **`test:web` fails on something you've just fixed:** if a
+  `node e2e/serve.mjs` is still running, the tests are using its older build.
+  Stop it (Ctrl+C), and either start it again or leave the tests to build.
 - **"already exists" when running a migration in a hosted project's SQL
   Editor:** that file has already been run on that database, and nothing
   changed. Run the next one.

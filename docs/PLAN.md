@@ -380,6 +380,8 @@ supabase/migrations/      0001 init (MVP), 0002 game, 0003 community, 0004 withe
                           0005 testing tools, 0006 real-time growth and desks,
                           0007 staying on the page, a first day, post and bins
 supabase/tests/           scenario tests for the game rules (plain Postgres + stubs)
+e2e/                      browser tests: the web build clicked through in Chromium,
+                          against a pretend Supabase (Playwright)
 deployment/               numbered runbooks for setting up and shipping each update
 ```
 
@@ -468,9 +470,9 @@ uses up the invite and befriends whoever made it.
 | Web build | `npx expo export -p web` with `web.output: "static"` | Every route gets its own HTML file, so refreshing `/garden` works on any static host |
 | Hosting | **EAS Hosting** (`eas deploy`), served at `https://<name>.expo.app` | The project is already linked to EAS; free tier; a preview URL per deploy; custom domain later |
 | Backend | **Supabase**: Postgres, Auth, Realtime | Already in use. RLS and RPCs keep the rules server-side, and Realtime Broadcast carries chat |
-| CI | GitHub Actions: lint, typecheck, web export and the database tests, on pull requests and pushes to `main` | Catches a broken build or rule before it ships |
+| CI | GitHub Actions: lint, typecheck, web export, the database tests and the browser tests, on pull requests and pushes to `main` | Catches a broken build, rule or screen before it ships |
 | CD | GitHub Actions: `eas deploy --prod` on push to `main`, a preview deploy for each PR | |
-| DB migrations | SQL files in `supabase/migrations/`, run in the SQL editor (or `supabase db push`) | Step-by-step runbooks in `deployment/` |
+| DB migrations | SQL files in `supabase/migrations/`, run by hand in the SQL editor (the CLI is never linked to the real project) | Step-by-step runbooks in `deployment/` |
 
 **Secrets and variables (GitHub → Settings → Secrets and variables → Actions)**
 - Secret `EXPO_TOKEN`: an access token from expo.dev (Account settings → Access
@@ -518,6 +520,9 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
       3-minute cigarettes (58 scenario tests in all). In the garden too: a
       noticeboard, benches to sit on, the gate back to work, and the
       thumbstick on the right. Sound plays on iPhones on silent
+- [x] Testing on your own machine: a local Supabase with test players
+      (`supabase/config.toml`, `seed.sql`), and browser tests (`npm run
+      test:web`, 21 click-throughs against a pretend Supabase, run in CI too)
 - [ ] Run `0003` to `0007`, switch sign-ups on,
       make the first invites, and do the first deploy:
       `deployment/0001-setup-and-launch.md`
