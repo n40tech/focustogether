@@ -151,6 +151,7 @@ const silentSwitch = (() => {
 
 class WebAudioEngine implements AudioEngine {
   unlocked = false;
+  onBeforeTap = false;
 
   private ctx: AudioContext | null = null;
   private n: Nodes | null = null;
@@ -165,7 +166,13 @@ class WebAudioEngine implements AudioEngine {
 
   constructor() {
     if (typeof window === 'undefined') return; // static rendering in Node
-    const unlock = () => this.unlock();
+    const unlock = (event: Event) => {
+      // A tap or key press is starting. These listeners hear it before
+      // anything else on the page, so this is how things were beforehand.
+      if (event.type === 'pointerdown' || event.type === 'keydown')
+        this.onBeforeTap = this.unlocked;
+      this.unlock();
+    };
     // Browsers only let a page start sound from a tap, click or key press, and
     // phones count the end of a tap (touchend, pointerup), not its start.
     for (const type of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown']) {

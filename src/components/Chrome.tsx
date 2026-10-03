@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { nativeDriver } from '@/art/motion';
 import { useReportPanelHeight, useTone } from '@/art/Scene';
-import { setSoundSettings, useSound } from '@/audio/sound';
+import { setSoundSettings, useSound, wasOnBeforeTap } from '@/audio/sound';
 import { font, palette } from '@/lib/theme';
 
 /** A poker chip, drawn small. */
@@ -51,7 +51,8 @@ export function SoundButton() {
   const label = !unlocked ? 'Sound' : muted ? 'Muted' : 'Sound on';
   return (
     <Pressable
-      onPress={() => unlocked && setSoundSettings({ muted: !muted })}
+      // The tap that turns sound on mustn't turn it straight off again.
+      onPress={() => wasOnBeforeTap() && setSoundSettings({ muted: !muted })}
       accessibilityRole="button"
       accessibilityLabel={muted ? 'Unmute' : 'Mute'}
       style={({ pressed }) => [

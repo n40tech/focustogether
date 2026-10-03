@@ -7,6 +7,7 @@ import type { AudioEngine } from './types';
  */
 export const engine: AudioEngine = {
   unlocked: false,
+  onBeforeTap: false,
   setAmbience: () => {},
   setSmoking: () => {},
   play: () => {},

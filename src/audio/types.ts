@@ -27,6 +27,11 @@ export type SoundSettings = { muted: boolean; volume: number };
 export interface AudioEngine {
   /** False until the browser lets the page make sound (after the first tap). */
   readonly unlocked: boolean;
+  /**
+   * Whether sound was already on as the latest tap or key press began: false
+   * all through the tap that turns it on.
+   */
+  readonly onBeforeTap: boolean;
   setAmbience(ambience: Ambience): void;
   /** Quiet crackle while your cigarette lasts. */
   setSmoking(on: boolean): void;

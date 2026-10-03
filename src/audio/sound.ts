@@ -40,6 +40,9 @@ export function setSoundSettings(next: Partial<SoundSettings>) {
   AsyncStorage.setItem(KEY, JSON.stringify(settings)).catch(() => {});
 }
 
+/** Whether sound was already on as this tap began (so it isn't the tap that turns it on). */
+export const wasOnBeforeTap = () => engine.onBeforeTap;
+
 const subscribe = (listener: () => void) => {
   listeners.add(listener);
   return () => {
