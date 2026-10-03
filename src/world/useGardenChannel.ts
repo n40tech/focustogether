@@ -22,10 +22,12 @@ const ttlFor = (text: string) => Math.min(10_000, 4_000 + text.length * 60);
 let nextId = 1;
 
 type Handlers = {
-  /** A friend moved (or told us where they are). */
-  onMove: (username: string, at: Point) => void;
+  /** A friend moved (or told us where they are, and whether they're sitting on a bench). */
+  onMove: (username: string, at: Point, sitting: boolean) => void;
   /** Where you are, to answer a friend who's just come into the garden. */
   where: () => Point;
+  /** Whether you're sitting on a bench. */
+  sitting: () => boolean;
 };
 
 /**
@@ -35,7 +37,7 @@ type Handlers = {
  * policies in 0002_game.sql enforce both. Nothing is stored: if you're not in
  * the garden when someone speaks, you don't see it.
  *
- * Events: "hello" (just arrived: say where you are), "pos" {x, y}, "say"
+ * Events: "hello" (just arrived: say where you are), "pos" {x, y, sit?}, "say"
  * {text} and "bye" (left the garden).
  */
 export function useGardenChannel(
@@ -86,7 +88,11 @@ export function useGardenChannel(
     mine.current?.send({
       type: 'broadcast',
       event: 'pos',
-      payload: { x: Math.round(at.x), y: Math.round(at.y) },
+      payload: {
+        x: Math.round(at.x),
+        y: Math.round(at.y),
+        ...(on.current.sitting() && { sit: 1 }),
+      },
     });
   }, []);
 
@@ -115,7 +121,11 @@ export function useGardenChannel(
           })
           .on('broadcast', { event: 'pos' }, ({ payload }) => {
             if (!Number.isFinite(payload?.x) || !Number.isFinite(payload?.y)) return;
-            on.current.onMove(username, clampToGarden({ x: payload.x, y: payload.y }));
+            on.current.onMove(
+              username,
+              clampToGarden({ x: payload.x, y: payload.y }),
+              payload.sit === 1
+            );
             hear(username);
           })
           .on('broadcast', { event: 'hello' }, () => sendPos())

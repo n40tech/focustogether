@@ -6,6 +6,7 @@ import { Scene } from '@/art/Scene';
 import { useAmbience } from '@/audio/sound';
 import { SceneHeader } from '@/components/Chrome';
 import { StudyPanel } from '@/components/StudyPanel';
+import { useTips } from '@/components/Tip';
 import { api } from '@/lib/api';
 import { palette } from '@/lib/theme';
 import { useConditions } from '@/weather/useConditions';
@@ -25,6 +26,13 @@ export default function Office() {
   useEffect(() => {
     api.setPlace('office').then(setMe, () => {});
   }, [setMe]);
+  // You found the office: the car park's welcome has done its job.
+  const tips = useTips();
+  const welcomed = tips.has('welcome');
+  const doneTip = tips.done;
+  useEffect(() => {
+    if (!welcomed) doneTip('welcome');
+  }, [welcomed, doneTip]);
   const walkOut = () => {
     api.setPlace('outside').then(setMe, () => {});
     go('/');

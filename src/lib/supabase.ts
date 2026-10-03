@@ -30,5 +30,26 @@ if (Platform.OS !== 'web') {
   });
 }
 
+/** The signed-in user's access token, kept to hand for calls that can't wait (see src/lib/away). */
+let token: string | null = null;
+supabase.auth.onAuthStateChange((_event, session) => {
+  token = session?.access_token ?? null;
+});
+export const accessToken = () => token;
+
+/**
+ * Calls an RPC with `fetch(..., { keepalive: true })`, which the browser
+ * finishes even as the page is hidden or closed. Fire and forget.
+ */
+export function rpcKeepalive(fn: string, args: Record<string, unknown>) {
+  if (!token) return Promise.resolve();
+  return fetch(`${url}/rest/v1/rpc/${fn}`, {
+    method: 'POST',
+    keepalive: true,
+    headers: { apikey: key!, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(args),
+  }).catch(() => {});
+}
+
 // Accounts are username-based in the UI; Supabase auth needs an email.
 export const usernameToEmail = (username: string) => `${username.trim().toLowerCase()}@focus.test`;

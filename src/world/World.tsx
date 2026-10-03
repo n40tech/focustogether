@@ -1,12 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, type Href } from 'expo-router';
-import { createContext, use, useCallback, useMemo, type ReactNode } from 'react';
+import { createContext, use, useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { playSound, type Sfx } from '@/audio/sound';
 import { Button } from '@/components/Button';
 import { usePolled } from '@/hooks/usePolled';
 import { api, type Friend, type Me } from '@/lib/api';
+import { fetchMe, startAwayWatch, watchSession } from '@/lib/away';
 import { supabase } from '@/lib/supabase';
 import { tones } from '@/lib/theme';
 
@@ -30,8 +31,13 @@ export function useWorld() {
 
 /** Polls the server for you and your friends; renders children once you've loaded. */
 export function WorldProvider({ children }: { children: ReactNode }) {
-  const me = usePolled(api.getMe, POLL_MS);
+  const me = usePolled(fetchMe, POLL_MS);
   const board = usePolled(api.getFriendsBoard, POLL_MS);
+
+  // Leaving the page mid-session stops the session (see src/lib/away).
+  useEffect(startAwayWatch, []);
+  const session = me.data?.active_session ?? null;
+  useEffect(() => watchSession(session), [session]);
 
   const refreshMe = me.refresh;
   const refreshBoard = board.refresh;

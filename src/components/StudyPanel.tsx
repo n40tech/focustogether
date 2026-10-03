@@ -6,7 +6,9 @@ import { playSound } from '@/audio/sound';
 import { Button } from '@/components/Button';
 import { Muted, Panel } from '@/components/Chrome';
 import { Countdown } from '@/components/Countdown';
-import { api, breakMinutes, MAX_SESSION_MIN, type Me } from '@/lib/api';
+import { Tip } from '@/components/Tip';
+import { api, AWAY_GRACE_S, breakMinutes, MAX_SESSION_MIN, type Me } from '@/lib/api';
+import { pageId } from '@/lib/away';
 import { confirm } from '@/lib/confirm';
 import { cancelSessionEnd, scheduleSessionEnd } from '@/lib/notifications';
 
@@ -41,9 +43,18 @@ export function StudyPanel({ me, setMe, refresh, onWalkOut }: Props) {
 
   const start = () =>
     run(async () => {
-      const next = await api.startSession(minutes);
+      const next = await api.startSession(minutes, pageId);
       playSound('pop');
       scheduleSessionEnd(new Date(Date.now() + minutes * 60_000), minutes);
+      return next;
+    });
+
+  // New players can skip their first session, to see the payout and the garden.
+  const firstTime = me.sessions_done === 0;
+  const skip = () =>
+    run(async () => {
+      const next = await api.skipFirstSession();
+      cancelSessionEnd();
       return next;
     });
 
@@ -63,22 +74,44 @@ export function StudyPanel({ me, setMe, refresh, onWalkOut }: Props) {
 
   const session = me.active_session;
   if (session) {
+    const here = session.device === pageId;
     return (
       <Panel style={styles.center}>
+        <Tip id="stay">
+          {`Keep Focus open while you study: the screen stays on. Switch apps or tabs, or lock your phone, for more than ${AWAY_GRACE_S} seconds and the session stops, with no chips.`}
+        </Tip>
         <Countdown
           until={session.ends_at}
           onDone={refresh}
           style={[styles.countdown, { color: tone.text }]}
         />
-        <Muted>{`Studying · ${session.duration_min} min`}</Muted>
+        <Muted style={styles.centerText}>
+          {here
+            ? `Studying · ${session.duration_min} min · stay on this page`
+            : `Studying · ${session.duration_min} min · started on another page`}
+        </Muted>
+        {firstTime && <Button title="Skip my first session" small onPress={skip} disabled={busy} />}
         <Button title="Give up" variant="ghost" small onPress={giveUp} disabled={busy} />
         {error && <Text style={{ color: tone.danger }}>{error}</Text>}
       </Panel>
     );
   }
 
+  const left = me.left_session;
   return (
     <Panel>
+      {left ? (
+        <Text style={[styles.left, { color: tone.text, borderColor: tone.line }]}>
+          {`You left the page ${minutesIn(left.started_at, left.left_at)} into your session, so it stopped: no chips or break this time.`}
+        </Text>
+      ) : (
+        firstTime && (
+          <Tip id="study">
+            Pick how long to study and press Start. New here? Once it has started you can skip your
+            first session, to look round first.
+          </Tip>
+        )
+      )}
       <View style={styles.stepper}>
         <Button
           title="−5"
@@ -128,8 +161,21 @@ export function StudyPanel({ me, setMe, refresh, onWalkOut }: Props) {
   );
 }
 
+/** "5 minutes", "a minute", "a few seconds". */
+function minutesIn(from: string, to: string) {
+  const m = Math.floor((Date.parse(to) - Date.parse(from)) / 60_000);
+  return m < 1 ? 'a few seconds' : m === 1 ? 'a minute' : `${m} minutes`;
+}
+
 const styles = StyleSheet.create({
   center: { alignItems: 'center' },
+  left: {
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
+    paddingBottom: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
   centerText: { textAlign: 'center' },
   countdown: { fontSize: 52, fontWeight: '300', fontVariant: ['tabular-nums'], letterSpacing: 1 },
   stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12 },

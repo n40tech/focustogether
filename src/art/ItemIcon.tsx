@@ -1,7 +1,7 @@
 import { View } from 'react-native';
 
 import { itemInfo } from '@/lib/catalog';
-import { Crop } from './Garden';
+import { Plant } from './Garden';
 import { DeskItem } from './Office';
 import { Box, Dot } from './primitives';
 import { Bike, Car } from './Vehicles';
@@ -57,7 +57,21 @@ export function ItemIcon({ slug, size = 44 }: { slug: string; size?: number }) {
       );
       break;
     case 'produce':
-      art = <Crop crop={slug} progress={1} ripe x={c} y={c + 6} />;
+      // One ripe plant, drawn larger.
+      art = (
+        <View
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            width: size,
+            height: size,
+            transform: [{ scale: size / 30 }],
+          }}
+        >
+          <Plant crop={slug} progress={1} ripe x={c} y={c + (slug === 'sunflower' ? 9 : 3)} />
+        </View>
+      );
       break;
     default:
       // A pack of cigarettes.

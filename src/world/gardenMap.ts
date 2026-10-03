@@ -55,28 +55,47 @@ export const TABLES: Point[] = [405, 505, 605].map((x) => ({ x, y: 532 }));
 export const STALLS: Rect = { x: 402, y: 516, w: 276, h: 44 };
 export const SHED: Point = { x: 40, y: 506 };
 export const SHED_DOOR: Point = { x: SHED.x + 42, y: SHED.y + 96 };
-export const BUTTS: Point[] = [
-  { x: 176, y: 566 },
-  { x: 912, y: 566 },
-];
 export const BENCHES: Point[] = [
   { x: 214, y: 590 },
   { x: 770, y: 590 },
 ];
-export const COMPOST: Point = { x: 1010, y: 586 };
+/**
+ * Where you sit on a bench (two to a bench): your feet, just in front of it,
+ * so you can get up and walk off.
+ */
+export const SEATS: Point[] = BENCHES.flatMap((b) => [
+  { x: b.x + 16, y: b.y + 20 },
+  { x: b.x + 44, y: b.y + 20 },
+]);
+/** The post box, bottom right: its foot. */
+export const POSTBOX: Point = { x: 1010, y: 590 };
+/** The garden's noticeboard (top-left corner of the board), by the market. */
+export const NOTICEBOARD: Point = { x: 708, y: 520 };
+/** The wheelie bins, one by the shed and one by the post box: their front-left corners. */
+export const BINS: Point[] = [
+  { x: 164, y: 570 },
+  { x: 900, y: 570 },
+];
+/** A bin's footprint, for "am I next to it?". */
+export const binRect = (b: Point): Rect => ({ x: b.x, y: b.y - 32, w: 24, h: 32 });
 export const HEDGE_Y = 620;
 /** Where you come in. */
 export const GATE: Point = { x: 540, y: 606 };
+/** Walk this far down through the gate and you've left the garden. */
+export const GATE_OUT_Y = HEDGE_Y + 12;
 
 /** Things you can't walk through, as rects your feet can't enter. */
 const FIXTURES: Rect[] = [
   { x: SHED.x - 2, y: SHED.y - 4, w: 88, h: 90 },
   ...TABLES.map((t) => ({ x: t.x - 3, y: t.y - 16, w: 76, h: 44 })),
-  ...BUTTS.map((b) => ({ x: b.x - 12, y: b.y - 32, w: 24, h: 34 })),
+  ...BINS.map((b) => ({ x: b.x - 2, y: b.y - 14, w: 28, h: 16 })),
   ...BENCHES.map((b) => ({ x: b.x - 2, y: b.y - 6, w: 64, h: 24 })),
-  { x: COMPOST.x - 32, y: COMPOST.y - 38, w: 64, h: 40 },
+  { x: POSTBOX.x - 13, y: POSTBOX.y - 14, w: 26, h: 16 },
+  { x: NOTICEBOARD.x - 2, y: NOTICEBOARD.y + 30, w: 56, h: 18 },
 ];
 const BOUNDS = { x0: 12, x1: WORLD.w - 12, y0: FENCE_Y + 28, y1: HEDGE_Y - 4 };
+/** The gap in the hedge, which you can walk out through. */
+const GATEWAY = { x0: GATE.x - 16, x1: GATE.x + 16, y1: WORLD.h + 20 };
 /** Half the width of someone's feet. */
 const FEET = 6;
 
@@ -87,7 +106,9 @@ export const obstaclesFor = (plots: Point[]): Rect[] => [
 ];
 
 export function blocked(p: Point, obstacles: Rect[]) {
-  if (p.x < BOUNDS.x0 || p.x > BOUNDS.x1 || p.y < BOUNDS.y0 || p.y > BOUNDS.y1) return true;
+  const inGateway = p.x >= GATEWAY.x0 && p.x <= GATEWAY.x1 && p.y <= GATEWAY.y1;
+  if (p.x < BOUNDS.x0 || p.x > BOUNDS.x1 || p.y < BOUNDS.y0 || (p.y > BOUNDS.y1 && !inGateway))
+    return true;
   return obstacles.some(
     (r) => p.x + FEET > r.x && p.x - FEET < r.x + r.w && p.y > r.y && p.y < r.y + r.h
   );

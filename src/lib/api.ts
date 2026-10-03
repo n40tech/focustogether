@@ -25,7 +25,14 @@ export type Me = {
   vehicle: string | null;
   activity: Activity;
   activity_until: string | null;
-  active_session: { started_at: string; duration_min: number; ends_at: string } | null;
+  active_session: {
+    id: number;
+    started_at: string;
+    duration_min: number;
+    ends_at: string;
+    /** The page (browser tab) it was started on: leaving that page stops it. */
+    device: string | null;
+  } | null;
   last_completed: {
     id: number;
     ended_at: string;
@@ -34,8 +41,16 @@ export type Me = {
     chips: number;
     break_min: number;
   } | null;
+  /** Your last session, if it stopped because you left the page. */
+  left_session: { id: number; started_at: string; left_at: string; duration_min: number } | null;
+  /** Sessions you've finished, ever. */
+  sessions_done: number;
   /** Your crops that are ready to pick, soonest to wither first. */
   ripe: { bed: number; crop: string; withers_at: string | null }[];
+  /** Letters waiting for you in the garden's post box. */
+  letters: number;
+  /** Tips you've seen through or put away (see src/components/Tip). */
+  tips: string[];
   inventory: Inventory;
   /** Testing tools on (profiles.tester, set in the SQL editor). */
   tester: boolean;
@@ -75,13 +90,18 @@ export type ShopItem = {
 
 export type Shop = { chips: number; items: ShopItem[] };
 
+/** One plant: a bed holds up to PLANTS_PER_BED, one seed each. */
 export type Plot = {
   bed: number;
+  /** Where in its bed (0 to PLANTS_PER_BED - 1). */
+  spot: number;
   crop: string;
   /** 0 to 1: how far it has grown. Crops grow in real time, faster while watered. */
   progress: number;
   /** Hours to ripen if nobody waters it. */
   grow_hours: number;
+  /** What it gives when it's picked. */
+  yield: number;
   /** Ready to pick (and not yet withered). */
   ripe: boolean;
   /** Left too long after ripening: gives nothing, and has to be cleared. */
@@ -143,6 +163,24 @@ export type Invite = {
 
 export type SignupCheck = { ok: boolean; reason?: string; from?: string };
 
+export type Letter = {
+  id: number;
+  body: string;
+  sent_at: string;
+  /** When it was picked up from the post box (null while it waits there). */
+  read_at: string | null;
+};
+
+export type Post = {
+  /** Letters to you, newest first. */
+  letters: (Letter & { from: string; from_name: string })[];
+  /** Letters you've sent, newest first. */
+  sent: (Letter & { to: string; to_name: string })[];
+  /** How many are waiting for you in the post box. */
+  waiting: number;
+  server_now: string;
+};
+
 async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.rpc(fn, args);
   if (error) throw new Error(error.message);
@@ -159,9 +197,25 @@ export const api = {
 
   /** Moves you (going to the office hands you a desk if you've just arrived). */
   setPlace: (place: Place) => rpc<Me>('set_place', { p_place: place }),
-  startSession: (minutes: number) => rpc<Me>('start_session', { p_minutes: minutes }),
+  /** `device` is this page's id: leaving this page stops the session. */
+  startSession: (minutes: number, device: string) =>
+    rpc<Me>('start_session', { p_minutes: minutes, p_device: device }),
   cancelSession: () => rpc<Me>('cancel_session'),
+  /** Your first session only: ends it now, as if you'd studied it. */
+  skipFirstSession: () => rpc<Me>('skip_first_session'),
+  /**
+   * You're back on the page a session was started on. `awaySeconds` is how
+   * long it was hidden, as far as this page knows.
+   */
+  /** The page `device` started `session` on has been hidden (see src/lib/away). */
+  leavePage: (session: number, device: string) =>
+    rpc<void>('leave_page', { p_session: session, p_device: device }),
+  backToPage: (session: number, device: string, awaySeconds: number | null) =>
+    rpc<Me>('back_to_page', { p_session: session, p_device: device, p_away_s: awaySeconds }),
   goHome: () => rpc<Me>('go_home'),
+  /** A tip seen through or put away; and all of them back again. */
+  doneTip: (tip: string) => rpc<Me>('done_tip', { p_tip: tip }),
+  resetTips: () => rpc<Me>('reset_tips'),
 
   getShop: () => rpc<Shop>('get_shop'),
   buy: (item: string) => rpc<Shop>('buy', { p_item: item }),
@@ -171,8 +225,9 @@ export const api = {
   water: () => rpc<Garden>('water'),
   waterFriend: (username: string) => rpc<Garden>('water_friend', { p_username: username }),
   harvest: (bed: number) => rpc<Garden>('harvest', { p_bed: bed }),
-  /** Puts a withered crop on the compost, freeing the bed. */
+  /** Pulls up whatever has withered in a bed. */
   clearBed: (bed: number) => rpc<Garden>('clear_bed', { p_bed: bed }),
+  binItem: (item: string, qty: number) => rpc<Garden>('bin_item', { p_item: item, p_qty: qty }),
   eat: (item: string) => rpc<Garden>('eat', { p_item: item }),
   saveSeeds: (item: string) => rpc<Garden>('save_seeds', { p_item: item }),
   smoke: () => rpc<Garden>('smoke'),
@@ -199,6 +254,10 @@ export const api = {
   unlist: (id: number) => rpc<Garden>('unlist', { p_id: id }),
   buyListing: (id: number, qty: number) => rpc<Garden>('buy_listing', { p_id: id, p_qty: qty }),
 
+  getPost: () => rpc<Post>('get_post'),
+  sendLetter: (to: string, body: string) => rpc<Post>('send_letter', { p_to: to, p_body: body }),
+  pickUpPost: () => rpc<Post>('pick_up_post'),
+
   createInvite: () => rpc<{ code: string; expires_at: string }>('create_invite'),
   getInvites: () => rpc<Invite[]>('get_invites'),
   /** Testing tools (testers only, see 0005_testing.sql). */
@@ -218,8 +277,15 @@ export const api = {
 export const MAX_SESSION_MIN = 120;
 /** Mirrors private.break_minutes: 1 minute of break per 5 studied, at least 1. */
 export const breakMinutes = (sessionMin: number) => Math.max(1, Math.round(sessionMin / 5));
-/** Mirrors the 4 beds per plot in public.plots. */
+/** Mirrors the 4 beds per plot, and up to 4 plants per bed, in public.plots. */
 export const BEDS = 4;
+export const PLANTS_PER_BED = 4;
+/** Mirrors private.away_grace: a page hidden this long during a session stops it. */
+export const AWAY_GRACE_S = 10;
+/** Mirrors 1000 characters in public.letters. */
+export const LETTER_MAX = 1000;
+/** Mirrors private.smoke_for: a cigarette burns this long. */
+export const SMOKE_MINUTES = 3;
 /** Mirrors private.keeps_for: a ripe crop withers this many days after it ripens. */
 export const KEEPS_FOR_DAYS = 2;
 /** Mirrors private.moist_for and private.watered_speed: a watering lasts a day, and

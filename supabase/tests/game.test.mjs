@@ -74,10 +74,13 @@ async function signUp(username, invite, { email, name } = {}) {
   return u.id;
 }
 
-/** Moves every stored timestamp back, which is the same as `minutes` passing. */
+/** Moves every stored timestamp back, which is the same as `minutes` passing (fractions too). */
 async function travel(minutes) {
-  const m = `make_interval(mins => ${Number(minutes)})`;
-  await q(`update public.sessions set started_at = started_at - ${m}, ended_at = ended_at - ${m}`);
+  const m = `make_interval(secs => ${Number(minutes) * 60})`;
+  await q(
+    `update public.sessions set started_at = started_at - ${m}, ended_at = ended_at - ${m},
+       left_at = left_at - ${m}`
+  );
   await q(
     `update public.profiles set went_home_at = went_home_at - ${m}, activity_until = activity_until - ${m},
        arrived_at = arrived_at - ${m}, seen_at = seen_at - ${m}`
@@ -88,6 +91,7 @@ async function travel(minutes) {
   );
   await q(`update public.trades set created_at = created_at - ${m}, closed_at = closed_at - ${m}`);
   await q(`update public.invites set expires_at = expires_at - ${m}`);
+  await q(`update public.letters set sent_at = sent_at - ${m}, read_at = read_at - ${m}`);
 }
 
 async function give(user, item, qty) {
@@ -166,12 +170,13 @@ before(async () => {
 
 beforeEach(async () => {
   await q(
-    'truncate public.sessions, public.inventory, public.plots, public.trades, public.listings'
+    `truncate public.sessions, public.inventory, public.plots, public.trades, public.listings,
+       public.letters`
   );
   await q(
     `update public.profiles set chips = 0, vehicle = null, went_home_at = null, activity = null,
        activity_until = null, arrived_at = null, desk = null, tester = false, place = null,
-       seen_at = null`
+       seen_at = null, tips = '{}'`
   );
 });
 
@@ -396,6 +401,206 @@ describe('arriving and desks', () => {
   });
 });
 
+describe('leaving the page', () => {
+  const running = async (user) => (await call(user, 'get_me')).active_session;
+
+  test('more than 10 seconds away stops the session: no chips, no break', async () => {
+    await call('alice', 'start_session', 25, 'tab-a');
+    const { id, device } = await running('alice');
+    assert.equal(device, 'tab-a');
+    await travel(5);
+    await call('alice', 'leave_page', id, 'tab-a');
+    await travel(11 / 60);
+
+    let me = await call('alice', 'get_me');
+    assert.equal(me.status, 'idle');
+    assert.equal(me.active_session, null);
+    assert.equal(me.break_ends_at, null);
+    assert.equal(me.left_session.id, id);
+    assertNear(
+      Date.parse(me.left_session.left_at) - Date.parse(me.left_session.started_at),
+      5 * MIN,
+      2000,
+      'left 5 minutes in'
+    );
+    const board = await call('bob', 'get_friends_board');
+    assert.equal(board.find((f) => f.username === 'alice').status, 'idle');
+
+    // Coming back doesn't bring it back, and it never pays.
+    me = await call('alice', 'back_to_page', id, 'tab-a', 30);
+    assert.equal(me.active_session, null);
+    await travel(30);
+    assert.equal((await call('alice', 'get_me')).chips, 0);
+    await travel(12 * 60);
+    assert.equal((await call('alice', 'get_me')).left_session, null, 'forgotten by the next day');
+    await travel(-12 * 60);
+    me = await call('alice', 'start_session', 5, 'tab-a');
+    assert.equal(me.left_session, null, 'forgotten once you start another');
+  });
+
+  test('back within 10 seconds, the session carries on', async () => {
+    await call('alice', 'start_session', 25, 'tab-a');
+    const { id } = await running('alice');
+    await call('alice', 'leave_page', id, 'tab-a');
+    await travel(6 / 60);
+    let me = await call('alice', 'back_to_page', id, 'tab-a', 6);
+    assert.equal(me.status, 'focused');
+    await travel(30 / 60);
+    assert.equal((await call('alice', 'get_me')).status, 'focused');
+    await travel(25);
+    me = await call('alice', 'get_me');
+    assert.equal(me.status, 'on_break');
+    assertPayout(me.chips, 25);
+  });
+
+  test('only the page the session started on counts', async () => {
+    await call('alice', 'start_session', 25, 'laptop');
+    const { id } = await running('alice');
+    await call('alice', 'leave_page', id, 'phone');
+    await travel(1);
+    assert.equal((await call('alice', 'get_me')).status, 'focused');
+    await call('alice', 'back_to_page', id, 'phone', 600);
+    assert.equal((await call('alice', 'get_me')).status, 'focused');
+    // Nor can anyone else stop it.
+    await call('bob', 'leave_page', id, 'laptop');
+    await travel(1);
+    assert.equal((await call('alice', 'get_me')).status, 'focused');
+  });
+
+  test('leaving in the last 10 seconds still pays', async () => {
+    await call('alice', 'start_session', 25, 'tab-a');
+    const { id } = await running('alice');
+    await travel(25 - 5 / 60);
+    await call('alice', 'leave_page', id, 'tab-a');
+    await travel(1);
+    const me = await call('alice', 'get_me');
+    assert.equal(me.status, 'on_break');
+    assertPayout(me.chips, 25);
+  });
+
+  test("the app's own count of time away stops it, even when word of leaving never came", async () => {
+    // Away (with no signal) since a minute before the end: bob's board
+    // finishes the session and pays it meanwhile, and coming back takes it back.
+    await call('alice', 'start_session', 25, 'tab-a');
+    const first = await running('alice');
+    await travel(27);
+    await call('bob', 'get_friends_board');
+    const [{ chips }] = await q('select chips from public.profiles where id = $1', [ids.alice]);
+    assertPayout(chips, 25);
+    let me = await call('alice', 'back_to_page', first.id, 'tab-a', 3 * 60);
+    assert.equal(me.chips, 0, 'taken back');
+    assert.equal(me.status, 'idle');
+    assert.equal(me.last_completed, null);
+    assert.equal(me.left_session.id, first.id);
+
+    // Still running when you come back: it stops then.
+    await call('alice', 'start_session', 25, 'tab-a');
+    const second = await running('alice');
+    await travel(2);
+    me = await call('alice', 'back_to_page', second.id, 'tab-a', 60);
+    assert.equal(me.active_session, null);
+    assert.equal(me.left_session.id, second.id);
+  });
+});
+
+describe('a first day', () => {
+  test('your first session can be skipped, as 25 minutes at most', async () => {
+    let me = await call('alice', 'get_me');
+    assert.equal(me.sessions_done, 0);
+    await rejects(call('alice', 'skip_first_session'), /No session is running/);
+
+    // Giving up doesn't use up the skip.
+    await call('alice', 'start_session', 10, 'tab-a');
+    await call('alice', 'cancel_session');
+    await call('alice', 'start_session', 60, 'tab-a');
+    me = await call('alice', 'skip_first_session');
+    assert.equal(me.status, 'on_break');
+    assert.equal(me.sessions_done, 1);
+    assert.equal(me.last_completed.duration_min, 25);
+    assert.equal(me.last_completed.break_min, 5);
+    assertPayout(me.chips, 25);
+
+    await travel(10);
+    await call('alice', 'start_session', 10, 'tab-a');
+    await rejects(call('alice', 'skip_first_session'), /Only your first session/);
+  });
+
+  test('tips are remembered once each, and can be brought back', async () => {
+    assert.deepEqual((await call('alice', 'get_me')).tips, []);
+    let me = await call('alice', 'done_tip', 'welcome');
+    assert.deepEqual(me.tips, ['welcome']);
+    me = await call('alice', 'done_tip', 'welcome');
+    me = await call('alice', 'done_tip', 'plant');
+    assert.deepEqual(me.tips, ['welcome', 'plant']);
+    await rejects(call('alice', 'done_tip', 'Bad Tip!'), /no tip called/);
+    me = await call('alice', 'reset_tips');
+    assert.deepEqual(me.tips, []);
+  });
+});
+
+describe('the post box', () => {
+  test('letters go to friends and wait in the post box until picked up', async () => {
+    await rejects(call('alice', 'send_letter', 'bob', 'Hello'), /on a break/);
+    await study('alice', 25);
+    await rejects(call('alice', 'send_letter', 'carol', 'Hi'), /only write to friends/);
+    await rejects(call('alice', 'send_letter', 'bob', '   '), /Write something/);
+    await rejects(call('alice', 'send_letter', 'bob', 'x'.repeat(1001)), /up to 1000/);
+    let post = await call('alice', 'send_letter', 'Bob ', '  Fancy a coffee at 3?  ');
+    assert.deepEqual(
+      post.sent.map((l) => [l.to, l.to_name, l.body, l.read_at]),
+      [['bob', 'Bob', 'Fancy a coffee at 3?', null]]
+    );
+
+    // Bob hears there's post wherever he is, and picks it up from the post box.
+    assert.equal((await call('bob', 'get_me')).letters, 1);
+    post = await call('bob', 'get_post');
+    assert.equal(post.waiting, 1);
+    assert.deepEqual(
+      post.letters.map((l) => [l.from, l.from_name, l.body, l.read_at]),
+      [['alice', 'Alice', 'Fancy a coffee at 3?', null]]
+    );
+    post = await call('bob', 'pick_up_post');
+    assert.equal(post.waiting, 0);
+    assert.ok(post.letters[0].read_at);
+    assert.equal((await call('bob', 'get_me')).letters, 0);
+    assert.ok((await call('alice', 'get_post')).sent[0].read_at, 'Alice sees it was picked up');
+  });
+
+  test('only the writer and whoever it is for can read a letter', async () => {
+    await study('alice', 25);
+    await call('alice', 'send_letter', 'bob', 'Just for Bob');
+    const read = async (user) =>
+      (await asUser(user, 'select body from public.letters')).map((r) => r.body);
+    assert.deepEqual(await read('alice'), ['Just for Bob']);
+    assert.deepEqual(await read('bob'), ['Just for Bob']);
+    assert.deepEqual(await read('carol'), []);
+    await rejects(
+      asUser(
+        'alice',
+        `insert into public.letters (from_user, to_user, body) values ($1, $2, 'forged')`,
+        [ids.bob, ids.alice]
+      ),
+      /row-level security/
+    );
+  });
+});
+
+describe('the bins', () => {
+  test('take crops, seeds and cigarettes you no longer want', async () => {
+    await give('alice', 'carrot', 3);
+    await give('alice', 'mug', 1);
+    await rejects(call('alice', 'bin_item', 'carrot', 1), /on a break/);
+    await study('alice', 5);
+    let garden = await call('alice', 'bin_item', 'carrot', 2);
+    assert.equal(garden.me.inventory.carrot, 1);
+    garden = await call('alice', 'bin_item', 'carrot', 1);
+    assert.equal(garden.me.inventory.carrot, undefined);
+    await rejects(call('alice', 'bin_item', 'carrot', 1), /Not enough carrot/);
+    await rejects(call('alice', 'bin_item', 'mug', 1), /Only crops, seeds and cigarettes/);
+    await rejects(call('alice', 'bin_item', 'radish', 0), /1 to 9999/);
+  });
+});
+
 describe('the kiosk', () => {
   test('sells packs, one-off desk items and vehicles', async () => {
     await rejects(call('alice', 'buy', 'mug'), /Not enough chips/);
@@ -438,7 +643,6 @@ describe('the allotment', () => {
     );
     assert.ok(plot.progress < 0.001);
     assertNear(Date.parse(plot.ripe_at) - Date.now(), DAY, MIN, 'ripe in a day, unwatered');
-    await rejects(call('alice', 'plant', 0, 'radish_seeds'), /already growing/);
     await rejects(call('alice', 'plant', 4, 'radish_seeds'), /no bed 4/);
     await rejects(call('alice', 'plant', 1, 'radish'), /aren't seeds/);
     await rejects(call('alice', 'harvest', 0), /Nothing is ripe/);
@@ -463,7 +667,64 @@ describe('the allotment', () => {
     await study('alice', 5);
     garden = await call('alice', 'harvest', 0);
     assert.deepEqual(garden.me.plots, []);
+    assert.equal(garden.me.inventory.radish, 1, 'a radish plant gives one radish');
+  });
+
+  test('one seed makes one plant, and a bed holds four', async () => {
+    await give('alice', 'radish_seeds', 5);
+    await give('alice', 'carrot_seeds', 1);
+    await study('alice', 5);
+    for (let i = 0; i < 3; i++) await call('alice', 'plant', 0, 'radish_seeds');
+    let garden = await call('alice', 'plant', 0, 'carrot_seeds');
+    assert.deepEqual(
+      garden.me.plots.map((p) => [p.bed, p.spot, p.crop]),
+      [
+        [0, 0, 'radish'],
+        [0, 1, 'radish'],
+        [0, 2, 'radish'],
+        [0, 3, 'carrot'],
+      ]
+    );
+    await rejects(call('alice', 'plant', 0, 'radish_seeds'), /full: it holds four/);
+    garden = await call('alice', 'plant', 1, 'radish_seeds');
+    assert.equal(garden.me.inventory.radish_seeds, 1);
+
+    // A day on, the radishes are ripe and the carrot isn't: picking a bed
+    // takes what's ripe in it, a root a plant.
+    await travel(24 * 60);
+    await study('alice', 5);
+    garden = await call('alice', 'harvest', 0);
     assert.equal(garden.me.inventory.radish, 3);
+    assert.deepEqual(
+      garden.me.plots.map((p) => [p.bed, p.spot, p.crop]),
+      [
+        [0, 3, 'carrot'],
+        [1, 0, 'radish'],
+      ]
+    );
+    // The spots picked take seeds again.
+    garden = await call('alice', 'plant', 0, 'radish_seeds');
+    assert.deepEqual(
+      garden.me.plots.filter((p) => p.bed === 0).map((p) => p.spot),
+      [0, 3]
+    );
+  });
+
+  test('clearing a bed pulls up only what has withered', async () => {
+    await give('alice', 'radish_seeds', 1);
+    await give('alice', 'pumpkin_seeds', 1);
+    await study('alice', 5);
+    await call('alice', 'plant', 0, 'radish_seeds');
+    await call('alice', 'plant', 0, 'pumpkin_seeds');
+    // Three days on, the radish has withered and the pumpkin is still growing.
+    await travel(3 * 24 * 60 + 1);
+    await study('alice', 5);
+    await rejects(call('alice', 'harvest', 0), /withered/);
+    const garden = await call('alice', 'clear_bed', 0);
+    assert.deepEqual(
+      garden.me.plots.map((p) => [p.spot, p.crop, p.withered]),
+      [[1, 'pumpkin', false]]
+    );
   });
 
   test('a ripe crop keeps for 2 days, then withers to nothing until the bed is cleared', async () => {
@@ -497,7 +758,6 @@ describe('the allotment', () => {
     assert.deepEqual((await call('alice', 'get_me')).ripe, []);
     await study('alice', 5);
     await rejects(call('alice', 'harvest', 0), /withered/);
-    await rejects(call('alice', 'plant', 0, 'radish_seeds'), /already growing/);
 
     const garden = await call('alice', 'clear_bed', 0);
     assert.deepEqual(garden.me.plots, []);
@@ -573,7 +833,7 @@ describe('the allotment', () => {
 });
 
 describe('smoking', () => {
-  test('uses a cigarette and shows for 5 minutes', async () => {
+  test('uses a cigarette, which burns out after 3 minutes', async () => {
     await study('alice', 50); // 10 minute break
     await rejects(call('alice', 'smoke'), /Not enough cigarettes/);
     await setChips('alice', 50);
@@ -586,7 +846,10 @@ describe('smoking', () => {
     // Friends see it on the board while it lasts.
     let board = await call('bob', 'get_friends_board');
     assert.equal(board.find((f) => f.username === 'alice').activity, 'smoking');
-    await travel(6);
+    await travel(2.9);
+    board = await call('bob', 'get_friends_board');
+    assert.equal(board.find((f) => f.username === 'alice').activity, 'smoking');
+    await travel(0.2);
     board = await call('bob', 'get_friends_board');
     assert.equal(board.find((f) => f.username === 'alice').activity, null);
     garden = await call('alice', 'smoke');

@@ -28,21 +28,31 @@ export function lookOf(plot: Plot, now: number): Look {
   return 'fresh';
 }
 
+/** Where each of a bed's four plants grows: two at the back, two at the front. */
+const SPOTS: [number, number][] = [
+  [16, 13],
+  [40, 13],
+  [16, 26],
+  [40, 26],
+];
+
 /** A raised bed seen from above and in front, with whatever grows in it. */
 export function RaisedBed({
   x,
   y,
-  plot,
+  plants,
   wet,
   now,
 }: {
   x: number;
   y: number;
-  plot?: Plot;
+  /** What's planted in it: up to four plants, one per spot. */
+  plants: Plot[];
   wet: boolean;
   /** Server-corrected time, for crops going over. */
   now: number;
 }) {
+  const watered = wet || plants.some((p) => p.watered);
   return (
     <>
       <Box x={x + 3} y={y + 4} w={BED.w} h={BED.h} c="#16181b" r={3} o={0.12} />
@@ -52,30 +62,47 @@ export function RaisedBed({
         y={y + 4}
         w={BED.w - 8}
         h={BED.h - 14}
-        c={wet || plot?.watered ? G.soilWet : G.soil}
+        c={watered ? G.soilWet : G.soil}
         r={2}
       />
       <Box x={x} y={y + BED.h - 6} w={BED.w} h={6} c="#85633f" r={2} />
-      {/* A withered bed has dropped a few leaves. */}
-      {plot?.withered &&
-        [
-          [10, 8],
-          [44, 12],
-          [30, 24],
-          [16, 26],
-        ].map(([dx, dy]) => (
-          <Dot key={dx} x={x + dx} y={y + dy} d={5} h={2.5} c="#7a6748" o={0.9} />
-        ))}
-      {plot && (
-        <Crop
-          crop={plot.crop}
-          progress={plot.progress}
-          ripe={plot.ripe || plot.withered}
-          look={lookOf(plot, now)}
-          x={x + BED.w / 2}
-          y={y + 18}
-        />
-      )}
+      {/* A withered plant has dropped a few leaves round it. */}
+      {plants
+        .filter((p) => p.withered)
+        .flatMap((p) => {
+          const [sx, sy] = SPOTS[p.spot] ?? SPOTS[0];
+          return [
+            [-7, -3],
+            [6, 1],
+            [-2, 4],
+          ].map(([dx, dy]) => (
+            <Dot
+              key={`${p.spot}${dx}`}
+              x={x + sx + dx}
+              y={y + sy + dy}
+              d={4.5}
+              h={2.2}
+              c="#7a6748"
+              o={0.9}
+            />
+          ));
+        })}
+      {[...plants]
+        .sort((a, b) => a.spot - b.spot)
+        .map((p) => {
+          const [sx, sy] = SPOTS[p.spot] ?? SPOTS[0];
+          return (
+            <Plant
+              key={p.spot}
+              crop={p.crop}
+              progress={p.progress}
+              ripe={p.ripe || p.withered}
+              look={lookOf(p, now)}
+              x={x + sx}
+              y={y + sy}
+            />
+          );
+        })}
     </>
   );
 }
@@ -86,8 +113,8 @@ const LOOKS: Record<
   { leaf: string; dark: string; rot: number; droop: number; size: number }
 > = {
   fresh: { leaf: '#6f9a5c', dark: '#5b844b', rot: 0, droop: 0, size: 1 },
-  over: { leaf: '#8f9b5a', dark: '#7a874b', rot: 0.25, droop: 1.5, size: 0.95 },
-  withered: { leaf: '#8a7650', dark: '#6f5e42', rot: 0.72, droop: 4, size: 0.8 },
+  over: { leaf: '#8f9b5a', dark: '#7a874b', rot: 0.25, droop: 1, size: 0.95 },
+  withered: { leaf: '#8a7650', dark: '#6f5e42', rot: 0.72, droop: 2.5, size: 0.8 },
 };
 const ROT = '#5a4632';
 
@@ -98,8 +125,8 @@ function mix(a: string, b: string, t: number) {
   return `#${out.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 }
 
-/** A crop at its growth stage, centred on (x, y). */
-export function Crop({
+/** One plant at its growth stage, standing at (x, y): one seed makes one of these. */
+export function Plant({
   crop,
   progress,
   ripe,
@@ -114,124 +141,90 @@ export function Crop({
   x: number;
   y: number;
 }) {
-  const spots: [number, number][] = [
-    [-12, -3],
-    [0, 3],
-    [12, -3],
-  ];
   const L = LOOKS[look];
   const LEAF = L.leaf;
   const LEAF_DARK = L.dark;
   const fruit = mix(itemInfo(crop).colour, ROT, L.rot);
   const k = L.size;
   const sag = L.droop;
+  const limp = look === 'withered';
 
-  if (progress <= 0) {
-    return (
-      <>
-        {spots.map(([dx, dy]) => (
-          <Dot key={dx} x={x + dx} y={y + dy} d={2.5} c="#d8c9a6" />
-        ))}
-      </>
-    );
-  }
-  if (progress < 0.34) {
-    return (
-      <>
-        {spots.map(([dx, dy]) => (
-          <Sprout key={dx} x={x + dx} y={y + dy} size={4} leaf={LEAF} dark={LEAF_DARK} />
-        ))}
-      </>
-    );
-  }
-  if (progress < 0.67) {
-    return (
-      <>
-        {spots.map(([dx, dy]) => (
-          <Sprout key={dx} x={x + dx} y={y + dy} size={7} leaf={LEAF} dark={LEAF_DARK} />
-        ))}
-      </>
-    );
-  }
+  if (progress <= 0) return <Dot x={x} y={y} d={3} c="#d8c9a6" />;
+  if (progress < 0.34) return <Sprout x={x} y={y} size={4} leaf={LEAF} dark={LEAF_DARK} />;
+  if (progress < 0.67) return <Sprout x={x} y={y} size={6} leaf={LEAF} dark={LEAF_DARK} />;
 
-  // Mature, then with fruit once ripe; going over, then withered, if it's left.
+  // Grown, then with fruit once ripe; going over, then withered, if it's left.
   switch (crop) {
     case 'sunflower': {
-      // The head nods further over as it goes.
-      const head = { x: x + sag * 1.5, y: y - 26 + sag * 2.5 };
+      // A tall stalk whose head nods further over as it goes.
+      const head = { x: x + sag * 1.5, y: y - 19 + sag * 2.5 };
       return (
         <>
-          <Box x={x - 1.5} y={head.y + 4} w={3} h={y + 2 - head.y - 4} c={LEAF_DARK} />
-          <Dot x={x - 6} y={y - 6 + sag} d={9 * k} h={5 * k} c={LEAF} />
-          <Dot x={x + 6} y={y - 12 + sag} d={9 * k} h={5 * k} c={LEAF} />
+          <Box x={x - 1} y={head.y + 3} w={2} h={y + 1 - head.y - 3} c={LEAF_DARK} />
+          <Dot x={x - 4} y={y - 5 + sag} d={7 * k} h={4 * k} c={LEAF} />
+          <Dot x={x + 4} y={y - 9 + sag} d={7 * k} h={4 * k} c={LEAF} />
           <Dot
             x={head.x}
             y={head.y}
-            d={(ripe ? 20 : 12) * k}
-            h={(ripe ? 20 : 12) * k - sag}
+            d={(ripe ? 13 : 8) * k}
+            h={(ripe ? 13 : 8) * k - sag}
             c={ripe ? fruit : LEAF}
           />
-          {ripe && <Dot x={head.x} y={head.y} d={8 * k} h={8 * k - sag / 2} c="#6b4a2f" />}
+          {ripe && <Dot x={head.x} y={head.y} d={5 * k} h={5 * k - sag / 2} c="#6b4a2f" />}
         </>
       );
     }
     case 'pumpkin':
       return (
         <>
-          <Box x={x - 20} y={y - 1 + sag / 2} w={40} h={2.5} c={LEAF_DARK} r={1} />
-          <Dot x={x - 15} y={y - 4 + sag} d={11 * k} h={8 * k} c={LEAF} />
-          <Dot x={x + 15} y={y + 1 + sag} d={11 * k} h={8 * k} c={LEAF} />
+          <Box x={x - 11} y={y - 1 + sag / 2} w={22} h={2} c={LEAF_DARK} r={1} />
+          <Dot x={x - 8} y={y - 3 + sag} d={8 * k} h={6 * k} c={LEAF} />
+          <Dot x={x + 8} y={y + sag} d={8 * k} h={6 * k} c={LEAF} />
           <Dot
             x={x}
             y={y + sag / 2}
-            d={(ripe ? 22 : 10) * k}
-            h={(ripe ? 16 : 8) * k - sag / 2}
+            d={(ripe ? 14 : 7) * k}
+            h={(ripe ? 10 : 5) * k - sag / 2}
             c={ripe ? fruit : '#9fb76a'}
           />
-          {ripe && <Box x={x - 1} y={y - 11 + sag} w={2.5} h={5} c="#6b5a3a" />}
+          {ripe && <Box x={x - 0.75} y={y - 7 + sag} w={2} h={3.5} c="#6b5a3a" />}
         </>
       );
     case 'carrot':
     case 'radish':
       return (
         <>
-          {spots.map(([dx, dy]) => (
-            <Leaves
-              key={dx}
-              x={x + dx}
-              y={y + dy + sag / 2}
-              size={9 - sag / 2}
-              feathery={crop === 'carrot'}
-              limp={look === 'withered'}
-              leaf={LEAF}
-              dark={LEAF_DARK}
-            />
-          ))}
-          {ripe &&
-            spots.map(([dx, dy]) => (
-              <Dot key={`f${dx}`} x={x + dx} y={y + dy + 4} d={6 * k} h={4 * k} c={fruit} />
-            ))}
+          <Leaves
+            x={x}
+            y={y + sag / 2}
+            size={9 - sag / 2}
+            feathery={crop === 'carrot'}
+            limp={limp}
+            leaf={LEAF}
+            dark={LEAF_DARK}
+          />
+          {ripe && <Dot x={x} y={y + 3} d={6 * k} h={4 * k} c={fruit} />}
         </>
       );
     default:
       // tomato, strawberry and anything new: a bushy plant with fruit.
       return (
         <>
-          <Dot x={x - 8} y={y + sag / 2} d={16 * k} h={13 * k - sag} c={LEAF} />
-          <Dot x={x + 8} y={y - 2 + sag / 2} d={16 * k} h={13 * k - sag} c={LEAF_DARK} />
-          <Dot x={x} y={y - 6 + sag} d={14 * k} h={11 * k - sag} c={LEAF} />
+          <Dot x={x - 4} y={y + sag / 2} d={10 * k} h={8 * k - sag} c={LEAF} />
+          <Dot x={x + 4} y={y - 1 + sag / 2} d={10 * k} h={8 * k - sag} c={LEAF_DARK} />
+          <Dot x={x} y={y - 4 + sag} d={9 * k} h={7 * k - sag} c={LEAF} />
           {ripe &&
             [
-              [-9, 1],
-              [6, -6],
-              [9, 3],
-              [-2, -2],
+              [-5, 0],
+              [3, -4],
+              [5, 2],
+              [-1, -2],
             ].map(([dx, dy]) => (
               <Dot
                 key={`${dx}${dy}`}
                 x={x + dx}
                 y={y + dy + sag}
-                d={(crop === 'strawberry' ? 4 : 5.5) * k}
+                d={(crop === 'strawberry' ? 2.8 : 3.6) * k}
                 c={fruit}
               />
             ))}
@@ -302,7 +295,7 @@ function Leaves({
   );
 }
 
-/** A 2 × 2 plot of raised beds; `beds` lists what's planted. */
+/** A 2 × 2 plot of raised beds; `plots` lists what's planted, plant by plant. */
 export function AllotmentPlot({
   x,
   y,
@@ -325,7 +318,7 @@ export function AllotmentPlot({
             key={bed}
             x={o.x}
             y={o.y}
-            plot={plots.find((p) => p.bed === bed)}
+            plants={plots.filter((p) => p.bed === bed)}
             wet={wet}
             now={now}
           />
@@ -347,16 +340,6 @@ export function Shed({ x, y }: { x: number; y: number }) {
       <Box x={x + 30} y={y + 46} w={24} h={36} c="#6f5847" r={2} />
       <Dot x={x + 50} y={y + 64} d={3} c="#d9c9a0" />
       <Box x={x + 8} y={y + 46} w={16} h={14} c="#c8d3d6" r={1} />
-    </>
-  );
-}
-
-export function WaterButt({ x, y }: { x: number; y: number }) {
-  return (
-    <>
-      <Shadow x={x} y={y} w={30} />
-      <Box x={x - 11} y={y - 26} w={22} h={26} c={G.butt} r={5} />
-      <Dot x={x} y={y - 26} d={22} h={8} c="#6c7882" />
     </>
   );
 }
@@ -442,16 +425,71 @@ export function Sign({ x, y }: { x: number; y: number }) {
   );
 }
 
-/** A slatted compost bin. */
-export function Compost({ x, y }: { x: number; y: number }) {
+/**
+ * A pillar box, for letters to friends. With post waiting for you, an
+ * envelope peeks out of the slot.
+ */
+export function PostBox({ x, y, waiting }: { x: number; y: number; waiting: boolean }) {
   return (
     <>
-      <Shadow x={x} y={y + 2} w={70} o={0.14} />
-      <Box x={x - 28} y={y - 34} w={56} h={34} c="#7d6146" r={2} />
-      <Box x={x - 24} y={y - 32} w={48} h={12} c="#4f3b2c" r={2} />
-      {[0, 1, 2].map((i) => (
-        <Box key={i} x={x - 28} y={y - 20 + i * 7} w={56} h={2} c="#6a523b" />
+      <Shadow x={x + 2} y={y} w={32} o={0.16} />
+      <Box x={x - 12} y={y - 5} w={24} h={5} c="#3a3433" r={1} />
+      <Box x={x - 11} y={y - 38} w={22} h={34} c="#b5524a" r={3} />
+      <Box x={x - 11} y={y - 30} w={22} h={2} c="#9a433d" />
+      <Dot x={x} y={y - 39} d={26} h={11} c="#a1463f" />
+      <Dot x={x} y={y - 41} d={18} h={6} c="#b85a51" />
+      <Box x={x - 7} y={y - 27} w={14} h={2.5} c="#3b2422" r={1} />
+      <Box x={x - 5} y={y - 19} w={10} h={7} c="#ebe3d3" o={0.85} r={1} />
+      {waiting && (
+        <>
+          <Box x={x - 5} y={y - 31} w={10} h={5} c="#f6f1e6" r={0.5} />
+          <Box x={x - 5} y={y - 31} w={10} h={1.2} c="#d8cdb8" />
+        </>
+      )}
+    </>
+  );
+}
+
+/** The garden's noticeboard on two posts: friends and invites. (x, y) is the board's corner. */
+export function GardenNoticeboard({ x, y }: { x: number; y: number }) {
+  return (
+    <>
+      <Shadow x={x + 26} y={y + 48} w={64} o={0.12} />
+      <Box x={x + 6} y={y + 28} w={4} h={20} c="#7a5f45" />
+      <Box x={x + 42} y={y + 28} w={4} h={20} c="#7a5f45" />
+      <Box x={x} y={y} w={52} h={32} c="#8f7151" r={2} />
+      <Box x={x + 3} y={y + 3} w={46} h={26} c="#c49a6c" r={1} />
+      {[
+        [6, 6, '#efe8da'],
+        [20, 9, '#e6d38f'],
+        [33, 5, '#cfe0e6'],
+        [13, 18, '#ead6d0'],
+        [31, 17, '#efe8da'],
+      ].map(([dx, dy, c]) => (
+        <Box
+          key={`${dx}${dy}`}
+          x={x + (dx as number)}
+          y={y + (dy as number)}
+          w={10}
+          h={8}
+          c={c as string}
+        />
       ))}
+      <Box x={x - 2} y={y - 3} w={56} h={4} c="#6f5641" r={1} />
+    </>
+  );
+}
+
+/** A wheelie bin: (x, y) is its front-left corner on the ground. */
+export function Bin({ x, y, colour }: { x: number; y: number; colour: string }) {
+  return (
+    <>
+      <Shadow x={x + 12} y={y} w={30} o={0.16} />
+      <Box x={x + 1} y={y - 28} w={22} h={26} c={colour} r={2} />
+      <Box x={x - 1} y={y - 32} w={26} h={6} c={mix(colour, '#000000', 0.18)} r={2} />
+      <Box x={x + 8} y={y - 31} w={8} h={1.5} c={mix(colour, '#ffffff', 0.25)} r={1} />
+      <Dot x={x + 4} y={y - 1} d={5} c="#2c2c2e" />
+      <Dot x={x + 20} y={y - 1} d={5} c="#2c2c2e" />
     </>
   );
 }

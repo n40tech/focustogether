@@ -9,7 +9,7 @@ import { BLEED, Scene, useTone } from '@/art/Scene';
 import { playSound, useAmbience } from '@/audio/sound';
 import { Button } from '@/components/Button';
 import { ChipIcon, Muted, SceneHeader } from '@/components/Chrome';
-import { api, type ItemKind, type Shop, type ShopItem } from '@/lib/api';
+import { api, SMOKE_MINUTES, type ItemKind, type Shop, type ShopItem } from '@/lib/api';
 import { itemInfo } from '@/lib/catalog';
 import { font } from '@/lib/theme';
 import { formatHours } from '@/lib/time';
@@ -171,9 +171,9 @@ function Row({
   const owned = oneOff && item.owned > 0;
   const detail =
     item.kind === 'seed'
-      ? `Packet of ${item.pack_size} · ripe in ${formatHours(item.grow_hours ?? 0)}, sooner if watered · ${item.yield} per harvest`
+      ? `${item.pack_size} seeds, one plant each · ripe in ${formatHours(item.grow_hours ?? 0)}, sooner if watered · ${item.yield === 1 ? 'one' : item.yield} to pick per plant`
       : item.kind === 'cigarette'
-        ? `Pack of ${item.pack_size}`
+        ? `Pack of ${item.pack_size} · each burns for ${SMOKE_MINUTES} minutes`
         : null;
   return (
     <View style={[styles.row, { borderColor: tone.line }]}>

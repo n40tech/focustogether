@@ -10,7 +10,9 @@ a walkable garden three phones wide with everyone's allotment on one grid, a
 market for buying and selling between friends standing next to each other,
 watering friends' plots, crops that wither if they're left unpicked for two
 days, payouts of about 1 chip a minute with a little luck, and invite-only
-sign-up.
+sign-up. Since then: sessions that stop if you leave the page, tips and a
+skippable first session for new players, and a post box, bins, benches and a
+noticeboard in the garden.
 
 ---
 
@@ -23,12 +25,13 @@ git pull
 npm install
 ```
 
-## 2. Run migrations 0003 to 0006
+## 2. Run migrations 0003 to 0007
 
 1. Supabase dashboard → **SQL Editor** → **New query**.
 2. Paste the whole of `supabase/migrations/0003_community.sql` and press **Run**.
 3. Do the same, one at a time and in order, with `0004_withering.sql`,
-   `0005_testing.sql` and `0006_growing_and_desks.sql`.
+   `0005_testing.sql`, `0006_growing_and_desks.sql` and
+   `0007_post_and_first_day.sql`.
 
 Each one runs as a single transaction: if anything fails, nothing is changed,
 so you can fix the problem and run it again. Once one has succeeded, don't run
@@ -47,6 +50,11 @@ What it does to your existing data:
   wither.
 - From 0006: crops grow in real time. Anything already planted keeps how far
   it had got (half grown stays half grown), and ripe crops keep their time.
+- From 0007: each existing crop becomes the first plant in its bed (a bed now
+  holds four, one seed each), and a radish or carrot plant gives one root.
+  Everyone starts with no tips seen, so existing players get the new ones
+  too (*Got it* puts each away for good). A session that's running while you
+  run 0007 finishes as normal.
 
 To check it worked, run this in the SQL Editor. Every player should have a
 `plot_slot`:
@@ -168,9 +176,23 @@ With two players (A and B) who are friends:
 - [ ] When A's session ends, B still sees A sitting at their desk. A only
       leaves it by going to the garden, walking out or going home.
 - [ ] A crop left ripe for two days withers. Walking up to it offers **Clear
-      the withered ...**, and the bed is free again afterwards. (To try it
-      without waiting, age a ripe crop in the SQL Editor:
-      `update public.plots set ripe_at = now() - interval '2 days' where ripe_at is not null;`)
+      the withered plant**, and that spot in the bed is free again afterwards.
+      (To try it without waiting, use the Test button: see
+      `deployment/0002-testing-tools.md`.)
+- [ ] Each seed planted shows as one plant; a bed takes four, and **Pick**
+      takes whatever's ripe in it.
+- [ ] A new player (join with a fresh invite) sees a welcome tip in the car
+      park, then tips in the office and the garden, and can **Skip my first
+      session** once it starts.
+- [ ] Mid-session, switch to another app or tab for a few seconds and come
+      back: the session carries on. Stay away for more than 10 seconds and it
+      stops, and the office says so. No chips, no break.
+- [ ] B writes A a letter at the post box (bottom right of the garden). A's
+      car park says a letter's waiting, and A picks it up at the post box.
+- [ ] Sitting on a bench shows you sitting to friends; walking off gets you up.
+- [ ] A bin takes something from your basket.
+- [ ] Walking out through the garden gate takes you back to the office.
+- [ ] Logging out on a break, then back in: you've gone home, not on a break.
 
 ## Troubleshooting
 
@@ -194,6 +216,15 @@ With two players (A and B) who are friends:
 - **Friends don't appear in the garden:** you only see friends who are on a
   break and have the garden open. Both of you need to be signed in to the same
   project, and the browser console shouldn't show websocket errors.
-- **No sound:** browsers only allow sound after your first tap or click.
+- **No sound:** browsers only allow sound after your first tap or click; the
+  Sound button says **♪ Sound on** once it's allowed. Then check the phone's
+  media volume. On an iPhone, Focus plays even with the silent switch on.
+  That pauses music from other apps while Focus is open, as a video would.
+  Tap **Sound on** to mute Focus and give the sound back.
+- **"You left the page ... so it stopped"** when you didn't mean to: the
+  session's page was hidden for more than 10 seconds (another app, another
+  tab, the phone locked). Focus keeps the screen on while you study, but a
+  phone in low-power mode may still lock: plug it in, or lengthen its
+  auto-lock.
 - **The deploy job says "Skipping deploy":** a secret or variable from step 6
   is missing or misnamed.

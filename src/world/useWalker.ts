@@ -192,5 +192,15 @@ export function useWalker({
   /** Where you are right now (read it in callbacks, not while rendering). */
   const where = useCallback(() => ({ ...here.current }), []);
 
-  return { pos, pan, steer, where };
+  /** Puts you somewhere at once (sitting down on a bench). */
+  const place = useCallback(
+    (at: Point) => {
+      here.current = { ...at };
+      pos.setValue(at);
+      wake();
+    },
+    [pos, wake]
+  );
+
+  return { pos, pan, steer, where, place };
 }

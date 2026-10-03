@@ -4,37 +4,45 @@ import { Animated, Easing, StyleSheet, Text, TextInput, View } from 'react-nativ
 import {
   AllotmentPlot,
   Bench,
+  Bin,
   Boundary,
-  Compost,
+  GardenNoticeboard,
   Hedge,
   MarketTable,
   PLOT,
+  PostBox,
   Shed,
   Sign,
-  WaterButt,
 } from '@/art/Garden';
 import { ChatBubble, Person } from '@/art/People';
 import { Box, Dot, Glow, Shadow, Tag } from '@/art/primitives';
 import { BLEED, Scene, STAGE, useTone } from '@/art/Scene';
 import { playSound, setSmoking, useAmbience } from '@/audio/sound';
 import { Button } from '@/components/Button';
-import { Body, Muted, Panel, SceneHeader, Toast } from '@/components/Chrome';
+import { Body, Muted, Panel, SceneHeader, Sheet, Toast } from '@/components/Chrome';
 import { Countdown } from '@/components/Countdown';
 import {
   BasketSheet,
   BedSheet,
+  BinSheet,
   FriendSheet,
+  isDry,
+  plantsLabel,
+  PostSheet,
   SeedSheet,
   StallSheet,
   TradeSheet,
   type Act,
 } from '@/components/GardenSheets';
 import { Joystick } from '@/components/Joystick';
+import { Noticeboard } from '@/components/Noticeboard';
+import { Tip, useTips } from '@/components/Tip';
 import { useNow } from '@/hooks/useNow';
 import { usePolled } from '@/hooks/usePolled';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { api, BEDS, type Garden, type Gardener, type Plot } from '@/lib/api';
+import { api, BEDS, PLANTS_PER_BED, type Garden, type Gardener } from '@/lib/api';
 import { itemInfo } from '@/lib/catalog';
+import { serverNow } from '@/lib/clock';
 import { onTimeSkipped } from '@/lib/testing';
 import { palette } from '@/lib/theme';
 import { useConditions } from '@/weather/useConditions';
@@ -42,19 +50,23 @@ import {
   bedRect,
   BENCHES,
   besidePlot,
-  BUTTS,
-  COMPOST,
+  binRect,
+  BINS,
   dist,
   distToRect,
   FENCE_Y,
   GATE,
+  GATE_OUT_Y,
   HEDGE_Y,
   MARKET,
+  NOTICEBOARD,
   obstaclesFor,
   onGravel,
   PATH,
   plotRect,
   plotSpots,
+  POSTBOX,
+  SEATS,
   SHED,
   SHED_DOOR,
   STALLS,
@@ -69,10 +81,22 @@ import { useGo, useWorld } from '@/world/World';
 
 const G = palette.garden;
 
-/** How close counts as "next to": a friend, one of your beds, a friend's plot, the shed door, the market. */
-const REACH = { person: 46, bed: 24, plot: 24, shed: 34, market: 30 };
+/** How close counts as "next to" each thing you can do something with. */
+const REACH = {
+  person: 46,
+  bed: 24,
+  plot: 24,
+  shed: 34,
+  market: 30,
+  post: 34,
+  board: 30,
+  bins: 28,
+  seat: 20,
+};
 /** Footsteps are this far apart (yours and, heard over the channel, friends'). */
 const STRIDE = 26;
+/** About this many steps and you've got the hang of walking. */
+const STEPS_TO_LEARN = 8;
 
 /**
  * Where you were standing, so popping into the shed doesn't send you back to
@@ -85,21 +109,39 @@ type Near =
   | { kind: 'bed'; bed: number }
   | { kind: 'friendPlot'; username: string }
   | { kind: 'shed' }
-  | { kind: 'market' };
+  | { kind: 'market' }
+  | { kind: 'post' }
+  | { kind: 'board' }
+  | { kind: 'bins' }
+  | { kind: 'seat'; seat: number };
 
 const sameNear = (a: Near | null, b: Near | null) => JSON.stringify(a) === JSON.stringify(b);
 
-/** Still growing, and would grow faster for a watering. */
-const isDry = (p: Plot) => !p.watered && !p.ripe && !p.withered;
+/** The noticeboard on its posts, for "am I next to it?". */
+const BOARD = { x: NOTICEBOARD.x, y: NOTICEBOARD.y, w: 52, h: 48 };
 
 type SheetState =
   | { kind: 'seed'; bed: number }
-  | { kind: 'bed'; plot: Plot }
+  | { kind: 'bed'; bed: number }
   | { kind: 'basket' }
   | { kind: 'trade'; to?: string; give?: string; fixedTo?: boolean }
   | { kind: 'stall'; item?: string }
   | { kind: 'friend'; username: string }
+  | { kind: 'post' }
+  | { kind: 'board' }
+  | { kind: 'bins' }
   | null;
+
+/** True until a cigarette lit until `until` burns out. */
+function useLit(until: string | null | undefined) {
+  const [out, setOut] = useState<string | null>(null);
+  useEffect(() => {
+    if (!until) return;
+    const id = setTimeout(() => setOut(until), Math.max(0, Date.parse(until) - serverNow()));
+    return () => clearTimeout(id);
+  }, [until]);
+  return !!until && out !== until;
+}
 
 export default function GardenScene() {
   useAmbience('garden');
@@ -108,6 +150,7 @@ export default function GardenScene() {
   const conditions = useConditions();
   const go = useGo();
   const reduceMotion = useReducedMotion();
+  const tips = useTips();
   // For ripe crops going over (once a minute is plenty).
   const now = useNow(60_000);
   const polled = usePolled(api.getGarden, 5000);
@@ -146,9 +189,39 @@ export default function GardenScene() {
       ? lastSpot.at
       : GATE
   );
+  // Sitting on a bench: which seat (see SEATS), until you walk off.
+  const [seat, setSeat] = useState<number | null>(null);
+  const seated = useRef<number | null>(null);
   const moved = useRef<() => void>(() => {});
-  const onStep = useCallback((at: Point) => playSound(onGravel(at) ? 'gravel' : 'step'), []);
-  const onMove = useCallback(() => moved.current(), []);
+  const leftByGate = useRef(false);
+  const steps = useRef(0);
+  const learnt = useRef(tips.has('walk'));
+  const doneTip = useRef(tips.done);
+  useEffect(() => {
+    doneTip.current = tips.done;
+    learnt.current = tips.has('walk');
+  });
+
+  const onStep = useCallback((at: Point) => {
+    playSound(onGravel(at) ? 'gravel' : 'step');
+    steps.current += 1;
+    if (!learnt.current && steps.current >= STEPS_TO_LEARN) {
+      learnt.current = true;
+      doneTip.current('walk');
+    }
+  }, []);
+  const onMove = useCallback(
+    (at: Point) => {
+      if (seated.current !== null) setSeat(null);
+      moved.current();
+      // Out through the gate: back to work.
+      if (at.y > GATE_OUT_Y && !leftByGate.current) {
+        leftByGate.current = true;
+        go('/office');
+      }
+    },
+    [go]
+  );
   const walker = useWalker({
     start,
     obstacles,
@@ -161,15 +234,29 @@ export default function GardenScene() {
   const where = walker.where;
   useEffect(
     () => () => {
-      lastSpot = { username: me.username, breakEndsAt: me.break_ends_at, at: where() };
+      const at = where();
+      lastSpot = {
+        username: me.username,
+        breakEndsAt: me.break_ends_at,
+        at: at.y > HEDGE_Y ? GATE : at,
+      };
     },
     [me.username, me.break_ends_at, where]
   );
 
-  // Friends' footsteps: quieter further off, and from their side of you.
+  // Friends' footsteps (quieter further off, and from their side of you), and
+  // who's sitting down.
   const [whereabouts] = useState(() => new Whereabouts());
+  const [sitting, setSitting] = useState<string[]>([]);
   const friendMoved = useCallback(
-    (username: string, at: Point) => {
+    (username: string, at: Point, sat: boolean) => {
+      setSitting((list) =>
+        list.includes(username) === sat
+          ? list
+          : sat
+            ? [...list, username]
+            : list.filter((u) => u !== username)
+      );
       if (!whereabouts.set(username, at, STRIDE)) return;
       const you = where();
       const gain = Math.max(0, 1 - dist(at, you) / 420) ** 2;
@@ -179,15 +266,28 @@ export default function GardenScene() {
     },
     [whereabouts, where]
   );
+  const isSitting = useCallback(() => seated.current !== null, []);
 
   const friendNames = useMemo(() => neighbours.map((n) => n.username), [neighbours]);
   const chat = useGardenChannel(me.username, friendNames, onBreak && !!garden, {
     onMove: friendMoved,
     where,
+    sitting: isSitting,
   });
   useEffect(() => {
     moved.current = chat.moved;
   }, [chat.moved]);
+
+  // Sitting down or getting up: friends see it straight away.
+  useEffect(() => {
+    seated.current = seat;
+    moved.current();
+  }, [seat]);
+  const sitDown = (i: number) => {
+    setSeat(i);
+    walker.place(SEATS[i]);
+  };
+  const standUp = () => setSeat(null);
 
   // Friends in the garden with you: on a break (says the server), and here (say they).
   const around = useMemo(
@@ -223,14 +323,17 @@ export default function GardenScene() {
     },
     [setGarden, say]
   );
+  const water = async () => {
+    if (await act(() => api.water(), 'water')) tips.done('water');
+  };
 
-  // The break timer ran out (or the server says so): ring the bell once.
   // You're in the garden now: friends see your desk empty until you're back.
   const setMe = world.setMe;
   useEffect(() => {
     if (onBreak) api.setPlace('garden').then(setMe, () => {});
   }, [onBreak, setMe]);
 
+  // The break timer ran out (or the server says so): ring the bell once.
   const refreshWorld = world.refresh;
   const ended = useRef(false);
   const endBreak = useCallback(() => {
@@ -245,8 +348,8 @@ export default function GardenScene() {
     if (status === 'idle') endBreak();
   }, [status, endBreak]);
 
-  // A quiet crackle while your cigarette lasts.
-  const smoking = garden?.me.activity === 'smoking';
+  // A quiet crackle while your cigarette lasts; it burns out by itself.
+  const smoking = useLit(garden?.me.activity === 'smoking' ? garden.me.activity_until : null);
   useEffect(() => {
     setSmoking(smoking);
     return () => setSmoking(false);
@@ -271,10 +374,21 @@ export default function GardenScene() {
   const goHome = async () => {
     try {
       world.setMe(await api.goHome());
-    } finally {
       go('/');
+    } catch (e) {
+      say(e instanceof Error ? e.message : String(e));
     }
   };
+
+  const onPickedUp = world.refresh;
+  const onPosted = useCallback(
+    (to: string) => {
+      tips.done('post');
+      const name = neighbours.find((n) => n.username === to)?.display_name ?? to;
+      say(`Posted. It's waiting for ${name} in the post box.`);
+    },
+    [tips, neighbours, say]
+  );
 
   // --- the scene -----------------------------------------------------------
 
@@ -319,13 +433,14 @@ export default function GardenScene() {
       ))}
       {myPlot && incoming.length > 0 && <Parcel x={myPlot.x + PLOT.w + 8} y={myPlot.y + 62} />}
       <Shed x={SHED.x} y={SHED.y} />
-      {BUTTS.map((b) => (
-        <WaterButt key={b.x} x={b.x} y={b.y} />
-      ))}
       {BENCHES.map((b) => (
         <Bench key={b.x} x={b.x} y={b.y} />
       ))}
-      <Compost x={COMPOST.x} y={COMPOST.y} />
+      {BINS.map((b, i) => (
+        <Bin key={b.x} x={b.x} y={b.y} colour={i === 0 ? '#4f6b55' : '#56636e'} />
+      ))}
+      <GardenNoticeboard x={NOTICEBOARD.x} y={NOTICEBOARD.y} />
+      <PostBox x={POSTBOX.x} y={POSTBOX.y} waiting={me.letters > 0} />
       <Sign x={MARKET.x + 10} y={MARKET.y + 12} />
       {TABLES.map((t, i) => (
         <MarketTable key={t.x} x={t.x} y={t.y} goods={goods.slice(i * 3, i * 3 + 3)} />
@@ -341,7 +456,9 @@ export default function GardenScene() {
             username={n.username}
             x={0}
             y={0}
+            pose={sitting.includes(n.username) ? 'bench' : 'stand'}
             activity={n.activity}
+            smokingUntil={n.activity_until}
             basket={n.stall.length > 0}
           />
         </Follow>
@@ -355,7 +472,9 @@ export default function GardenScene() {
             username={me.username}
             x={0}
             y={0}
+            pose={seat !== null ? 'bench' : 'stand'}
             activity={garden?.me.activity ?? null}
+            smokingUntil={garden?.me.activity_until}
             basket={myStall.length > 0}
           />
         </Animated.View>
@@ -389,6 +508,12 @@ export default function GardenScene() {
       })}
       <Tag x={SHED.x + 42} y={SHED.y - 16} text="Shed" dim />
       <Tag x={MARKET.x + MARKET.w / 2} y={MARKET.y + 4} text="Market" dim />
+      <Tag x={NOTICEBOARD.x + 26} y={NOTICEBOARD.y - 18} text="Noticeboard" dim />
+      <Tag x={POSTBOX.x} y={POSTBOX.y - 62} text="Post box" dim={me.letters === 0} />
+      {BINS.map((b) => (
+        <Tag key={b.x} x={b.x + 12} y={b.y - 50} text="Bin" dim />
+      ))}
+      <Tag x={GATE.x + 84} y={HEDGE_Y + 8} text="Gate: back to work" dim />
       {around.map((n) => (
         <Follow
           key={n.username}
@@ -412,7 +537,7 @@ export default function GardenScene() {
 
   // What you can do where you're standing.
   const actions: { title: string; onPress: () => void; quiet?: boolean }[] = [];
-  let hint = 'Walk up to your plot, a friend, the market or the shed.';
+  let hint = 'Walk up to your plot, a friend, the market, the post box or the shed.';
   if (near && garden) {
     switch (near.kind) {
       case 'friend': {
@@ -426,39 +551,36 @@ export default function GardenScene() {
         break;
       }
       case 'bed': {
-        const plot = myPlots.find((p) => p.bed === near.bed);
-        const info = plot && itemInfo(plot.crop);
-        if (!plot || !info) {
+        const plants = myPlots.filter((p) => p.bed === near.bed);
+        const ripe = plants.filter((p) => p.ripe);
+        const withered = plants.filter((p) => p.withered);
+        const look = () => setSheet({ kind: 'bed', bed: near.bed });
+        if (ripe.length > 0) {
           actions.push({
-            title: 'Plant something',
-            onPress: () => setSheet({ kind: 'seed', bed: near.bed }),
-          });
-        } else if (plot.withered) {
-          actions.push({
-            title: `Clear the withered ${(info.plural ?? info.name).toLowerCase()}`,
-            onPress: () => void act(() => api.clearBed(near.bed), 'rustle'),
-          });
-        } else if (plot.ripe) {
-          actions.push({
-            title: `Harvest the ${(info.plural ?? info.name).toLowerCase()}`,
+            title: `Pick ${plantsLabel(ripe)}`,
             onPress: () => void act(() => api.harvest(near.bed), 'pluck'),
           });
-        } else {
-          const share = Math.min(99, Math.floor(100 * plot.progress));
+        } else if (withered.length > 0) {
           actions.push({
-            title: `${info.name} · ${share}%`,
-            quiet: true,
-            onPress: () => setSheet({ kind: 'bed', plot }),
+            title: withered.length === 1 ? 'Clear the withered plant' : 'Clear the withered',
+            onPress: () => void act(() => api.clearBed(near.bed), 'rustle'),
+          });
+        } else if (plants.length < PLANTS_PER_BED) {
+          actions.push({
+            title: plants.length === 0 ? 'Plant something' : 'Plant more',
+            onPress: () => setSheet({ kind: 'seed', bed: near.bed }),
           });
         }
-        // Watering (all your beds) goes alongside planting or looking at a
-        // bed; picking and clearing need the room for their labels.
-        if ((!plot || (!plot.ripe && !plot.withered)) && myPlots.some(isDry))
+        // Then one quieter thing: water if anything's dry, else a closer look.
+        if (myPlots.some(isDry)) actions.push({ title: 'Water', quiet: true, onPress: water });
+        else if (plants.length > 0)
           actions.push({
-            title: 'Water',
+            title: actions.length === 0 ? `Look at ${plantsLabel(plants)}` : 'Look',
             quiet: true,
-            onPress: () => void act(() => api.water(), 'water'),
+            onPress: look,
           });
+        if (actions.length < 2 && plants.length > 0 && myPlots.some(isDry))
+          actions.push({ title: 'Look', quiet: true, onPress: look });
         break;
       }
       case 'friendPlot': {
@@ -482,8 +604,60 @@ export default function GardenScene() {
       case 'market':
         actions.push({ title: 'Your stall', onPress: () => setSheet({ kind: 'stall' }) });
         break;
+      case 'post':
+        actions.push({
+          title:
+            me.letters > 0
+              ? `Post box · ${me.letters} for you`
+              : neighbours.length > 0
+                ? 'Write a letter'
+                : 'Post box',
+          onPress: () => setSheet({ kind: 'post' }),
+        });
+        break;
+      case 'board':
+        actions.push({ title: 'Noticeboard', onPress: () => setSheet({ kind: 'board' }) });
+        break;
+      case 'bins':
+        actions.push({ title: 'Throw something away', onPress: () => setSheet({ kind: 'bins' }) });
+        break;
+      case 'seat':
+        if (seat === null)
+          actions.push({ title: 'Sit on the bench', onPress: () => sitDown(near.seat) });
+        else actions.push({ title: 'Stand up', quiet: true, onPress: standUp });
+        break;
     }
   }
+
+  // One tip at a time for new players, in the order they'll want them.
+  const hasSeeds = Object.keys(garden?.me.inventory ?? {}).some(
+    (slug) => itemInfo(slug).kind === 'seed'
+  );
+  const tip: { id: string; text: string } | null = !garden
+    ? null
+    : !tips.has('walk')
+      ? {
+          id: 'walk',
+          text: 'Drag the stick (or use the arrow keys) to walk. Your plot is marked "Your plot". Walk out through the gate to go back to work.',
+        }
+      : myPlots.length === 0 && !hasSeeds && !tips.has('seeds')
+        ? { id: 'seeds', text: "You'll need seeds to plant: the shed, bottom left, sells them." }
+        : myPlots.length === 0 && hasSeeds && !tips.has('plant')
+          ? {
+              id: 'plant',
+              text: `Walk up to one of your beds to plant. Each seed makes one plant, and a bed holds ${PLANTS_PER_BED}.`,
+            }
+          : myPlots.some(isDry) && !tips.has('water')
+            ? {
+                id: 'water',
+                text: 'Water your beds and they grow half as fast again for a day. Crops grow in real time, studying or not.',
+              }
+            : neighbours.length > 0 && !tips.has('post')
+              ? {
+                  id: 'post',
+                  text: 'Leave a friend a letter in the post box, bottom right. It waits there until they come by.',
+                }
+              : null;
 
   return (
     <Scene
@@ -513,9 +687,9 @@ export default function GardenScene() {
         </Panel>
       ) : (
         <Panel>
+          {tip && <Tip id={tip.id}>{tip.text}</Tip>}
           <ChatBar onSay={chat.say} />
           <View style={styles.controls}>
-            <Joystick size={92} onChange={walker.steer} />
             <View style={styles.side}>
               <View style={styles.nearby}>
                 {actions.length > 0 ? (
@@ -567,6 +741,8 @@ export default function GardenScene() {
                 />
               </View>
             </View>
+            {/* On the right, under your thumb. */}
+            <Joystick size={92} onChange={walker.steer} />
           </View>
           <View style={styles.row}>
             <Button title="Back to work" small style={styles.flex} onPress={() => go('/office')} />
@@ -581,6 +757,9 @@ export default function GardenScene() {
           act={act}
           setSheet={setSheet}
           onShop={() => go('/shop?from=garden', null)}
+          onPlanted={() => tips.done('plant')}
+          onPickedUp={onPickedUp}
+          onPosted={onPosted}
         />
       )}
       {notice && <Toast key={notice.id} text={notice.text} onDone={clearNotice} />}
@@ -630,6 +809,18 @@ function nearest(
   }
   consider({ kind: 'shed' }, dist(at, SHED_DOOR), REACH.shed);
   consider({ kind: 'market' }, distToRect(at, STALLS), REACH.market);
+  consider({ kind: 'post' }, dist(at, POSTBOX), REACH.post);
+  consider({ kind: 'board' }, distToRect(at, BOARD), REACH.board);
+  for (const b of BINS) consider({ kind: 'bins' }, distToRect(at, binRect(b)), REACH.bins);
+  // Either side of a bench, or in front of it: the seat on your side.
+  BENCHES.forEach((b, i) => {
+    const seat = 2 * i + (at.x < b.x + 30 ? 0 : 1);
+    consider(
+      { kind: 'seat', seat },
+      distToRect(at, { x: b.x, y: b.y - 6, w: 60, h: 24 }),
+      REACH.seat
+    );
+  });
   return best;
 }
 
@@ -697,21 +888,42 @@ function GardenSheet({
   act,
   setSheet,
   onShop,
+  onPlanted,
+  onPickedUp,
+  onPosted,
 }: {
   sheet: NonNullable<SheetState>;
   garden: Garden;
   act: Act;
   setSheet: (s: SheetState) => void;
   onShop: () => void;
+  onPlanted: () => void;
+  onPickedUp: () => void;
+  onPosted: (to: string) => void;
 }) {
   const close = () => setSheet(null);
   switch (sheet.kind) {
     case 'seed':
       return (
-        <SeedSheet bed={sheet.bed} garden={garden} act={act} onShop={onShop} onClose={close} />
+        <SeedSheet
+          bed={sheet.bed}
+          garden={garden}
+          act={act}
+          onPlanted={onPlanted}
+          onShop={onShop}
+          onClose={close}
+        />
       );
     case 'bed':
-      return <BedSheet plot={sheet.plot} onClose={close} />;
+      return (
+        <BedSheet
+          bed={sheet.bed}
+          garden={garden}
+          act={act}
+          onPlant={() => setSheet({ kind: 'seed', bed: sheet.bed })}
+          onClose={close}
+        />
+      );
     case 'basket':
       return (
         <BasketSheet
@@ -745,6 +957,23 @@ function GardenSheet({
           onClose={close}
         />
       );
+    case 'post':
+      return (
+        <PostSheet
+          friends={garden.neighbours}
+          onPickedUp={onPickedUp}
+          onPosted={onPosted}
+          onClose={close}
+        />
+      );
+    case 'board':
+      return (
+        <Sheet title="Noticeboard" onClose={close}>
+          <Noticeboard />
+        </Sheet>
+      );
+    case 'bins':
+      return <BinSheet garden={garden} act={act} onClose={close} />;
   }
 }
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Box, Dot, Glow, Hotspot, Shadow, Tag } from '@/art/primitives';
@@ -6,9 +6,10 @@ import { BLEED, Scene, useTone } from '@/art/Scene';
 import { Bike, Car, CarLights } from '@/art/Vehicles';
 import { useAmbience } from '@/audio/sound';
 import { Button } from '@/components/Button';
-import { Body, HeaderDetail, Muted, Panel, SceneHeader } from '@/components/Chrome';
+import { Body, HeaderDetail, Muted, Panel, SceneHeader, Toast } from '@/components/Chrome';
 import { Countdown } from '@/components/Countdown';
 import { RipeNote } from '@/components/RipeNote';
+import { Tip } from '@/components/Tip';
 import { api, DESKS, type Me } from '@/lib/api';
 import { itemInfo } from '@/lib/catalog';
 import { cancelSessionEnd } from '@/lib/notifications';
@@ -43,6 +44,10 @@ export default function CarPark() {
   const onBreak = me.status === 'on_break';
   const atWork = me.status !== 'absent';
   const [leaving, setLeaving] = useState(false);
+  const [notice, setNotice] = useState<{ id: number; text: string } | null>(null);
+  const clearNotice = useCallback(() => setNotice(null), []);
+  const say = (e: unknown) =>
+    setNotice({ id: Date.now(), text: e instanceof Error ? e.message : String(e) });
 
   // People at work park in the bay (or rack slot) that matches their desk.
   // Anyone without a vehicle walked, so the car park doesn't show them.
@@ -59,7 +64,22 @@ export default function CarPark() {
     setLeaving(true);
     try {
       setMe(await api.goHome());
+    } catch (e) {
+      say(e);
     } finally {
+      setLeaving(false);
+    }
+  };
+
+  // Logging out is going home: you've left, break or no break.
+  const logOut = async () => {
+    setLeaving(true);
+    try {
+      if (atWork) await api.goHome();
+      await cancelSessionEnd();
+      await supabase.auth.signOut();
+    } catch (e) {
+      say(e);
       setLeaving(false);
     }
   };
@@ -225,6 +245,19 @@ export default function CarPark() {
         detail={<HeaderDetail>{conditions.label}</HeaderDetail>}
       />
       <Panel>
+        {me.sessions_done === 0 ? (
+          <Tip id="welcome">
+            Welcome to Focus. Study in the office to earn chips and a break, then spend the break in
+            the garden with your friends. Walk in to start.
+          </Tip>
+        ) : (
+          friends.length === 0 && (
+            <Tip id="friends">
+              Focus is better with friends: add them on the noticeboard by their username, or make
+              an invite there to send them.
+            </Tip>
+          )
+        )}
         <Greeting me={me} inCount={inCount} />
         <Button title="Walk in" onPress={() => go('/office')} />
         <View style={styles.row}>
@@ -255,16 +288,9 @@ export default function CarPark() {
             />
           )}
         </View>
-        <Button
-          title="Log out"
-          variant="ghost"
-          small
-          onPress={async () => {
-            await cancelSessionEnd();
-            await supabase.auth.signOut();
-          }}
-        />
+        <Button title="Log out" variant="ghost" small onPress={logOut} disabled={leaving} />
       </Panel>
+      {notice && <Toast key={notice.id} text={notice.text} onDone={clearNotice} />}
     </Scene>
   );
 }
@@ -284,6 +310,7 @@ function Greeting({ me, inCount }: { me: Me; inCount: number }) {
           {" left. The garden's through the gate."}
         </Body>
         <RipeNote ripe={me.ripe} />
+        <PostNote letters={me.letters} />
       </View>
     );
   }
@@ -302,7 +329,20 @@ function Greeting({ me, inCount }: { me: Me; inCount: number }) {
           : 'You came on foot. The garden shed sells bikes.'}
       </Muted>
       <RipeNote ripe={me.ripe} />
+      <PostNote letters={me.letters} />
     </View>
+  );
+}
+
+/** Letters waiting in the garden's post box. */
+function PostNote({ letters }: { letters: number }) {
+  if (!letters) return null;
+  return (
+    <Muted>
+      {letters === 1
+        ? "There's a letter for you in the garden's post box."
+        : `There are ${letters} letters for you in the garden's post box.`}
+    </Muted>
   );
 }
 

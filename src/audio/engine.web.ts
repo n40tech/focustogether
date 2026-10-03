@@ -75,6 +75,80 @@ type Nodes = {
   glass: GainNode;
 };
 
+/**
+ * iPhones and iPads mute web audio while the ring/silent switch is on silent,
+ * as they do a game's sound effects. Focus is mostly sound, so it asks to be
+ * treated as playback instead (like a video): it plays on silent too, and,
+ * like a video, pauses music from other apps while it does. Muting Focus
+ * gives the phone's sound back.
+ *
+ * Safari's Audio Session API says so directly; older iOS needs an audio
+ * element playing (a silent loop) to switch the page over.
+ */
+const silentSwitch = (() => {
+  type Session = { type: string };
+  let loop: HTMLAudioElement | null = null;
+  const apple = () =>
+    typeof navigator !== 'undefined' &&
+    (/iPhone|iPad|iPod/.test(navigator.userAgent) ||
+      (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1));
+  const session = () => (navigator as Navigator & { audioSession?: Session }).audioSession ?? null;
+
+  /** A quarter of a second of silence, as a WAV file. */
+  function silence() {
+    const samples = 2000;
+    const bytes = new DataView(new ArrayBuffer(44 + samples));
+    const text = (at: number, s: string) =>
+      [...s].forEach((c, i) => bytes.setUint8(at + i, c.charCodeAt(0)));
+    text(0, 'RIFF');
+    bytes.setUint32(4, 36 + samples, true);
+    text(8, 'WAVEfmt ');
+    bytes.setUint32(16, 16, true);
+    bytes.setUint16(20, 1, true); // PCM
+    bytes.setUint16(22, 1, true); // mono
+    bytes.setUint32(24, 8000, true);
+    bytes.setUint32(28, 8000, true);
+    bytes.setUint16(32, 1, true);
+    bytes.setUint16(34, 8, true);
+    text(36, 'data');
+    bytes.setUint32(40, samples, true);
+    for (let i = 0; i < samples; i++) bytes.setUint8(44 + i, 128);
+    return URL.createObjectURL(new Blob([bytes.buffer], { type: 'audio/wav' }));
+  }
+
+  return {
+    claim() {
+      try {
+        const s = session();
+        if (s) {
+          if (s.type !== 'playback') s.type = 'playback';
+          return;
+        }
+        if (!apple()) return;
+        if (!loop) {
+          loop = document.createElement('audio');
+          loop.setAttribute('x-webkit-airplay', 'deny');
+          loop.preload = 'auto';
+          loop.loop = true;
+          loop.src = silence();
+        }
+        if (loop.paused) loop.play().catch(() => {});
+      } catch {
+        // Not allowed yet: the next tap tries again.
+      }
+    },
+    release() {
+      try {
+        const s = session();
+        if (s && s.type !== 'auto') s.type = 'auto';
+        loop?.pause();
+      } catch {
+        // Nothing to give back.
+      }
+    },
+  };
+})();
+
 class WebAudioEngine implements AudioEngine {
   unlocked = false;
 
@@ -92,9 +166,20 @@ class WebAudioEngine implements AudioEngine {
   constructor() {
     if (typeof window === 'undefined') return; // static rendering in Node
     const unlock = () => this.unlock();
-    for (const type of ['pointerdown', 'keydown', 'touchend']) {
+    // Browsers only let a page start sound from a tap, click or key press, and
+    // phones count the end of a tap (touchend, pointerup), not its start.
+    for (const type of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown']) {
       window.addEventListener(type, unlock, { capture: true, passive: true });
     }
+    // Phones suspend the sound while the page is hidden; pick up again on return.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') {
+        silentSwitch.release();
+        return;
+      }
+      if (!this.settings.muted && this.unlocked) silentSwitch.claim();
+      if (this.ctx && this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
+    });
   }
 
   // --- public API -----------------------------------------------------------
@@ -110,6 +195,9 @@ class WebAudioEngine implements AudioEngine {
 
   setSettings(settings: SoundSettings) {
     this.settings = settings;
+    // Muted, Focus lets go of the phone's sound, so your own music can play.
+    if (settings.muted) silentSwitch.release();
+    else if (this.unlocked) silentSwitch.claim();
     this.applyVolume(0.15);
   }
 
@@ -145,6 +233,8 @@ class WebAudioEngine implements AudioEngine {
         return this.munch(t);
       case 'pop':
         return this.pop(t);
+      case 'bin':
+        return this.bin(t);
       case 'paper':
         return this.paper(t);
       case 'rustle':
@@ -159,24 +249,34 @@ class WebAudioEngine implements AudioEngine {
   // --- lifecycle ------------------------------------------------------------
 
   private unlock() {
+    if (!this.settings.muted) silentSwitch.claim();
     if (this.ctx?.state === 'running') return;
     try {
-      this.ctx ??= new AudioContext();
+      if (!this.ctx) {
+        const Context =
+          window.AudioContext ??
+          (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (!Context) return; // no Web Audio here; stay silent
+        this.ctx = new Context();
+      }
+      if (!this.n) this.build(this.ctx);
     } catch {
-      return; // no Web Audio here; stay silent
+      return;
     }
     const ctx = this.ctx;
-    if (!this.n) this.build(ctx);
-    ctx.resume().then(() => {
-      if (this.unlocked) return;
-      this.unlocked = true;
-      this.scheduledUntil = ctx.currentTime;
-      this.strikesUntil = serverNow();
-      this.tick();
-      this.applyVolume(1.5); // fade in rather than start with a burst
-      setInterval(() => this.tick(), TICK_MS);
-      this.listeners.forEach((l) => l());
-    });
+    ctx
+      .resume()
+      .then(() => {
+        if (this.unlocked) return;
+        this.unlocked = true;
+        this.scheduledUntil = ctx.currentTime;
+        this.strikesUntil = serverNow();
+        this.tick();
+        this.applyVolume(1.5); // fade in rather than start with a burst
+        setInterval(() => this.tick(), TICK_MS);
+        this.listeners.forEach((l) => l());
+      })
+      .catch(() => {});
   }
 
   private applyVolume(timeConstant: number) {
@@ -795,6 +895,15 @@ class WebAudioEngine implements AudioEngine {
       });
     }
   }
+  /** Something dropped into a wheelie bin, and the lid let fall. */
+  private bin(t: number) {
+    const out = this.n!.sfx;
+    this.tone(t, out, { freq: 140, to: 70, level: 0.35, decay: 0.22 });
+    this.burst(t, out, { colour: 'pink', freq: 700, Q: 1.2, level: 0.25, decay: 0.12 });
+    this.tone(t + 0.32, out, { freq: 190, to: 110, level: 0.28, decay: 0.16 });
+    this.burst(t + 0.32, out, { freq: 1100, Q: 1.5, level: 0.22, decay: 0.08 });
+  }
+
   private paper(t: number) {
     const src = this.source('pink');
     const env = this.gainNode();

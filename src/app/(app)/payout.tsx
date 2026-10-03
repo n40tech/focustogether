@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { DESK_SPOTS, OfficeFloor, OfficeGlow } from '@/art/Office';
@@ -6,7 +6,7 @@ import { Box, Dot } from '@/art/primitives';
 import { Scene, useTone, Zoom } from '@/art/Scene';
 import { playSound, useAmbience } from '@/audio/sound';
 import { Button } from '@/components/Button';
-import { Body, Muted, Panel, SceneHeader } from '@/components/Chrome';
+import { Body, Muted, Panel, SceneHeader, Toast } from '@/components/Chrome';
 import { Countdown } from '@/components/Countdown';
 import { RipeNote } from '@/components/RipeNote';
 import { api } from '@/lib/api';
@@ -62,6 +62,8 @@ export default function Payout() {
   const physical = stacks.reduce((n, s) => n + s.length, 0);
   const [shown, setShown] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<{ id: number; text: string } | null>(null);
+  const clearNotice = useCallback(() => setNotice(null), []);
 
   // A chime, then the chips counted out onto the desk one by one.
   useEffect(() => {
@@ -90,6 +92,8 @@ export default function Payout() {
       setMe(await api.goHome());
       cancelSessionEnd();
       go('/');
+    } catch (e) {
+      setNotice({ id: Date.now(), text: e instanceof Error ? e.message : String(e) });
     } finally {
       setBusy(false);
     }
@@ -172,6 +176,7 @@ export default function Payout() {
           />
         </View>
       </Panel>
+      {notice && <Toast key={notice.id} text={notice.text} onDone={clearNotice} />}
     </Scene>
   );
 }

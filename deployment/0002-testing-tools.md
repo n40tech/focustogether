@@ -12,11 +12,12 @@ Two switches keep this away from real players:
 - the server only lets accounts you've marked as testers use the tools, so
   nobody can cheat with a modified app either.
 
-## 1. Run migrations 0005 and 0006
+## 1. Run migrations 0005 to 0007
 
 Supabase dashboard → **SQL Editor** → **New query** → paste the whole of
 `supabase/migrations/0005_testing.sql` → **Run**. Then do the same with
-`0006_growing_and_desks.sql`. (Each runs once, in order, after 0004.)
+`0006_growing_and_desks.sql` and `0007_post_and_first_day.sql`. (Each runs
+once, in order, after 0004.)
 
 ## 2. Turn testing mode on locally
 
@@ -62,6 +63,25 @@ strawberries 2 days, tomatoes 3, sunflowers 4 and pumpkins 5, and a watered bed
 grows half as fast again for a day. So **1 day** then **1 day** grows radishes;
 water in between and they're ready sooner.
 
+## Trying a first day
+
+The tips and the first-session skip are for new players:
+
+- **Tips:** the noticeboard's **Show the tips for new players again** brings
+  them all back for your account.
+- **Skipping the first session** only works on an account that has never
+  finished one. To see it, join with a fresh invite as a second player (in a
+  private window). Then you'll see the whole first day: the welcome, the
+  office tips, the skip, the payout and the garden.
+
+## Trying "leave the page and the session stops"
+
+Start a short session, switch to another tab or app for a few seconds and
+come back: it carries on. Stay away for more than 10 seconds and it stops,
+and the office says so. Testing on a laptop? Another tab counts as leaving,
+but another window beside the browser doesn't, as long as the Focus tab stays
+visible.
+
 ## The same from the SQL Editor
 
 Handy for setting up another player, without signing in as them:
@@ -74,6 +94,9 @@ update public.profiles set chips = chips + 1000 where username = 'alice';
 insert into public.inventory (user_id, item, qty)
 select id, 'tomato_seeds', 6 from public.profiles where username = 'alice'
 on conflict (user_id, item) do update set qty = public.inventory.qty + excluded.qty;
+
+-- Bring back the tips for new players
+update public.profiles set tips = '{}' where username = 'alice';
 
 -- Ripen everything alice has planted
 update public.plots b set grown_s = c.grow_hours * 3600.0, settled_at = now()

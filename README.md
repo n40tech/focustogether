@@ -13,14 +13,18 @@ up and shipping each update is in **[deployment/](deployment/)**, starting with
   in the bay that goes with their desk.
 - **Office**: twelve identical desks. You get a random one when you walk in and
   keep it until you go home. Set a timer and study; while a session runs,
-  nothing else is reachable.
+  nothing else is reachable, and leaving the page (another app or tab, or
+  locking your phone) for more than 10 seconds stops the session with no
+  chips. A new player can skip their first session.
 - **Payout**: a closer look at your desk, about 1 chip per minute (give or take a
   little luck), and an earned break (1 minute per 5 studied).
 - **Garden**: walk about with a thumbstick (or the arrow keys), chat in speech
-  bubbles, tend your allotment (crops grow in real time over a few days; pick
-  them within 2 days of ripening or they wither),
-  water friends' plots, smoke, and buy and sell at the market with friends
-  standing next to you.
+  bubbles, tend your allotment (one plant per seed, four to a bed; crops grow
+  in real time over a few days; pick them within 2 days of ripening or they
+  wither), water friends' plots, smoke, sit on a bench, throw things in the
+  bins, write letters at the post box, add friends at the noticeboard, and
+  buy and sell at the market with friends standing next to you. Walk out
+  through the gate to go back to work.
 - **Shed**: vehicles, desk things, seeds and cigarettes.
 - **Noticeboard**: friends and invites.
 
@@ -28,7 +32,8 @@ up and shipping each update is in **[deployment/](deployment/)**, starting with
 1. **SQL Editor → New query**: paste and run each file in
    `supabase/migrations/` that your database hasn't had yet, in order
    (`0001_init.sql`, `0002_game.sql`, `0003_community.sql`,
-   `0004_withering.sql`, `0005_testing.sql`, `0006_growing_and_desks.sql`).
+   `0004_withering.sql`, `0005_testing.sql`, `0006_growing_and_desks.sql`,
+   `0007_post_and_first_day.sql`).
    Each file runs once, ever: re-running one fails with "already exists" and
    changes nothing.
 2. **Authentication → Sign In / Providers**: turn *Allow new users to sign up*
@@ -55,6 +60,9 @@ npx expo start --web    # or `npx expo start` and scan the QR code with Expo Go
 (see `.env.example`).
 
 Sound starts after your first tap or click; browsers don't allow it sooner.
+On an iPhone it plays even with the silent switch on (which, like a video,
+pauses music from other apps); tap the Sound button to mute Focus and give the
+sound back.
 To preview other weather or another time of day, add
 `?weather=clear|cloudy|windy|rain|storm|mist` and/or `?hour=0-23` to the URL. This
 only changes what you see and hear. To try two players at once, use a normal and

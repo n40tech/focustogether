@@ -72,7 +72,6 @@ export const palette = {
     shed: '#8a6f5a',
     shedRoof: '#6b5546',
     bench: '#9b7a58',
-    butt: '#55606a',
   },
   chips: { white: '#efeae0', red: '#b4574a', green: '#5f8a63', black: '#3b3a3f', edge: '#d9cfb9' },
 };

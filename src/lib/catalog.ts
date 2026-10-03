@@ -44,10 +44,11 @@ const UNKNOWN = { name: 'Something', kind: 'desk' as ItemKind, colour: '#b9b2a6'
 
 export const itemInfo = (slug: string) => ITEMS[slug] ?? { ...UNKNOWN, name: slug };
 
-/** "3 tomatoes", "1 tomato", "5 tomato seeds" */
+/** "3 tomatoes", "1 tomato", "5 tomato seeds", "1 tomato seed" */
 export function countOf(slug: string, qty: number) {
   const info = itemInfo(slug);
-  const name = qty === 1 ? info.name : (info.plural ?? info.name);
+  const one = info.kind === 'seed' ? info.name.replace(/s$/, '') : info.name;
+  const name = qty === 1 ? one : (info.plural ?? info.name);
   return `${qty} ${name.toLowerCase()}`;
 }
 

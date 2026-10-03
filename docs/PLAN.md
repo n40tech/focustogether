@@ -77,7 +77,11 @@ agreed; **Open questions** lists what hasn't.
 - **Do, before a session:** choose a length (1–120 min) and start, or walk out.
 - **Do, during a session:** nothing else. There's the countdown and a small
   *give up* link, which forfeits the session. The chip balance, shop and all
-  navigation are hidden.
+  navigation are hidden. **Stay on the page**: switch apps or tabs, or lock
+  the phone, for more than 10 seconds and the session stops with nothing
+  paid (see *Staying on the page*). The screen is kept awake meanwhile.
+  A new player can **skip their first session**, to see the payout and the
+  garden before they've studied.
 - **Hear:** a soft room tone, the weather muffled through the window, rain
   tapping on the glass.
 
@@ -93,16 +97,21 @@ agreed; **Open questions** lists what hasn't.
   grid by a slot handed out when they joined, so a plot is always in the same
   place for everyone who can see it; friends' plots appear as you add them.
   Along the front: a gravel path, the shed, a little market square with trestle
-  tables, benches and the gate. Friends in the garden walk about too, with
+  tables, two benches, two wheelie bins, a noticeboard, a post box and the
+  gate. Friends in the garden walk about too, with
   Club Penguin-style chat bubbles over their heads, smoke if they're having a
   cigarette and a basket if they've something on their stall. A quiet break
   timer.
-- **Do:** walk with the thumbstick (or the arrow keys / WASD) · say something.
-  What else you can do depends on where you're standing: plant, look at or
-  harvest your beds and water them; water a friend's beds; go into the shed;
-  buy from a friend's stall, or offer them a swap, when you're next to them.
-  From anywhere: smoke · your basket (eat, save seeds, sell, offer, and
-  answer offers) · your stall · *Back to work* (office) · *Go home*.
+- **Do:** walk with the thumbstick (on the right, under your thumb; or the
+  arrow keys / WASD) · say something. What else you can do depends on where
+  you're standing: plant, look at or harvest your beds and water them; water
+  a friend's beds; go into the shed; buy from a friend's stall, or offer them
+  a swap, when you're next to them; sit on a bench (friends see you sitting;
+  walk off to get up); throw things in a bin; the noticeboard (friends and
+  invites, as in the car park); the post box (letters). Walking out through
+  the gate takes you back to work. From anywhere: smoke · your basket (eat,
+  save seeds, sell, offer, and answer offers) · your stall · *Back to work*
+  (office) · *Go home*.
 - **Hear:** the weather in full, birds when it's dry, crickets at night, wind
   chimes when it gusts, and footsteps (yours, and friends' from their side of
   you) on grass and gravel.
@@ -113,7 +122,9 @@ Reached from the shed door in the garden and from the payout screen. It's
 never available during a session.
 
 ### Noticeboard (friends and invites)
-See where everyone is, add a friend by username, and make invites.
+See where everyone is, add a friend by username, and make invites. There's
+one in the car park and one in the garden. It also brings back the tips for
+new players.
 
 ## 4. Rules
 
@@ -124,7 +135,7 @@ Derived on the server from timestamps and never stored, so it can't drift.
 |---|---|---|---|---|
 | `focused` | a session is running | vehicle shown | at their desk | – |
 | `on_break` | finished a session less than their earned break ago, and hasn't gone home | vehicle shown | at their desk until they get up, then an empty chair | walking about, if they have the garden open |
-| `idle` | arrived, or a break (or a given-up session) ended, less than 15 min ago; or their app is open at their desk or in the garden | vehicle shown | at their desk until they get up, then an empty chair | – |
+| `idle` | arrived, or a break (or a given-up or stopped session) ended, less than 15 min ago; or their app is open at their desk or in the garden | vehicle shown | at their desk until they get up, then an empty chair | – |
 | `absent` | otherwise, or they went home | – | – (desk given up) | – |
 
 A desk (and with it a bay and a rack slot) is held for as long as you're not
@@ -143,7 +154,33 @@ however long ago your break ended; close it and the usual timings apply.
 - **Earned break: 1 minute per 5 studied** (at least 1). So 25 min earns 5,
   50 earns 10, 90 earns 18 and 120 earns 24.
 - When the break runs out, a soft bell rings and you choose office or home.
-  Starting a new session ends a break early; going home ends it too.
+  Starting a new session ends a break early; going home ends it too, and so
+  does logging out (it counts as going home).
+
+### Staying on the page
+- A session belongs to the page (browser tab) it was started on. If that page
+  is hidden (another app, another tab, the phone locked) for **more than 10
+  seconds**, the session stops at the moment you left: no chips, no break.
+  Back within 10 seconds, it carries on, so a slip of the thumb is forgiven.
+- The page tells the server the moment it's hidden (a request the browser
+  finishes even as the page goes), and on coming back says how long it was
+  away, in case the first word never got through (no signal, say). If the
+  session had finished meanwhile, without you, it's taken back, chips and all.
+- Only the page you started on counts: a phone left open on Focus beside the
+  laptop you're studying on can't stop your session. The screen is kept awake
+  during a session (where the browser allows), so it doesn't lock by itself.
+- The office says when a session stopped because you left, until you start
+  another.
+
+### A first day
+- **Tips** guide a new player, one at a time, at the top of the panel: walk
+  in, pick a length and start, stay on the page, walk about the garden, buy
+  seeds, plant, water, write to a friend, add friends. Each goes once it's
+  done or put away (*Got it*), and is remembered per account (`profiles.tips`);
+  the noticeboard brings them all back.
+- **The first session can be skipped** once it's started: it ends at once, as
+  a session of the length chosen (25 minutes at most), with its payout and
+  break, so there's something to spend in the garden. Only ever the first.
 
 ### Shop catalogue (placeholder prices, tuned to ~1 chip per minute)
 
@@ -159,8 +196,10 @@ arrive in. The catalogue is one table (`items`), so prices are tuned without
 touching code.
 
 ### Allotment
-- Every player has a plot with **4 beds**.
-- Plant a seed in an empty bed. **Crops grow in real time**, studying or not:
+- Every player has a plot with **4 beds**, and a bed holds **4 plants**.
+- **One seed makes one plant**, in the next free spot of a bed; plants in a
+  bed can be different crops, and each grows on its own clock. **Crops grow in
+  real time**, studying or not:
   from a day for radishes to five for a pumpkin. A watering lasts a day, and
   meanwhile the bed grows **half as fast again**; nothing dies of thirst, it
   just grows at its own pace. When it's raining and you're in the garden, the
@@ -170,18 +209,21 @@ touching code.
   fruit), then it **withers**: it gives nothing, and stays in its bed until
   you clear it onto the compost. The payout and the car park mention what's
   ripe and how long it keeps, and friends can see a withered plot.
-- A ripe crop is harvested into your basket as produce. **Produce is never
-  exchanged for chips by the game.** You can:
+- Picking a bed takes everything ripe in it into your basket as produce (a
+  radish or carrot plant gives one root; see the table). Clearing a bed pulls
+  up only what has withered. **Produce is never exchanged for chips by the
+  game.** You can:
   - **eat** it (a munching sound, nothing more),
   - **save seeds** from it (one crop gives 2–6 seeds of its kind),
-  - **sell** it to friends at the market, or **trade** it.
+  - **sell** it to friends at the market, or **trade** it,
+  - or **throw it away** in a bin (seeds and cigarettes too).
 - You can **water a friend's beds** (standing next to their plot), but only
   they can plant and harvest them.
 
-| Crop | Ripe after (never watered) | Kept watered | Harvest | Seeds saved per crop |
+| Crop | Ripe after (never watered) | Kept watered | Picked per plant | Seeds saved per crop |
 |---|---|---|---|---|
-| Radish | 1 day | 16 hours | 3 | 2 |
-| Carrot | 1.5 days | 1 day | 3 | 2 |
+| Radish | 1 day | 16 hours | 1 | 2 |
+| Carrot | 1.5 days | 1 day | 1 | 2 |
 | Strawberry | 2 days | 32 hours | 4 | 2 |
 | Tomato | 3 days | 2 days | 4 | 3 |
 | Sunflower | 4 days | 64 hours | 1 | 6 |
@@ -211,8 +253,20 @@ touching code.
   pairwise: you see your friends, not your friends' friends.
 
 ### Cigarettes
-Smoked in the garden, one at a time. Your friends see about 5 minutes of smoke
-and hear a lighter flick and a quiet crackle.
+Smoked in the garden, one at a time. Each burns for **3 minutes**, getting
+shorter as it goes, then it's out. Friends see the smoke and hear a lighter
+flick and a quiet crackle.
+
+### Post
+- The **post box** in the garden takes letters (up to 1000 characters) to
+  friends. A letter waits in the post box until its friend next opens it
+  there; the car park mentions waiting letters, and an envelope shows in the
+  slot. Sent letters say whether they've been picked up.
+- Letters are only readable by whoever wrote them and whoever they're for.
+
+### Bins
+Two wheelie bins in the garden take produce, seeds and cigarettes you don't
+want. Nothing comes back out.
 
 ### Chat
 Messages of up to 80 characters appear as a bubble over your head for a few
@@ -320,9 +374,11 @@ src/
   art/                    placeholder art: the scene stage and its light, weather,
                           vehicles, desks, people, beds
   components/             UI pieces: buttons, header, toast, timer, thumbstick, sheets
-  lib/                    Supabase client, typed RPC wrappers, catalogue art, time
+  lib/                    Supabase client, typed RPC wrappers, catalogue art, time,
+                          leaving the page mid-session (away)
 supabase/migrations/      0001 init (MVP), 0002 game, 0003 community, 0004 withering,
-                          0005 testing tools, 0006 real-time growth and desks
+                          0005 testing tools, 0006 real-time growth and desks,
+                          0007 staying on the page, a first day, post and bins
 supabase/tests/           scenario tests for the game rules (plain Postgres + stubs)
 deployment/               numbered runbooks for setting up and shipping each update
 ```
@@ -332,7 +388,10 @@ deployment/               numbered runbooks for setting up and shipping each upd
   is a security-definer Postgres function using `auth.uid()`, and RLS only
   allows reads.
 - **Polling:** the world polls `get_me` and `get_friends_board` every 10 s and
-  when the app regains focus. The garden polls `get_garden` every 5 s.
+  when the app regains focus (back on the page mid-session, the first poll is
+  `back_to_page` instead). The garden polls `get_garden` every 5 s. A poll that
+  comes back after an action's own answer (going home, say) is dropped, so it
+  can't undo the action.
 - **Garden channel:** Supabase Realtime Broadcast on private channels named
   `garden:<username>`, carrying chat and positions. RLS on `realtime.messages`
   lets you listen to your own and your friends' channels, and speak only on
@@ -357,22 +416,30 @@ deployment/               numbered runbooks for setting up and shipping each upd
 | Table | Holds |
 |---|---|
 | `profiles` | + `chips` (was `points`), `went_home_at` (was `left_at`), `vehicle`, `activity`, `activity_until`; + `arrived_at`, `desk` (0–11), `plot_slot` (0003) |
-| `sessions` | + `chips`: what a completed session paid (0003) |
+| `sessions` | + `chips`: what a completed session paid (0003); + `device`: the page it was started on, and `left_at`: when that page was left (0007) |
 | `friendships` | unchanged |
 | `items` | catalogue: slug, kind, name, price, pack size |
 | `crops` | per crop: its seed, study minutes to ripen, harvest size, seeds saved |
 | `inventory` | (player, item) → quantity |
-| `plots` | (player, bed 0–3) → crop, planted at, growth so far (`grown_s` as of `settled_at`, 0006), last watered |
+| `plots` | (player, bed 0–3, spot 0–3) → crop, planted at, growth so far (`grown_s` as of `settled_at`, 0006), last watered. One row a plant; `spot` from 0007 |
 | `crops` | + `grow_hours` (0006): hours to ripen unwatered |
 | `trades` | offers in escrow: what's given, what's wanted, status |
 | `listings` | market stalls: seller, item, quantity, price per item (0003) |
 | `invites` | code, who made it, expiry, who used it (0003) |
+| `letters` | from, to, body (up to 1000 characters), sent at, picked up at (0007) |
+| `profiles` | + `tips`: tips for new players already seen to (0007) |
 
 | RPC | Allowed when | Returns |
 |---|---|---|
 | `get_me`, `get_friends_board`, `add_friend` | signed in | me / friends |
 | `arrive()` | signed in (gives you a desk if you haven't one) | me |
-| `start_session(minutes)` | not studying | me |
+| `start_session(minutes, device)` | not studying | me |
+| `leave_page(session, device)`, `back_to_page(session, device, away_s)` | the page the session was started on (0007) | – / me |
+| `skip_first_session()` | your first session is running (0007) | me |
+| `done_tip(tip)`, `reset_tips()` | signed in (0007) | me |
+| `get_post()`, `pick_up_post()` | signed in (0007) | post |
+| `send_letter(to, body)` | on a break, to a friend (0007) | post |
+| `bin_item(item, qty)` | on a break (0007) | garden |
 | `cancel_session()` | studying | me |
 | `go_home()` | on a break or idle | me |
 | `get_shop()`, `buy(item)` | not studying | shop |
@@ -445,7 +512,13 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 - [x] Migration `0006_growing_and_desks.sql`: crops grow in real time (faster
       while watered); people stay at their desks after a session until they
       leave; testing mode only in local builds (`EXPO_PUBLIC_TESTING`)
-- [ ] Run `0003` to `0006`, switch sign-ups on,
+- [x] Migration `0007_post_and_first_day.sql`: leaving the page stops a
+      session; a skippable first session and tips for new players; letters
+      in a garden post box; bins; one plant per seed and four to a bed;
+      3-minute cigarettes (58 scenario tests in all). In the garden too: a
+      noticeboard, benches to sit on, the gate back to work, and the
+      thumbstick on the right. Sound plays on iPhones on silent
+- [ ] Run `0003` to `0007`, switch sign-ups on,
       make the first invites, and do the first deploy:
       `deployment/0001-setup-and-launch.md`
 - [ ] Try it with friends, then tune prices, break length and the mix
@@ -453,8 +526,8 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 **M2: feel**
 - Illustrated art, recorded audio (layer by layer), a typeface, gentle
   character animation.
-- Walking animation (legs, a gentle bob), sitting on benches, and people
-  drawn in depth order as they pass each other.
+- Walking animation (legs, a gentle bob), and people drawn in depth order as
+  they pass each other.
 - Server-side weather, so rain waters everyone's plots.
 - "Session over" and "break over" notifications (web push on web).
 - Arranging your desk, and choosing which owned vehicle to arrive in.
@@ -487,6 +560,12 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 | Unpicked crops | Wither 2 days after ripening (going over for the last 12 hours), give nothing, and must be cleared before replanting. |
 | After a session | You stay at your desk (friends see you there) until you choose to leave it. |
 | Testing | A Test button, only in local builds with `EXPO_PUBLIC_TESTING=true` and only for accounts marked as testers. |
+| Leaving the page mid-session | Stops the session with nothing paid, after 10 seconds' grace. Only the page the session started on counts. |
+| New players | Tips, one at a time, and a skippable first session (as 25 minutes at most). |
+| Planting | One seed, one visible plant; four plants to a bed, any mix of crops. |
+| The bins | The two grey drums in the garden are wheelie bins (they were water butts): they take produce, seeds and cigarettes. |
+| Logging out | Counts as going home. |
+| Sound on iPhones | Plays even with the silent switch on, which, like a video, pauses other apps' music; muting Focus gives the sound back. |
 | Payout | A closer look at your own office desk, at the same proportions. |
 
 ## 13. Open questions
@@ -510,9 +589,11 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
   are one row in `items`, so they can be renamed or swapped per platform.
 - **Audio autoplay:** browsers stay silent until the first tap. The car park's
   first interaction unlocks sound.
-- **Background tabs:** browsers slow timers in hidden tabs, so rain drops and
-  birds thin out while you study in another tab. The continuous layers (rain
-  hiss, wind, room tone) keep playing.
+- **Studying on a laptop:** another tab counts as leaving the page, so lecture
+  notes in a second tab would stop a session. (Another window beside the
+  browser doesn't, as long as the Focus tab stays visible.)
+- **Leaving is reported by the page:** a modified client could stay quiet when
+  it's hidden. As with proximity, the server trusts friends' apps here.
 - **Cheating:** rewards are computed in Postgres from server time, so a client
   can't award itself chips. Chat is friends-only and unstored, so there's
   nothing to moderate after the fact, but also no history.

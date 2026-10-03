@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Animated, Text, View } from 'react-native';
 
-import type { Activity } from '@/lib/api';
+import { useNow } from '@/hooks/useNow';
+import { SMOKE_MINUTES, type Activity } from '@/lib/api';
 import { personColour } from '@/lib/catalog';
 import { nativeDriver, rand, useLoop } from './motion';
 import { Box, Dot, Shadow } from './primitives';
@@ -22,7 +23,8 @@ function looks(username: string) {
 
 /**
  * A person seen from above and in front. `x` is their centre, `y` where their
- * feet meet the ground. Seated people face away from us, towards their desk.
+ * feet meet the ground. At a desk ('sit') they face away from us; on a bench
+ * they face us.
  */
 export function Person({
   username,
@@ -30,17 +32,37 @@ export function Person({
   y,
   pose = 'stand',
   activity = null,
+  smokingUntil = null,
   basket = false,
 }: {
   username: string;
   x: number;
   y: number;
-  pose?: 'stand' | 'sit';
+  pose?: 'stand' | 'sit' | 'bench';
   activity?: Activity;
+  /** When their cigarette burns out: it gets shorter until then. */
+  smokingUntil?: string | null;
   /** Carrying a basket: they've something on their stall. */
   basket?: boolean;
 }) {
   const { shirt, skin, hair } = looks(username);
+  if (pose === 'bench') {
+    // Sitting on a bench, facing us: lap and shins in front of the seat.
+    return (
+      <>
+        <Shadow x={x} y={y} w={20} o={0.1} />
+        <Box x={x - 9} y={y - 27} w={18} h={17} c={shirt} r={7} />
+        <Dot x={x} y={y - 31} d={14} c={skin} />
+        <Box x={x - 7} y={y - 39} w={14} h={6} c={hair} r={5} />
+        <Dot x={x - 3} y={y - 31} d={1.8} c="#2b2622" />
+        <Dot x={x + 3} y={y - 31} d={1.8} c="#2b2622" />
+        <Box x={x - 8} y={y - 13} w={16} h={6} c="#4a4d55" r={3} />
+        <Box x={x - 6} y={y - 8} w={4} h={8} c="#4a4d55" r={2} />
+        <Box x={x + 2} y={y - 8} w={4} h={8} c="#4a4d55" r={2} />
+        {activity === 'smoking' && <Cigarette x={x + 7} y={y - 16} until={smokingUntil} />}
+      </>
+    );
+  }
   if (pose === 'sit') {
     // From behind: shoulders and the back of the head.
     return (
@@ -75,13 +97,27 @@ export function Person({
           <Box x={x - 18} y={y - 14} w={12} h={1.2} c="#8d6c47" />
         </>
       )}
-      {activity === 'smoking' && (
-        <>
-          <Box x={x + 7} y={y - 22} w={7} h={1.6} c="#efe9de" />
-          <Dot x={x + 14} y={y - 21.2} d={2} c="#e0763c" />
-          <Smoke x={x + 14} y={y - 23} />
-        </>
-      )}
+      {activity === 'smoking' && <Cigarette x={x + 7} y={y - 22} until={smokingUntil} />}
+    </>
+  );
+}
+
+/**
+ * A cigarette held at (x, y), burning down from the far end over its few
+ * minutes; once it's burnt out there's nothing left to draw.
+ */
+function Cigarette({ x, y, until }: { x: number; y: number; until: string | null }) {
+  const now = useNow(2000);
+  const left = until ? (Date.parse(until) - now) / (SMOKE_MINUTES * 60_000) : 1;
+  if (left <= 0) return null;
+  const length = 2 + 6 * Math.min(1, left);
+  return (
+    <>
+      <Box x={x} y={y} w={length} h={1.6} c="#efe9de" />
+      <Box x={x} y={y} w={2} h={1.6} c="#c9a07a" />
+      <Box x={x + length - 0.8} y={y} w={1} h={1.6} c="#8f8a84" />
+      <Dot x={x + length} y={y + 0.8} d={2} c="#e0763c" />
+      <Smoke x={x + length} y={y - 1} />
     </>
   );
 }
