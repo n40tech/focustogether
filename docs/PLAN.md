@@ -110,7 +110,8 @@ agreed; **Open questions** lists what hasn't.
   a friend's beds; go into the shed; buy from a friend's stall, or offer them
   a swap, when you're next to them; sit on a bench (friends see you sitting;
   walk off to get up); throw things in a bin; the noticeboard (friends and
-  invites, as in the car park); the post box (letters). Walking out through
+  invites, as in the car park); the post box (letters). With a friend beside
+  you there, you get both: the place's button and theirs. Walking out through
   the gate takes you back to work. From anywhere: smoke · your basket (eat,
   save seeds, sell, offer, and answer offers) · your stall · *Back to work*
   (office) · *Go home*.
@@ -574,6 +575,7 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 | Testing | A Test button, only in local builds with `EXPO_PUBLIC_TESTING=true` and only for accounts marked as testers. |
 | Leaving the page mid-session | Stops the session with nothing paid, after 10 seconds' grace. Only the page the session started on counts. |
 | Other tabs on a computer | Fine, for lecture notes: on a computer only closing the page counts as leaving. On a phone or tablet, another app or tab still does. |
+| A friend standing at a place | Doesn't hide it: you get the place's button and the friend's (by name). |
 | New players | Tips, one at a time, and a skippable first session (as 25 minutes at most). |
 | Planting | One seed, one visible plant; four plants to a bed, any mix of crops. |
 | The bins | The two grey drums in the garden are wheelie bins (they were water butts): they take produce, seeds and cigarettes. |

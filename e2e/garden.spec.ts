@@ -117,6 +117,23 @@ test('the post box: picking up a letter, and writing back', async ({ page, fake 
   expect(fake.called('send_letter')).toEqual([{ p_to: 'bob', p_body: 'Thanks! Want some?' }]);
 });
 
+test("a friend by the post box doesn't hide it", async ({ page, fake }) => {
+  fake.letters = [
+    { id: 82, from: 'bob', from_name: 'Bob', body: 'Over here!', sent_at: iso(-5), read_at: null },
+  ];
+  // Bob's standing by the post box, bottom right.
+  fake.inGarden = [{ username: 'bob', x: 1000, y: 600 }];
+  await enterGarden(page, fake);
+  const postBox = button(page, 'Post box · 1 for you');
+  await walk(page, 'ArrowUp', 300);
+  await walk(page, 'ArrowRight', 6000, postBox);
+  // Bob as well, beside it, by name.
+  await expect(button(page, "Bob's stall")).toHaveText('Bob');
+
+  await postBox.click();
+  await expect(page.getByText('Over here!')).toBeVisible();
+});
+
 test('sitting on a bench, and getting up by walking off', async ({ page, fake }) => {
   await enterGarden(page, fake);
   const sit = button(page, 'Sit on the bench');

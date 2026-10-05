@@ -104,8 +104,8 @@ const STEPS_TO_LEARN = 8;
  */
 let lastSpot: { username: string; breakEndsAt: string | null; at: Point } | null = null;
 
-type Near =
-  | { kind: 'friend'; username: string }
+/** A place you can do something at. */
+type Place =
   | { kind: 'bed'; bed: number }
   | { kind: 'friendPlot'; username: string }
   | { kind: 'shed' }
@@ -115,7 +115,11 @@ type Near =
   | { kind: 'bins' }
   | { kind: 'seat'; seat: number };
 
-const sameNear = (a: Near | null, b: Near | null) => JSON.stringify(a) === JSON.stringify(b);
+/** What's beside you: a place, a friend, both or neither. */
+type Near = { place: Place | null; friend: string | null };
+
+const NOWHERE: Near = { place: null, friend: null };
+const sameNear = (a: Near, b: Near) => JSON.stringify(a) === JSON.stringify(b);
 
 /** The noticeboard on its posts, for "am I next to it?". */
 const BOARD = { x: NOTICEBOARD.x, y: NOTICEBOARD.y, w: 52, h: 48 };
@@ -164,7 +168,7 @@ export default function GardenScene() {
   const clearNotice = useCallback(() => setNotice(null), []);
   const [breakOver, setBreakOver] = useState(false);
   const [viewWidth, setViewWidth] = useState<number>(STAGE.width);
-  const [near, setNear] = useState<Near | null>(null);
+  const [near, setNear] = useState<Near>(NOWHERE);
 
   const status = garden?.me.status ?? me.status;
   const breakEndsAt = garden?.me.break_ends_at ?? me.break_ends_at;
@@ -535,40 +539,32 @@ export default function GardenScene() {
     </Pan>
   );
 
-  // What you can do where you're standing.
-  const actions: { title: string; onPress: () => void; quiet?: boolean }[] = [];
+  // What you can do where you're standing: at a place, with a friend beside
+  // you, or both (neither hides the other).
+  const actions: { title: string; label?: string; onPress: () => void; quiet?: boolean }[] = [];
   let hint = 'Walk up to your plot, a friend, the market, the post box or the shed.';
-  if (near && garden) {
-    switch (near.kind) {
-      case 'friend': {
-        const f = neighbours.find((n) => n.username === near.username);
-        if (f)
-          actions.push({
-            title:
-              f.stall.length > 0 ? `${f.display_name}'s stall` : `Trade with ${f.display_name}`,
-            onPress: () => setSheet({ kind: 'friend', username: f.username }),
-          });
-        break;
-      }
+  const place = garden ? near.place : null;
+  if (place) {
+    switch (place.kind) {
       case 'bed': {
-        const plants = myPlots.filter((p) => p.bed === near.bed);
+        const plants = myPlots.filter((p) => p.bed === place.bed);
         const ripe = plants.filter((p) => p.ripe);
         const withered = plants.filter((p) => p.withered);
-        const look = () => setSheet({ kind: 'bed', bed: near.bed });
+        const look = () => setSheet({ kind: 'bed', bed: place.bed });
         if (ripe.length > 0) {
           actions.push({
             title: `Pick ${plantsLabel(ripe)}`,
-            onPress: () => void act(() => api.harvest(near.bed), 'pluck'),
+            onPress: () => void act(() => api.harvest(place.bed), 'pluck'),
           });
         } else if (withered.length > 0) {
           actions.push({
             title: withered.length === 1 ? 'Clear the withered plant' : 'Clear the withered',
-            onPress: () => void act(() => api.clearBed(near.bed), 'rustle'),
+            onPress: () => void act(() => api.clearBed(place.bed), 'rustle'),
           });
         } else if (plants.length < PLANTS_PER_BED) {
           actions.push({
             title: plants.length === 0 ? 'Plant something' : 'Plant more',
-            onPress: () => setSheet({ kind: 'seed', bed: near.bed }),
+            onPress: () => setSheet({ kind: 'seed', bed: place.bed }),
           });
         }
         // Then one quieter thing: water if anything's dry, else a closer look.
@@ -584,7 +580,7 @@ export default function GardenScene() {
         break;
       }
       case 'friendPlot': {
-        const f = neighbours.find((n) => n.username === near.username);
+        const f = neighbours.find((n) => n.username === place.username);
         if (!f) break;
         if (f.plots.some((p) => !p.watered))
           actions.push({
@@ -623,10 +619,27 @@ export default function GardenScene() {
         break;
       case 'seat':
         if (seat === null)
-          actions.push({ title: 'Sit on the bench', onPress: () => sitDown(near.seat) });
+          actions.push({ title: 'Sit on the bench', onPress: () => sitDown(place.seat) });
         else actions.push({ title: 'Stand up', quiet: true, onPress: standUp });
         break;
     }
+  }
+  const friend =
+    garden && near.friend ? neighbours.find((n) => n.username === near.friend) : undefined;
+  if (friend) {
+    // Room for the place's main thing and the friend; only one stands out.
+    actions.splice(1);
+    const label =
+      friend.stall.length > 0
+        ? `${friend.display_name}'s stall`
+        : `Trade with ${friend.display_name}`;
+    actions.push({
+      // Beside a place's button, just their name, so both fit.
+      title: actions.length > 0 ? friend.display_name : label,
+      label,
+      quiet: actions.some((a) => !a.quiet),
+      onPress: () => setSheet({ kind: 'friend', username: friend.username }),
+    });
   }
 
   // One tip at a time for new players, in the order they'll want them.
@@ -695,11 +708,12 @@ export default function GardenScene() {
                 {actions.length > 0 ? (
                   actions.map((a) => (
                     <Button
-                      key={a.title}
+                      key={a.label ?? a.title}
                       title={a.title}
+                      accessibilityLabel={a.label}
                       small
                       variant={a.quiet ? 'quiet' : 'primary'}
-                      style={styles.flex}
+                      style={styles.fit}
                       onPress={a.onPress}
                     />
                   ))
@@ -767,7 +781,7 @@ export default function GardenScene() {
   );
 }
 
-/** The nearest thing you could do something with, if any. */
+/** The nearest thing you could do something with, and the nearest friend, if any. */
 function nearest(
   at: Point,
   me: string,
@@ -775,28 +789,33 @@ function nearest(
   spots: Map<string, Point>,
   around: Gardener[],
   whereabouts: Whereabouts
-): Near | null {
-  let best: Near | null = null;
+): Near {
+  let friend: string | null = null;
+  let closest = REACH.person;
+  for (const n of around) {
+    const p = whereabouts.get(n.username);
+    const d = p ? dist(at, p) : Infinity;
+    if (d < closest) {
+      friend = n.username;
+      closest = d;
+    }
+  }
+
+  let best: Place | null = null;
   let bestDistance = Infinity;
-  const consider = (candidate: Near, d: number, reach: number) => {
+  const consider = (candidate: Place, d: number, reach: number) => {
     if (d < reach && d < bestDistance) {
       best = candidate;
       bestDistance = d;
     }
   };
 
-  // People first: if a friend's beside you, that's who you'll want.
-  for (const n of around) {
-    const p = whereabouts.get(n.username);
-    if (p) consider({ kind: 'friend', username: n.username }, dist(at, p), REACH.person);
-  }
-  if (best) return best;
-
+  // Your own beds first: at your plot, that's what you'll want.
   const mine = spots.get(me);
   if (mine) {
     for (let bed = 0; bed < BEDS; bed++)
       consider({ kind: 'bed', bed }, distToRect(at, bedRect(mine, bed)), REACH.bed);
-    if (best) return best;
+    if (best) return { place: best, friend };
   }
   for (const n of garden.neighbours) {
     const p = spots.get(n.username);
@@ -821,7 +840,7 @@ function nearest(
       REACH.seat
     );
   });
-  return best;
+  return { place: best, friend };
 }
 
 /** Moves the garden under the stage as the camera pans. */
@@ -1068,6 +1087,8 @@ const styles = StyleSheet.create({
   hint: { flex: 1, fontSize: 12, lineHeight: 16 },
   flex: { flex: 1 },
   grow: { flexGrow: 1 },
+  /** Side by side, each as wide as its words, sharing what's left. */
+  fit: { flexGrow: 1, flexShrink: 1, flexBasis: 'auto' },
   center: { textAlign: 'center' },
   input: {
     flex: 1,
