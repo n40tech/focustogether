@@ -187,9 +187,7 @@ the old values stick.
 
 ### On your phone
 
-1. Put the phone and the computer on a network that lets devices reach each
-   other: home Wi-Fi, or the phone's own hotspot. University and other public
-   Wi-Fi (eduroam, say) usually doesn't.
+1. Put the phone on the same Wi-Fi as the computer.
 2. Find your computer's IP address on that network: `ipconfig getifaddr en0`
    on a Mac, or `ipconfig` on Windows (the IPv4 address).
 3. The phone has to reach your local Supabase too, so in `.env` swap
@@ -197,11 +195,15 @@ the old values stick.
    `EXPO_PUBLIC_SUPABASE_URL=http://192.168.1.20:54321`, and restart with
    `npx expo start --web --clear`.
 4. On the phone, open `http://<that address>:8081`.
-5. If the phone can't connect, the computer's firewall is probably in the way.
-   On Windows, set the network to Private (Settings → Network & internet →
-   Wi-Fi → the network), and allow Node.js and Docker Desktop for private
+5. If the phone can't connect, the computer's firewall is probably in the way:
+   it has to let in Node.js (which serves the app) and Docker Desktop (the
+   local Supabase). On Windows, mark the network as Private (Settings →
+   Network & internet → Wi-Fi → the network), then allow both for private
    networks (Windows Security → Firewall & network protection → Allow an app
-   through firewall). On a Mac, allow them if it asks.
+   through firewall). On a Mac, allow them if it asks. Keep this to private
+   networks, such as home Wi-Fi or your phone's hotspot: on a public one,
+   such as university Wi-Fi, letting Docker in opens your local Supabase,
+   default passwords and all, to everyone on it.
 6. When you're done, put `127.0.0.1` back in `.env` (the address changes from
    network to network), and restart with `--clear`.
 

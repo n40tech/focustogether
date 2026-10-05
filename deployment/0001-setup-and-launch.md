@@ -27,16 +27,38 @@ npm install
 
 ## 2. Run migrations 0003 to 0007
 
-1. Supabase dashboard → **SQL Editor** → **New query**.
-2. Paste the whole of `supabase/migrations/0003_community.sql` and press **Run**.
-3. Do the same, one at a time and in order, with `0004_withering.sql`,
-   `0005_testing.sql`, `0006_growing_and_desks.sql` and
-   `0007_post_and_first_day.sql`.
+First, check which ones the database has had. Supabase dashboard → **SQL
+Editor** → **New query**, and run:
+
+```sql
+select m.migration, m.done
+from (values
+  ('0001_init',               to_regclass('public.profiles') is not null),
+  ('0002_game',               to_regclass('public.items') is not null),
+  ('0003_community',          to_regclass('public.invites') is not null),
+  ('0004_withering',          to_regprocedure('public.clear_bed(integer)') is not null),
+  ('0005_testing',            exists (select 1 from information_schema.columns
+                                       where table_schema = 'public' and table_name = 'profiles'
+                                         and column_name = 'tester')),
+  ('0006_growing_and_desks',  exists (select 1 from information_schema.columns
+                                       where table_schema = 'public' and table_name = 'plots'
+                                         and column_name = 'grown_s')),
+  ('0007_post_and_first_day', to_regclass('public.letters') is not null)
+) as m (migration, done);
+```
+
+Then run each one that says `false`, one at a time and in order:
+
+1. **SQL Editor** → **New query**.
+2. Paste the whole file from `supabase/migrations/` and press **Run**. Take
+   the files from this branch: `main` doesn't have them yet. Some of them drop
+   old columns or functions, so the editor may warn that the query is
+   destructive. That's expected: run it anyway.
 
 Each one runs as a single transaction: if anything fails, nothing is changed,
 so you can fix the problem and run it again. Once one has succeeded, don't run
 it a second time. It would fail on its first line, and nothing would change.
-(If you've already run some, start from the first one you haven't.)
+When you're done, run the check again: every row should say `true`.
 
 What it does to your existing data:
 
@@ -205,7 +227,9 @@ With two players (A and B) who are friends:
   running a migration: that file has already been run on this database, so
   nothing was changed. Skip it and run the next one. This runbook starts from
   0003: don't re-run `0001_init.sql` or `0002_game.sql`.
-
+- **"Could not find the function ... in the schema cache"** in the app, after
+  running a migration: Supabase's API hasn't noticed the new functions yet.
+  Run `notify pgrst, 'reload schema';` in the SQL Editor, and reload the app.
 - **"Focus is invite-only, and that invite code isn't valid"**, or **"Couldn't
   join with that invite"**: the code was used, has expired, or was mistyped.
   Make a new one.
