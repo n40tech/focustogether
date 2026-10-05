@@ -104,11 +104,13 @@ changed.
   you're done if you like.
 - `npm run test:web` builds the web app (a minute or two), then clicks
   through it in Chromium at phone size, as one player: signing in, the office,
-  the payout, the garden, the shed and a first day. It doesn't need the local
-  Supabase, and it ignores your `.env`: the tests stand in for Supabase
-  themselves (`e2e/fake-supabase.ts`), so they're quick and always start from
-  the same place. They can't check the rules (that's `test:db`) or two real
-  players (that's you, in section 5).
+  the payout, the garden, the shed and a first day. The page counts as a
+  computer's (a mouse, no touch), except in tests that say they're on a
+  phone, which add a touchscreen. It doesn't need the local Supabase, and it
+  ignores your `.env`: the tests stand in for Supabase themselves
+  (`e2e/fake-supabase.ts`), so they're quick and always start from the same
+  place. They can't check the rules (that's `test:db`) or two real players
+  (that's you, in section 5).
 - A failing browser test says which step failed, and leaves a screenshot and
   a trace in `test-results/`. `npx playwright show-trace <the trace.zip>`
   replays the test step by step. In CI, the report is kept with the run:
@@ -179,8 +181,9 @@ the old values stick.
   see the welcome, the tips, and skipping the first session. The noticeboard's
   **Show the tips for new players again** brings the tips back for anyone.
 - **Phone sizes:** the browser's developer tools have a device mode (in
-  Chrome, F12, then the phone icon). It's good for layout, but try a real
-  phone too, for touch, the thumbstick and sound.
+  Chrome, F12, then the phone icon). It's good for layout, and with a phone
+  picked, Focus treats the page as a phone's (so another tab stops a
+  session). Try a real phone too, for touch, the thumbstick and sound.
 
 ### On your phone
 
@@ -225,7 +228,10 @@ bigger change), do the whole round:
       noticeboard opens, and the garden gate only works on a break.
 - [ ] **Office:** you get a desk and the other player sees you at it. Start a
       session and watch the countdown. Give up. Start another and switch to
-      another tab for over 10 seconds: it stops, and the office says so.
+      another tab for over 10 seconds: on a computer it carries on. Then try
+      the same in the browser's device mode, or on a phone: it stops, and the
+      office says so. On a computer, closing the tab stops a session (open
+      Focus again to see the office say so), but a reload doesn't.
       **Test → Finish my session** pays out.
 - [ ] **Payout:** chips are counted onto your desk and the break is shown.
       Take a break, go home, and spend chips all work.

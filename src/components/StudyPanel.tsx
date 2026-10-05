@@ -8,7 +8,7 @@ import { Muted, Panel } from '@/components/Chrome';
 import { Countdown } from '@/components/Countdown';
 import { Tip } from '@/components/Tip';
 import { api, AWAY_GRACE_S, breakMinutes, MAX_SESSION_MIN, type Me } from '@/lib/api';
-import { pageId } from '@/lib/away';
+import { otherTabsAllowed, pageId } from '@/lib/away';
 import { confirm } from '@/lib/confirm';
 import { cancelSessionEnd, scheduleSessionEnd } from '@/lib/notifications';
 
@@ -75,10 +75,14 @@ export function StudyPanel({ me, setMe, refresh, onWalkOut }: Props) {
   const session = me.active_session;
   if (session) {
     const here = session.device === pageId;
+    // On a computer, other tabs are fine; on a phone, Focus has to stay in front.
+    const tabsOk = otherTabsAllowed();
     return (
       <Panel style={styles.center}>
         <Tip id="stay">
-          {`Keep Focus open while you study: the screen stays on. Switch apps or tabs, or lock your phone, for more than ${AWAY_GRACE_S} seconds and the session stops, with no chips.`}
+          {tabsOk
+            ? 'Keep this tab open while you study. Other tabs and windows are fine, for notes or reading. Close this one and the session stops, with no chips.'
+            : `Keep Focus open while you study: the screen stays on. Switch apps or tabs, or lock your phone, for more than ${AWAY_GRACE_S} seconds and the session stops, with no chips.`}
         </Tip>
         <Countdown
           until={session.ends_at}
@@ -87,7 +91,7 @@ export function StudyPanel({ me, setMe, refresh, onWalkOut }: Props) {
         />
         <Muted style={styles.centerText}>
           {here
-            ? `Studying · ${session.duration_min} min · stay on this page`
+            ? `Studying · ${session.duration_min} min · ${tabsOk ? 'keep this tab open' : 'stay on this page'}`
             : `Studying · ${session.duration_min} min · started on another page`}
         </Muted>
         {firstTime && <Button title="Skip my first session" small onPress={skip} disabled={busy} />}

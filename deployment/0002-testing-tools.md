@@ -76,11 +76,15 @@ The tips and the first-session skip are for new players:
 
 ## Trying "leave the page and the session stops"
 
-Start a short session, switch to another tab or app for a few seconds and
-come back: it carries on. Stay away for more than 10 seconds and it stops,
-and the office says so. Testing on a laptop? Another tab counts as leaving,
-but another window beside the browser doesn't, as long as the Focus tab stays
-visible.
+On a phone, start a short session, switch to another app or tab for a few
+seconds and come back: it carries on. Stay away for more than 10 seconds and
+it stops, and the office says so.
+
+On a computer, other tabs and windows are fine: switch away for as long as
+you like and the session carries on. Closing the tab stops it (open Focus
+again after 10 seconds and the office says so), but a reload doesn't. To try
+a phone's rules on a computer, use the browser's device mode (in Chrome, F12,
+then the phone icon).
 
 ## The same from the SQL Editor
 

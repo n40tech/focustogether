@@ -6,16 +6,28 @@ import { rpcKeepalive } from './supabase';
 
 /**
  * Focus means staying on the page: a session stops if the page it was
- * started on is hidden (another app, another tab, the phone locked) for more
- * than AWAY_GRACE_S. This page tells the server the moment it's hidden, and on
- * coming back says how long it was away, in case that first word never got
- * through. Meanwhile it keeps the screen awake, so the phone doesn't lock by
- * itself mid-session.
+ * started on is left for more than AWAY_GRACE_S. On a phone or tablet, hiding
+ * the page counts (another app, another tab, the phone locked). On a computer,
+ * other tabs and windows are fine, for notes and reading: only leaving the
+ * page itself counts (closing its tab, or going to another site in it). This
+ * page tells the server the moment it's left, and on coming back says how
+ * long it was away, in case that first word never got through. Meanwhile it
+ * keeps the screen awake, so the phone doesn't lock by itself mid-session.
  */
 
 const web = Platform.OS === 'web' && typeof document !== 'undefined';
 const PAGE_KEY = 'focus.page';
 const AWAY_KEY = 'focus.away';
+
+/**
+ * True on a computer (its main pointer is a mouse or trackpad), where other
+ * tabs and windows are fine mid-session. Asked each time, as a tablet can
+ * gain or lose a trackpad.
+ */
+export const otherTabsAllowed = () =>
+  web &&
+  typeof window.matchMedia === 'function' &&
+  window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
 const newId = () => `${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
 
@@ -133,12 +145,12 @@ export function startAwayWatch() {
   started = true;
   if (web) {
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') hidden();
+      if (document.visibilityState === 'hidden' && !otherTabsAllowed()) hidden();
       // The browser drops the screen lock whenever the page is hidden.
       lock = null;
       holdScreen();
     });
-    // Closing the tab (or going to another site) is leaving too.
+    // Closing the tab (or going to another site) is leaving, on a computer too.
     window.addEventListener('pagehide', hidden);
   } else {
     AppState.addEventListener('change', (state) => {

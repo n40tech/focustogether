@@ -14,9 +14,10 @@ change before a pull request is in **[docs/TESTING.md](docs/TESTING.md)**.
   in the bay that goes with their desk.
 - **Office**: twelve identical desks. You get a random one when you walk in and
   keep it until you go home. Set a timer and study; while a session runs,
-  nothing else is reachable, and leaving the page (another app or tab, or
-  locking your phone) for more than 10 seconds stops the session with no
-  chips. A new player can skip their first session.
+  nothing else is reachable. On a phone, leaving the page (another app or
+  tab, or locking it) for more than 10 seconds stops the session with no
+  chips. On a computer, other tabs are fine, and only closing the page stops
+  it. A new player can skip their first session.
 - **Payout**: a closer look at your desk, about 1 chip per minute (give or take a
   little luck), and an earned break (1 minute per 5 studied).
 - **Garden**: walk about with a thumbstick (or the arrow keys), chat in speech

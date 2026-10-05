@@ -187,9 +187,11 @@ With two players (A and B) who are friends:
 - [ ] A new player (join with a fresh invite) sees a welcome tip in the car
       park, then tips in the office and the garden, and can **Skip my first
       session** once it starts.
-- [ ] Mid-session, switch to another app or tab for a few seconds and come
-      back: the session carries on. Stay away for more than 10 seconds and it
-      stops, and the office says so. No chips, no break.
+- [ ] On a phone, mid-session, switch to another app or tab for a few
+      seconds and come back: the session carries on. Stay away for more than
+      10 seconds and it stops, and the office says so. No chips, no break.
+- [ ] On a computer, another tab for as long as you like doesn't stop a
+      session, but closing the Focus tab does.
 - [ ] B writes A a letter at the post box (bottom right of the garden). A's
       car park says a letter's waiting, and A picks it up at the post box.
 - [ ] Sitting on a bench shows you sitting to friends; walking off gets you up.
@@ -224,10 +226,10 @@ With two players (A and B) who are friends:
   media volume. On an iPhone, Focus plays even with the silent switch on.
   That pauses music from other apps while Focus is open, as a video would.
   Tap **Sound on** to mute Focus and give the sound back.
-- **"You left the page ... so it stopped"** when you didn't mean to: the
-  session's page was hidden for more than 10 seconds (another app, another
-  tab, the phone locked). Focus keeps the screen on while you study, but a
-  phone in low-power mode may still lock: plug it in, or lengthen its
-  auto-lock.
+- **"You left the page ... so it stopped"** when you didn't mean to: on a
+  phone, the session's page was hidden for more than 10 seconds (another app,
+  another tab, the phone locked); on a computer, its tab was closed. Focus
+  keeps the screen on while you study, but a phone in low-power mode may
+  still lock: plug it in, or lengthen its auto-lock.
 - **The deploy job says "Skipping deploy":** a secret or variable from step 6
   is missing or misnamed.

@@ -77,9 +77,11 @@ agreed; **Open questions** lists what hasn't.
 - **Do, before a session:** choose a length (1–120 min) and start, or walk out.
 - **Do, during a session:** nothing else. There's the countdown and a small
   *give up* link, which forfeits the session. The chip balance, shop and all
-  navigation are hidden. **Stay on the page**: switch apps or tabs, or lock
-  the phone, for more than 10 seconds and the session stops with nothing
-  paid (see *Staying on the page*). The screen is kept awake meanwhile.
+  navigation are hidden. **Stay on the page**: on a phone, switch apps or
+  tabs, or lock it, for more than 10 seconds and the session stops with
+  nothing paid. On a computer, other tabs and windows are fine, but closing
+  the page stops it (see *Staying on the page*). The screen is kept awake
+  meanwhile.
   A new player can **skip their first session**, to see the payout and the
   garden before they've studied.
 - **Hear:** a soft room tone, the weather muffled through the window, rain
@@ -158,11 +160,16 @@ however long ago your break ended; close it and the usual timings apply.
   does logging out (it counts as going home).
 
 ### Staying on the page
-- A session belongs to the page (browser tab) it was started on. If that page
-  is hidden (another app, another tab, the phone locked) for **more than 10
-  seconds**, the session stops at the moment you left: no chips, no break.
-  Back within 10 seconds, it carries on, so a slip of the thumb is forgiven.
-- The page tells the server the moment it's hidden (a request the browser
+- A session belongs to the page (browser tab) it was started on. On a phone
+  or tablet, if that page is hidden (another app, another tab, the phone
+  locked) for **more than 10 seconds**, the session stops at the moment you
+  left: no chips, no break. Back within 10 seconds, it carries on, so a slip
+  of the thumb is forgiven.
+- On a computer (one with a mouse or trackpad), **other tabs and windows are
+  fine**, for lecture notes and reading. Only leaving the page itself counts:
+  closing its tab, or going to another site in it, with the same 10 seconds'
+  grace, so a reload is forgiven.
+- The page tells the server the moment it's left (a request the browser
   finishes even as the page goes), and on coming back says how long it was
   away, in case the first word never got through (no signal, say). If the
   session had finished meanwhile, without you, it's taken back, chips and all.
@@ -522,7 +529,7 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
       thumbstick on the right. Sound plays on iPhones on silent
 - [x] Testing on your own machine: a local Supabase with test players
       (`supabase/config.toml`, `seed.sql`), and browser tests (`npm run
-      test:web`, 21 click-throughs against a pretend Supabase, run in CI too)
+      test:web`, 22 click-throughs against a pretend Supabase, run in CI too)
 - [ ] Run `0003` to `0007`, switch sign-ups on,
       make the first invites, and do the first deploy:
       `deployment/0001-setup-and-launch.md`
@@ -566,6 +573,7 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 | After a session | You stay at your desk (friends see you there) until you choose to leave it. |
 | Testing | A Test button, only in local builds with `EXPO_PUBLIC_TESTING=true` and only for accounts marked as testers. |
 | Leaving the page mid-session | Stops the session with nothing paid, after 10 seconds' grace. Only the page the session started on counts. |
+| Other tabs on a computer | Fine, for lecture notes: on a computer only closing the page counts as leaving. On a phone or tablet, another app or tab still does. |
 | New players | Tips, one at a time, and a skippable first session (as 25 minutes at most). |
 | Planting | One seed, one visible plant; four plants to a bed, any mix of crops. |
 | The bins | The two grey drums in the garden are wheelie bins (they were water butts): they take produce, seeds and cigarettes. |
@@ -594,9 +602,9 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
   are one row in `items`, so they can be renamed or swapped per platform.
 - **Audio autoplay:** browsers stay silent until the first tap. The car park's
   first interaction unlocks sound.
-- **Studying on a laptop:** another tab counts as leaving the page, so lecture
-  notes in a second tab would stop a session. (Another window beside the
-  browser doesn't, as long as the Focus tab stays visible.)
+- **Studying on a computer is on trust:** other tabs are allowed (for lecture
+  notes), so Focus can't tell notes from a video in another tab, or from a
+  laptop that's been shut. Only closing the page stops a session there.
 - **Leaving is reported by the page:** a modified client could stay quiet when
   it's hidden. As with proximity, the server trusts friends' apps here.
 - **Cheating:** rewards are computed in Postgres from server time, so a client

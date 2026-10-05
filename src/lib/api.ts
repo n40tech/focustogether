@@ -280,7 +280,7 @@ export const breakMinutes = (sessionMin: number) => Math.max(1, Math.round(sessi
 /** Mirrors the 4 beds per plot, and up to 4 plants per bed, in public.plots. */
 export const BEDS = 4;
 export const PLANTS_PER_BED = 4;
-/** Mirrors private.away_grace: a page hidden this long during a session stops it. */
+/** Mirrors private.away_grace: a page left this long during a session stops it (see src/lib/away). */
 export const AWAY_GRACE_S = 10;
 /** Mirrors 1000 characters in public.letters. */
 export const LETTER_MAX = 1000;
