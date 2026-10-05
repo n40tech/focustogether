@@ -1,3 +1,6 @@
+/** Behind the places while they load, and past the page's edges on the web. */
+export const BACKDROP = '#7d7a73';
+
 /**
  * Calm, muted colours. UI panels come in two tones so they never glare: warm
  * paper by day and dim slate after dark (see ToneContext in src/art/Scene).
