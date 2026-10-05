@@ -1,4 +1,4 @@
-# Focus — game plan
+# Focus Together — game plan
 
 A calm, sound-first study game for a small group of friends. You "go to work"
 together: you study at your desk in a shared office, earn poker chips for every
@@ -174,8 +174,8 @@ however long ago your break ended; close it and the usual timings apply.
   finishes even as the page goes), and on coming back says how long it was
   away, in case the first word never got through (no signal, say). If the
   session had finished meanwhile, without you, it's taken back, chips and all.
-- Only the page you started on counts: a phone left open on Focus beside the
-  laptop you're studying on can't stop your session. The screen is kept awake
+- Only the page you started on counts: a phone left open on Focus Together
+  beside the laptop you're studying on can't stop your session. The screen is kept awake
   during a session (where the browser allows), so it doesn't lock by itself.
 - The office says when a session stopped because you left, until you start
   another.
@@ -580,7 +580,7 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 | Planting | One seed, one visible plant; four plants to a bed, any mix of crops. |
 | The bins | The two grey drums in the garden are wheelie bins (they were water butts): they take produce, seeds and cigarettes. |
 | Logging out | Counts as going home. |
-| Sound on iPhones | Plays even with the silent switch on, which, like a video, pauses other apps' music; muting Focus gives the sound back. |
+| Sound on iPhones | Plays even with the silent switch on, which, like a video, pauses other apps' music; muting Focus Together gives the sound back. |
 | Payout | A closer look at your own office desk, at the same proportions. |
 
 ## 13. Open questions
@@ -605,8 +605,8 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 - **Audio autoplay:** browsers stay silent until the first tap. The car park's
   first interaction unlocks sound.
 - **Studying on a computer is on trust:** other tabs are allowed (for lecture
-  notes), so Focus can't tell notes from a video in another tab, or from a
-  laptop that's been shut. Only closing the page stops a session there.
+  notes), so Focus Together can't tell notes from a video in another tab, or
+  from a laptop that's been shut. Only closing the page stops a session there.
 - **Leaving is reported by the page:** a modified client could stay quiet when
   it's hidden. As with proximity, the server trusts friends' apps here.
 - **Cheating:** rewards are computed in Postgres from server time, so a client

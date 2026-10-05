@@ -1,4 +1,4 @@
-# Testing Focus before a pull request
+# Testing Focus Together before a pull request
 
 How to check a change on your own machine before you open a pull request. It's
 the same every time. Section 1 is one-off setup, and the checklist in section 6
@@ -184,8 +184,8 @@ the old values stick.
   **Show the tips for new players again** brings the tips back for anyone.
 - **Phone sizes:** the browser's developer tools have a device mode (in
   Chrome, F12, then the phone icon). It's good for layout, and with a phone
-  picked, Focus treats the page as a phone's (so another tab stops a
-  session). Try a real phone too, for touch, the thumbstick and sound.
+  picked, Focus Together treats the page as a phone's (so another tab stops
+  a session). Try a real phone too, for touch, the thumbstick and sound.
 
 ### On your phone
 
@@ -215,8 +215,8 @@ links. Everything else works. To try those two, use the preview a pull
 request gets (see *After you open it*), or `localhost` on a computer.
 
 Sound starts after the first tap. On an iPhone it plays even on silent, and it
-pauses other apps' music while it does. Focus is made for browsers first:
-Expo Go runs it, but without sound.
+pauses other apps' music while it does. Focus Together is made for browsers
+first: Expo Go runs it, but without sound.
 
 ### What to click through
 
@@ -235,7 +235,7 @@ bigger change), do the whole round:
       another tab for over 10 seconds: on a computer it carries on. Then try
       the same in the browser's device mode, or on a phone: it stops, and the
       office says so. On a computer, closing the tab stops a session (open
-      Focus again to see the office say so), but a reload doesn't.
+      Focus Together again to see the office say so), but a reload doesn't.
       **Test → Finish my session** pays out.
 - [ ] **Payout:** chips are counted onto your desk and the break is shown.
       Take a break, go home, and spend chips all work.
@@ -331,4 +331,4 @@ turn sign-ups on and email confirmation off.
 - **The other player doesn't show up in the garden:** both have to be on a
   break with the garden open, and friends (the three test players all are).
 - **No sound:** tap or click once first, then check the phone's volume. On an
-  iPhone, check Focus itself isn't muted (the Sound button).
+  iPhone, check Focus Together itself isn't muted (the Sound button).

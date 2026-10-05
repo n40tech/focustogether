@@ -13,6 +13,7 @@ import {
 import { Box } from '@/art/primitives';
 import { Scene, useTone } from '@/art/Scene';
 import { useAmbience } from '@/audio/sound';
+import { BetaBanner } from '@/components/BetaBanner';
 import { Button } from '@/components/Button';
 import { Muted } from '@/components/Chrome';
 import { api } from '@/lib/api';
@@ -55,24 +56,27 @@ export default function Login() {
     </>
   );
   return (
-    <Scene
-      conditions={conditions}
-      ground={C.ground}
-      outdoor
-      art={art}
-      reserve={{ top: 0, bottom: 0 }}
-    >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.screen}
+    <View style={styles.page}>
+      <BetaBanner />
+      <Scene
+        conditions={conditions}
+        ground={C.ground}
+        outdoor
+        art={art}
+        reserve={{ top: 0, bottom: 0 }}
       >
-        {joining ? (
-          <Join invite={invite} onSignIn={() => setJoining(false)} />
-        ) : (
-          <SignIn onJoin={() => setJoining(true)} />
-        )}
-      </KeyboardAvoidingView>
-    </Scene>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.screen}
+        >
+          {joining ? (
+            <Join invite={invite} onSignIn={() => setJoining(false)} />
+          ) : (
+            <SignIn onJoin={() => setJoining(true)} />
+          )}
+        </KeyboardAvoidingView>
+      </Scene>
+    </View>
   );
 }
 
@@ -105,7 +109,7 @@ function SignIn({ onJoin }: { onJoin: () => void }) {
   ];
   return (
     <View style={[styles.card, { backgroundColor: tone.panel, borderColor: tone.line }]}>
-      <Text style={[styles.title, { color: tone.text }]}>Focus</Text>
+      <Text style={[styles.title, { color: tone.text }]}>Focus Together</Text>
       <Muted style={styles.center}>Park up, study together, take your breaks in the garden.</Muted>
       <TextInput
         value={username}
@@ -204,7 +208,7 @@ function Join({ invite, onSignIn }: { invite: string; onSignIn: () => void }) {
       // With a session, the root layout's auth listener takes you to the car park.
       if (!data.session)
         throw new Error(
-          "Your account's made, but this Focus needs email confirmation turned off before you can arrive."
+          "Your account's made, but Focus Together needs email confirmation turned off before you can arrive."
         );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -218,9 +222,11 @@ function Join({ invite, onSignIn }: { invite: string; onSignIn: () => void }) {
   ];
   return (
     <View style={[styles.card, { backgroundColor: tone.panel, borderColor: tone.line }]}>
-      <Text style={[styles.title, { color: tone.text }]}>Join Focus</Text>
+      <Text style={[styles.title, { color: tone.text }]}>Join Focus Together</Text>
       <Muted style={styles.center}>
-        {from ? `${from} invited you.` : 'Focus is invite-only for now. Enter your invite code.'}
+        {from
+          ? `${from} invited you.`
+          : 'Focus Together is invite-only for now. Enter your invite code.'}
       </Muted>
       <TextInput
         value={code}
@@ -284,6 +290,7 @@ function Switch({ label, onPress }: { label: string; onPress: () => void }) {
 }
 
 const styles = StyleSheet.create({
+  page: { flex: 1 },
   screen: { flex: 1, justifyContent: 'center', padding: 20 },
   card: {
     width: '100%',

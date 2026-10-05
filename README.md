@@ -1,4 +1,4 @@
-# Focus
+# Focus Together
 
 A calm, sound-first study game for friends. Park up, study at your desk in a
 shared office, earn poker chips for every minute, and spend your earned breaks
@@ -54,8 +54,8 @@ The full walkthrough, with checks and troubleshooting, is
 and refuses to run on a database that already has players.)
 
 ## Run locally
-Locally, Focus runs against a **local Supabase** in Docker, so your friends'
-real data is never touched:
+Locally, Focus Together runs against a **local Supabase** in Docker, so your
+friends' real data is never touched:
 ```bash
 npm install
 npx supabase start      # applies the migrations and makes test players
@@ -68,8 +68,8 @@ Put the local address and publishable key that `npx supabase status` prints in
 
 Sound starts after your first tap or click; browsers don't allow it sooner.
 On an iPhone it plays even with the silent switch on (which, like a video,
-pauses music from other apps); tap the Sound button to mute Focus and give the
-sound back.
+pauses music from other apps); tap the Sound button to mute Focus Together and
+give the sound back.
 To preview other weather or another time of day, add
 `?weather=clear|cloudy|windy|rain|storm|mist` and/or `?hour=0-23` to the URL. This
 only changes what you see and hear. To try two players at once, use a normal and
@@ -129,3 +129,8 @@ a pull request is in **[docs/TESTING.md](docs/TESTING.md)**.
   audio files yet.
 - Scenes are placeholder art built from shapes (`src/art`), seen from above and
   in front.
+- The icon, a clock at nine on sage, is drawn by `scripts/icons.mjs`: change it
+  there and run `npm run icons` to write every size. `public/manifest.json` and
+  `src/app/+html.tsx` give it, and the name, to browsers and phones.
+- While it's in beta, a banner across the top of every place but the office
+  links testers to the WhatsApp group (`src/components/BetaBanner.tsx`).

@@ -1,11 +1,13 @@
 @AGENTS.md
 
-# Focus
+# Focus Together
 
 A calm, sound-first study game for a small group of friends: study at a desk in
 the office, earn chips, and spend the break in a shared garden. Web first (a
 static Expo export on EAS Hosting, deployed by GitHub Actions), with Supabase
-behind it. The design pillars, rules, data model and decisions are in
+behind it. Players see the name Focus Together; the repo, the Supabase project
+and the Expo project are still called `focus-app`. While it's in beta, a banner
+across the top links testers to a WhatsApp group (`src/components/BetaBanner.tsx`). The design pillars, rules, data model and decisions are in
 `docs/PLAN.md`; how to test is in `docs/TESTING.md`; the steps for shipping
 each update are in `deployment/`.
 

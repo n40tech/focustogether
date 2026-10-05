@@ -169,7 +169,7 @@ function useInvites() {
 
   const send = async (code: string) => {
     const link = inviteLink(code);
-    const text = `Come and study with me on Focus. Your invite code: ${formatInvite(code)}`;
+    const text = `Come and study with me on Focus Together. Your invite code: ${formatInvite(code)}`;
     try {
       if (link && typeof navigator !== 'undefined' && navigator.clipboard) {
         await navigator.clipboard.writeText(link);
@@ -210,7 +210,7 @@ function InviteList({ invites, onSend }: { invites: Invite[]; onSend: (code: str
       <Text style={[font.label, { color: tone.muted }]}>Invites</Text>
       {invites.length === 0 && (
         <Muted>
-          Focus is invite-only. Whoever joins with your invite starts out as your friend.
+          Focus Together is invite-only. Whoever joins with your invite starts out as your friend.
         </Muted>
       )}
       {invites.map((i) => (

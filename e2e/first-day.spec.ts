@@ -6,7 +6,7 @@ test('a first day: tips, then skipping the first session to see the garden', asy
 }) => {
   Object.assign(fake.me, { sessions_done: 0, tips: [], inventory: { radish_seeds: 3 } });
   await fake.open('/');
-  await expect(page.getByText(/Welcome to Focus/)).toBeVisible();
+  await expect(page.getByText(/Welcome to Focus Together/)).toBeVisible();
 
   await button(page, 'Walk in').click();
   await expect(page).toHaveURL(/\/office$/);

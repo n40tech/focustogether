@@ -82,7 +82,7 @@ export function StudyPanel({ me, setMe, refresh, onWalkOut }: Props) {
         <Tip id="stay">
           {tabsOk
             ? 'Keep this tab open while you study. Other tabs and windows are fine, for notes or reading. Close this one and the session stops, with no chips.'
-            : `Keep Focus open while you study: the screen stays on. Switch apps or tabs, or lock your phone, for more than ${AWAY_GRACE_S} seconds and the session stops, with no chips.`}
+            : `Keep Focus Together open while you study: the screen stays on. Switch apps or tabs, or lock your phone, for more than ${AWAY_GRACE_S} seconds and the session stops, with no chips.`}
         </Tip>
         <Countdown
           until={session.ends_at}

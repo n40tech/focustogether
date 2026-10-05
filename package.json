@@ -34,7 +34,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
     "test:db": "node --test supabase/tests/game.test.mjs",
-    "test:web": "playwright test"
+    "test:web": "playwright test",
+    "icons": "node scripts/icons.mjs"
   },
   "private": true
 }

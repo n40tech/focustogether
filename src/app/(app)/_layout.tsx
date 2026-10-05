@@ -1,6 +1,8 @@
 import { Stack, usePathname, useRouter } from 'expo-router';
 import { useEffect } from 'react';
+import { StyleSheet, View } from 'react-native';
 
+import { BetaBanner } from '@/components/BetaBanner';
 import { TestPanel } from '@/components/TestPanel';
 import { isPayoutSeen, loadSeenPayout, useWorld, WorldProvider } from '@/world/World';
 
@@ -13,11 +15,17 @@ export default function AppLayout() {
 }
 
 function World() {
+  const pathname = usePathname();
   return (
-    <>
-      <Places />
+    <View style={styles.fill}>
+      {/* Not in the office, which is for studying. Every session runs there,
+          and on a phone, opening WhatsApp mid-session would stop it. */}
+      {pathname !== '/office' && <BetaBanner />}
+      <View style={styles.fill}>
+        <Places />
+      </View>
       <TestPanel />
-    </>
+    </View>
   );
 }
 
@@ -67,3 +75,5 @@ function usePayoutPrompt() {
     };
   }, [sessionId, pathname, router]);
 }
+
+const styles = StyleSheet.create({ fill: { flex: 1 } });

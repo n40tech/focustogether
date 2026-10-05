@@ -82,7 +82,7 @@ it stops, and the office says so.
 
 On a computer, other tabs and windows are fine: switch away for as long as
 you like and the session carries on. Closing the tab stops it (open Focus
-again after 10 seconds and the office says so), but a reload doesn't. To try
+Together again after 10 seconds and the office says so), but a reload doesn't. To try
 a phone's rules on a computer, use the browser's device mode (in Chrome, F12,
 then the phone icon).
 

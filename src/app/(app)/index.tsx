@@ -247,14 +247,14 @@ export default function CarPark() {
       <Panel>
         {me.sessions_done === 0 ? (
           <Tip id="welcome">
-            Welcome to Focus. Study in the office to earn chips and a break, then spend the break in
-            the garden with your friends. Walk in to start.
+            Welcome to Focus Together. Study in the office to earn chips and a break, then spend the
+            break in the garden with your friends. Walk in to start.
           </Tip>
         ) : (
           friends.length === 0 && (
             <Tip id="friends">
-              Focus is better with friends: add them on the noticeboard by their username, or make
-              an invite there to send them.
+              Focus Together is better with friends: add them on the noticeboard by their username,
+              or make an invite there to send them.
             </Tip>
           )
         )}
