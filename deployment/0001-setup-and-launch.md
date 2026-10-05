@@ -130,12 +130,14 @@ This is where you choose the subdomain:
 
 ```bash
 npx eas-cli@latest login
-npx expo export --platform web
+npx expo export --platform web --clear
 npx eas-cli@latest deploy --prod
 ```
 
 `npx expo export` builds the values in your local `.env` into the app, so check
-that they point at your real Supabase project first.
+that they point at your real Supabase project first, and that
+`EXPO_PUBLIC_TESTING` isn't there. Keep the `--clear`: without it, Metro can
+reuse code it built earlier with other values (your local Supabase's, say).
 
 ### After that, let GitHub deploy it
 

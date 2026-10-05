@@ -39,10 +39,10 @@ changed.
    ```bash
    npx supabase start
    ```
-   The first time, this downloads Supabase's images (a few GB, so give it a few
-   minutes); after that it starts in seconds. It applies every migration in
-   `supabase/migrations/`, then `supabase/seed.sql`, which makes three test
-   players:
+   The first time, this downloads Supabase's images (about 7 GB, so check you
+   have the space, and give it a few minutes); after that it starts in
+   seconds. It applies every migration in `supabase/migrations/`, then
+   `supabase/seed.sql`, which makes three test players:
 
    | Username | Password | |
    |---|---|---|
@@ -51,7 +51,8 @@ changed.
    | `carol` | `focus-dev` | friends with alice and bob |
 
    All three are testers (they get the **Test** button), and there's a spare
-   invite, `TESTJOIN`, for trying the Join form.
+   invite, `TESTJOIN`, for trying the Join form. It works once, like any
+   invite; `npx supabase db reset` brings it back.
 4. Point the app at it. `npx supabase status` prints the local addresses and
    keys. Put these in `.env` (copy `.env.example` if you haven't got one):
    ```
@@ -62,7 +63,10 @@ changed.
    `.env` is never committed (it's in `.gitignore`), and deploys get their
    values from GitHub, so none of this reaches the real site. (If you ever
    deploy by hand with `npx eas-cli@latest deploy`, switch `.env` to the real
-   project's values and remove `EXPO_PUBLIC_TESTING` first.)
+   project's values and remove `EXPO_PUBLIC_TESTING` first, and build with
+   `npx expo export --platform web --clear`. Without `--clear`, Metro reuses
+   code it built with the old values, and the site would talk to your local
+   Supabase.)
 5. `npx expo start --web --clear`, and sign in as `alice`.
 
 ## 2. Each time you sit down to work
@@ -70,10 +74,13 @@ changed.
 - Start Docker Desktop, then `npx supabase start` and `npx expo start --web`.
 - **Studio**, the local dashboard, is at <http://127.0.0.1:54323>: browse the
   tables, or run SQL in its SQL Editor.
-- When you're done, `npx supabase stop` frees the memory. Your local players
-  and their plots are kept for next time.
+- When you're done, `npx supabase stop` frees the memory (not the disk: Docker
+  keeps the images). Your local players and their plots are kept for next
+  time.
 - To start afresh, `npx supabase db reset` rebuilds the local database from the
-  migrations and the seed: back to alice, bob and carol with nothing.
+  migrations and the seed: back to alice, bob and carol with nothing. A
+  browser that was signed in before the reset then says "No profile for this
+  account": press **Log out** and sign in again.
 - Never connect the CLI to the real project (`supabase link`, or any command
   with `--linked`). New migrations reach the real database by hand, following
   the runbooks in `deployment/`.
@@ -159,7 +166,8 @@ the old values stick.
 
 - **Two players:** `alice` in a normal window and `bob` in a private window (or
   another browser). The garden, the market, letters, desks and friends' cars
-  all need two.
+  all need two. Another address keeps its own sign-in too, so a third player
+  can use `http://127.0.0.1:8081` in a window of its own.
 - **The Test button** finishes a session at once, skips ahead in time (so
   crops grow and wither, and breaks run out), and gives chips, items and ripe
   crops. See [deployment/0002-testing-tools.md](../deployment/0002-testing-tools.md).
@@ -176,15 +184,23 @@ the old values stick.
 
 ### On your phone
 
-1. Find your computer's IP address: `ipconfig getifaddr en0` on a Mac, or
-   `ipconfig` on Windows (the IPv4 address).
-2. The phone has to reach your local Supabase too, so in `.env` swap
+1. Put the phone and the computer on a network that lets devices reach each
+   other: home Wi-Fi, or the phone's own hotspot. University and other public
+   Wi-Fi (eduroam, say) usually doesn't.
+2. Find your computer's IP address on that network: `ipconfig getifaddr en0`
+   on a Mac, or `ipconfig` on Windows (the IPv4 address).
+3. The phone has to reach your local Supabase too, so in `.env` swap
    `127.0.0.1` for that address, e.g.
    `EXPO_PUBLIC_SUPABASE_URL=http://192.168.1.20:54321`, and restart with
    `npx expo start --web --clear`.
-3. With the phone on the same Wi-Fi, open `http://<that address>:8081`. If your
-   computer asks whether to let Node or Docker accept incoming connections,
-   allow it.
+4. On the phone, open `http://<that address>:8081`.
+5. If the phone can't connect, the computer's firewall is probably in the way.
+   On Windows, set the network to Private (Settings → Network & internet →
+   Wi-Fi → the network), and allow Node.js and Docker Desktop for private
+   networks (Windows Security → Firewall & network protection → Allow an app
+   through firewall). On a Mac, allow them if it asks.
+6. When you're done, put `127.0.0.1` back in `.env` (the address changes from
+   network to network), and restart with `--clear`.
 
 Over a plain `http://` address, browsers turn off two things that need a
 secure page: keeping the screen awake during a session, and copying invite
@@ -276,8 +292,14 @@ turn sign-ups on and email confirmation off.
 - **`npx supabase start` says a port is already allocated:** something else
   is using Supabase's ports (54321 to 54324), often another local Supabase
   project. `npx supabase stop --all` stops every one of them.
+- **`npx supabase start` (or a build) fails with "no space left on device":**
+  the disk is full. Supabase's images need about 7 GB. Clearing npm's
+  download cache (`npm cache clean --force`) frees a few GB safely.
 - **A change to `.env` hasn't taken effect:** restart with
   `npx expo start --web --clear`.
+- **"Failed to fetch" when signing in from a phone or another address:**
+  `.env` still says `127.0.0.1`, which means "this computer" to every device.
+  Put the computer's IP address there instead (see *On your phone*).
 - **"Invalid login credentials" for alice:** the password is `focus-dev`. If
   the players have gone, `npx supabase db reset` brings them back (and clears
   everything else).

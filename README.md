@@ -78,11 +78,14 @@ a private window.
 The web build is a static export (`web.output: "static"`), hosted on
 [EAS Hosting](https://docs.expo.dev/eas/hosting/introduction/).
 
-**First deploy, from your machine** (this is where you choose the subdomain):
+**First deploy, from your machine** (this is where you choose the subdomain).
+`.env` must have the real project's values, and no `EXPO_PUBLIC_TESTING`:
 ```bash
-npx expo export --platform web
+npx expo export --platform web --clear
 npx eas-cli@latest deploy --prod
 ```
+`--clear` matters: without it, Metro can reuse code it built earlier with other
+values (your local Supabase's, say).
 
 **Then let GitHub Actions do it.** In the repo, go to *Settings → Secrets and
 variables → Actions* and add:
