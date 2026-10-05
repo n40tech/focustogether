@@ -233,7 +233,11 @@ export class FakeSupabase {
     await this.page.routeWebSocket(/\/realtime\/v1\/websocket/, (ws) => this.realtime(ws));
   }
 
-  /** Opens `path` in the app, signed in or not (see `signedIn`). */
+  /**
+   * Opens `path` in the app, signed in or not (see `signedIn`). Always in clear
+   * weather: the real weather follows the clock, and rain or a storm is so slow
+   * to draw in a test browser that long walks in the garden run out of time.
+   */
   async open(path: string) {
     await this.page.addInitScript(
       ({ key, session, seen }) => {
@@ -245,7 +249,7 @@ export class FakeSupabase {
       },
       { key: SESSION_KEY, session: this.signedIn ? session() : null, seen: this.payoutSeen }
     );
-    await this.page.goto(path);
+    await this.page.goto(`${path}${path.includes('?') ? '&' : '?'}weather=clear`);
   }
 
   private async answer(route: Route) {
