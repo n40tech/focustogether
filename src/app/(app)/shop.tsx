@@ -26,7 +26,7 @@ const SECTIONS: { kind: ItemKind; title: string; note: string }[] = [
   {
     kind: 'seed',
     title: 'For your allotment',
-    note: 'Plant them on a break; they grow while you study.',
+    note: 'Plant them on a break; they grow in real time, studying or not.',
   },
   { kind: 'cigarette', title: 'For your break', note: 'Smoked in the garden.' },
 ];
