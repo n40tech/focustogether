@@ -480,7 +480,7 @@ uses up the invite and befriends whoever made it.
 | Backend | **Supabase**: Postgres, Auth, Realtime | Already in use. RLS and RPCs keep the rules server-side, and Realtime Broadcast carries chat |
 | CI | GitHub Actions: lint, typecheck, web export, the database tests and the browser tests, on pull requests and pushes to `main` | Catches a broken build, rule or screen before it ships |
 | CD | GitHub Actions: `eas deploy --prod` on push to `main`, a preview deploy for each PR | |
-| DB migrations | SQL files in `supabase/migrations/`, run by hand in the SQL editor (the CLI is never linked to the real project) | Step-by-step runbooks in `deployment/` |
+| DB migrations | SQL files in `supabase/migrations/`, each run once on the real project before the merge that needs it: by Claude through the Supabase connector (only if it matches the file), or pasted into the SQL Editor. The CLI is never linked to the real project | Step-by-step runbooks in `deployment/` |
 
 **Secrets and variables (GitHub → Settings → Secrets and variables → Actions)**
 - Secret `EXPO_TOKEN`: an access token from expo.dev (Account settings → Access

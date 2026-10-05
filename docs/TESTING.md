@@ -82,8 +82,9 @@ changed.
   browser that was signed in before the reset then says "No profile for this
   account": press **Log out** and sign in again.
 - Never connect the CLI to the real project (`supabase link`, or any command
-  with `--linked`). New migrations reach the real database by hand, following
-  the runbooks in `deployment/`.
+  with `--linked`). New migrations reach the real database one file at a time,
+  following the runbooks in `deployment/`: Claude runs them through the
+  Supabase connector, or you can paste them into the SQL Editor.
 
 ## 3. The automated checks
 
@@ -152,9 +153,10 @@ Rules live in the migrations, so most gameplay changes are database changes.
 - **Then `npx supabase migration up`.** It applies just the new migration to
   your local Supabase, keeping its players and plots, so it's also the check
   that the migration upgrades a database in use. Then try the app.
-- **Say so for the real project.** Migrations are run on the real database by
-  hand, so a pull request with one needs a runbook step in `deployment/`
-  (which file, in what order, and what to check afterwards).
+- **Say so for the real project.** Migrations go into the real database one
+  file at a time, separately from the deploy, so a pull request with one needs
+  a runbook step in `deployment/` (which file, in what order, and what to
+  check afterwards).
 
 ## 5. Trying it by hand
 

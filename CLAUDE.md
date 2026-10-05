@@ -35,14 +35,27 @@ each update are in `deployment/`.
 
 - **Database changes go in a new migration** with the next number
   (`0008_<what_it_does>.sql`, and so on). Never edit an old one: they've already
-  been run on the real database. Each new file is run there by hand, once, in
-  the SQL Editor, so it must work as one transaction on a database that's in
-  use. Write its scenario tests in `supabase/tests/game.test.mjs` first, and add
-  a step for it to a runbook in `deployment/`.
-- **Leave the real Supabase project ("focus-app") alone** unless asked: no
-  `supabase link`, nothing with `--linked`, and no SQL or writes through a
-  Supabase connector. Test on the local Supabase instead (`npx supabase start`;
-  the players `alice`, `bob` and `carol` have the password `focus-dev`).
+  been run on the real database. Each new file runs there once, as one
+  transaction, on a database that's in use, so it must work that way. Write its
+  scenario tests in `supabase/tests/game.test.mjs` first, and add a step for it
+  to a runbook in `deployment/`.
+- **Run each new migration on the real Supabase project ("focus-app")
+  yourself**, through the Supabase connector, just before merging the pull
+  request that needs it. Don't hand the SQL to the user to paste. First:
+  - rehearse it locally on a database with players in it;
+  - check which migrations the real project has had (the query in step 2 of
+    `deployment/0001-setup-and-launch.md`);
+  - compare its schema with a local build at the same migration, ignoring
+    `\r` (the older functions there have Windows line endings).
+
+  Then send the file inside a `do` block that runs it only if its md5 matches
+  the file, so a copying slip runs nothing. Afterwards, check the schema
+  matches the local build and run the security advisor. If Claude Code's
+  permission check blocks a step, say so and leave it to the user.
+- **Otherwise, leave the real project alone** unless asked: no `supabase link`,
+  nothing with `--linked`, no other SQL or writes there, and never change
+  players' data. Test on the local Supabase instead (`npx supabase start`; the
+  players `alice`, `bob` and `carol` have the password `focus-dev`).
 - **`EXPO_PUBLIC_TESTING` only ever goes in a local `.env`**: never in GitHub's
   variables, a workflow, or a deployed build.
 - **Don't open a pull request unless asked.**

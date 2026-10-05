@@ -179,7 +179,9 @@ this update, open a pull request from `claude/trusting-brahmagupta-u24nw3` into
 the deploy job skips with a notice rather than failing.
 
 Database changes are never deployed automatically. Each new file in
-`supabase/migrations/` is run by hand in the SQL Editor, in order, like step 2.
+`supabase/migrations/` goes into the real project once, in order, before the
+merge that needs it: Claude runs it through the Supabase connector, or you can
+paste it into the SQL Editor as in step 2.
 
 ## 7. Check it all works
 

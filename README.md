@@ -99,8 +99,10 @@ Pushes to `main` then deploy to production, and every pull request gets its own
 preview URL (`.github/workflows/deploy-web.yml`). Until those settings exist,
 the workflow skips with a notice instead of failing.
 
-Database changes are not deployed automatically: run new files from
-`supabase/migrations/` in the SQL Editor, in order.
+Database changes are not deployed automatically. Each new file in
+`supabase/migrations/` goes into the real project once, in order, before the
+merge that needs it: Claude runs it through the Supabase connector, or you can
+paste it into the SQL Editor.
 
 ## Checks
 ```bash
