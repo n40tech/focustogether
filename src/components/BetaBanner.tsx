@@ -1,6 +1,6 @@
 import { Link } from 'expo-router';
 import { useMemo, type ReactNode } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View, type TextStyle } from 'react-native';
 import { SafeAreaInsetsContext, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { tones } from '@/lib/theme';
@@ -34,7 +34,7 @@ export function BetaBanner({
           href={FEEDBACK_GROUP}
           target="_blank"
           rel="noopener noreferrer"
-          style={[styles.banner, { paddingTop: 7 + insets.top }]}
+          style={[styles.banner, STICKY, { paddingTop: 7 + insets.top }]}
         >
           This is a beta test. <Text style={styles.link}>Join the WhatsApp group</Text> to post
           feedback and ideas.
@@ -46,6 +46,15 @@ export function BetaBanner({
     </View>
   );
 }
+
+/**
+ * Safari on an iPhone (from iOS 26) colours the bar above the page from a
+ * sticky or fixed element at the top edge, and otherwise from the page's
+ * background, which is the scene's. Sticky makes it take the banner's colour.
+ * The banner never scrolls, so it stays where it was. React Native's types
+ * don't know sticky, but the web passes it through to CSS.
+ */
+const STICKY = { position: 'sticky', top: 0 } as unknown as TextStyle;
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
