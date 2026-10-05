@@ -56,8 +56,7 @@ export default function Login() {
     </>
   );
   return (
-    <View style={styles.page}>
-      <BetaBanner />
+    <BetaBanner>
       <Scene
         conditions={conditions}
         ground={C.ground}
@@ -76,7 +75,7 @@ export default function Login() {
           )}
         </KeyboardAvoidingView>
       </Scene>
-    </View>
+    </BetaBanner>
   );
 }
 
@@ -290,7 +289,6 @@ function Switch({ label, onPress }: { label: string; onPress: () => void }) {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1 },
   screen: { flex: 1, justifyContent: 'center', padding: 20 },
   card: {
     width: '100%',

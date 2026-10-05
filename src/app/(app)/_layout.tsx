@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { BetaBanner } from '@/components/BetaBanner';
 import { TestPanel } from '@/components/TestPanel';
+import { BACKDROP } from '@/lib/theme';
 import { isPayoutSeen, loadSeenPayout, useWorld, WorldProvider } from '@/world/World';
 
 export default function AppLayout() {
@@ -20,10 +21,9 @@ function World() {
     <View style={styles.fill}>
       {/* Not in the office, which is for studying. Every session runs there,
           and on a phone, opening WhatsApp mid-session would stop it. */}
-      {pathname !== '/office' && <BetaBanner />}
-      <View style={styles.fill}>
+      <BetaBanner hidden={pathname === '/office'}>
         <Places />
-      </View>
+      </BetaBanner>
       <TestPanel />
     </View>
   );
@@ -40,7 +40,7 @@ function Places() {
         headerShown: false,
         animation: 'fade',
         gestureEnabled: false,
-        contentStyle: { backgroundColor: '#7d7a73' },
+        contentStyle: { backgroundColor: BACKDROP },
       }}
     >
       {/* While a session runs, the office is the only place that exists: the

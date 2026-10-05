@@ -7,8 +7,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { supabase } from '@/lib/supabase';
-
-const BACKDROP = '#7d7a73';
+import { BACKDROP } from '@/lib/theme';
 
 /**
  * The name in the browser tab. It's in both branches below because the web

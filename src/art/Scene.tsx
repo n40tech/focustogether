@@ -1,5 +1,6 @@
-import { createContext, use, useEffect, useState, type ReactNode } from 'react';
-import { Animated, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import { createContext, use, useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Animated, Platform, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { tones, type Tone } from '@/lib/theme';
@@ -88,6 +89,7 @@ export function Scene({
 
   const { light } = conditions;
   const tone = light.daylight < 0.4 ? tones.night : tones.day;
+  usePageBackground(ground, light.tint);
 
   return (
     <ToneContext value={tone}>
@@ -125,6 +127,22 @@ export function Scene({
         </View>
       </View>
     </ToneContext>
+  );
+}
+
+/**
+ * On the web, colours the page itself as the scene's ground, lit like the
+ * scene. It shows past the page's edges, such as behind Safari's bars on an
+ * iPhone, so the scene seems to run to the edges of the screen.
+ */
+function usePageBackground(ground: string, tint: { color: string; opacity: number }) {
+  const colour = `color-mix(in srgb, ${tint.color} ${Math.round(tint.opacity * 100)}%, ${ground})`;
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS !== 'web') return;
+      document.documentElement.style.backgroundColor = colour;
+      document.body.style.backgroundColor = colour;
+    }, [colour])
   );
 }
 
