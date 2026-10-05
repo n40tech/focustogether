@@ -1,0 +1,58 @@
+name: Deploy web
+
+# main -> production (https://<your-subdomain>.expo.app); pull requests -> a preview URL.
+# Needs the EXPO_TOKEN secret and the EXPO_PUBLIC_SUPABASE_* variables (see README).
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check deploy settings
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - id: check
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
+          SUPABASE_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          if [ -n "$EXPO_TOKEN" ] && [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_KEY" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Skipping deploy: add the EXPO_TOKEN secret and the EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY variables (README > Deploy)."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy:
+    name: Deploy to EAS Hosting
+    needs: check
+    if: needs.check.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx expo export --platform web
+      - name: Deploy
+        run: |
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            npx eas-cli@latest deploy --prod --non-interactive
+          else
+            npx eas-cli@latest deploy --non-interactive
+          fi

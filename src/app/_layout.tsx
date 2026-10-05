@@ -1,12 +1,26 @@
 import type { Session } from '@supabase/supabase-js';
 import { Stack } from 'expo-router';
+import Head from 'expo-router/head';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { supabase } from '@/lib/supabase';
-import { colors } from '@/lib/theme';
+
+const BACKDROP = '#7d7a73';
+
+/**
+ * The name in the browser tab. It's in both branches below because the web
+ * build only renders the loading one: it can't check anyone's sign-in.
+ */
+function PageTitle() {
+  return (
+    <Head>
+      <title>Focus Together</title>
+    </Head>
+  );
+}
 
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null);
@@ -23,16 +37,25 @@ export default function RootLayout() {
 
   if (!ready) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
-        <ActivityIndicator />
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: BACKDROP,
+        }}
+      >
+        <PageTitle />
+        <ActivityIndicator color="#e8e3d7" />
       </View>
     );
   }
 
   return (
     <SafeAreaProvider>
-      <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+      <PageTitle />
+      <StatusBar style="light" />
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: BACKDROP } }}>
         <Stack.Protected guard={!!session}>
           <Stack.Screen name="(app)" />
         </Stack.Protected>
