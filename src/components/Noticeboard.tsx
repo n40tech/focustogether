@@ -29,38 +29,19 @@ export function Noticeboard({ footer }: { footer?: ReactNode }) {
   const tone = useTone();
   const { friends, refresh, setMe } = useWorld();
   const invites = useInvites();
+  // Unpinning someone starts the add-a-friend box afresh, so an old "Pinned" note goes.
+  const [unpinned, setUnpinned] = useState(0);
+  const removed = () => {
+    setUnpinned((n) => n + 1);
+    refresh();
+  };
   return (
     <>
       <Text style={[font.label, { color: tone.muted }]}>Friends</Text>
       <ScrollView contentContainerStyle={styles.list}>
         {friends.length === 0 && <Muted>No friends yet. Add someone by their username.</Muted>}
         {friends.map((f) => (
-          <View
-            key={f.username}
-            style={[styles.card, { borderColor: tone.line, backgroundColor: tone.raised }]}
-          >
-            <View style={[styles.avatar, { backgroundColor: personColour(f.username) }]} />
-            <View style={styles.flex}>
-              <Text style={{ color: tone.text, fontSize: 15, fontWeight: '600' }}>
-                {f.display_name}
-              </Text>
-              <Muted>@{f.username}</Muted>
-            </View>
-            <Text style={{ color: f.status === 'absent' ? tone.muted : tone.text, fontSize: 13 }}>
-              {WHERE[f.status]}
-              {f.status === 'focused' && f.ends_at ? (
-                <>
-                  {' · '}
-                  <Countdown
-                    until={f.ends_at}
-                    minutes
-                    style={{ color: tone.muted, fontSize: 13 }}
-                  />
-                  {' left'}
-                </>
-              ) : null}
-            </Text>
-          </View>
+          <FriendCard key={f.username} friend={f} onRemoved={removed} />
         ))}
         <InviteList invites={invites.list} onSend={invites.send} />
         <Button
@@ -73,7 +54,7 @@ export function Noticeboard({ footer }: { footer?: ReactNode }) {
           }}
         />
       </ScrollView>
-      <AddFriend onAdded={refresh} />
+      <AddFriend key={unpinned} onAdded={refresh} />
       {invites.message && (
         <Text style={{ color: invites.message.ok ? tone.accent : tone.danger, fontSize: 13 }}>
           {invites.message.text}
@@ -91,6 +72,83 @@ export function Noticeboard({ footer }: { footer?: ReactNode }) {
         {footer}
       </View>
     </>
+  );
+}
+
+/**
+ * A friend on the board. "Unpin" asks first, then ends the friendship both
+ * ways (offers between you are called off; letters stay).
+ */
+function FriendCard({ friend: f, onRemoved }: { friend: Friend; onRemoved: () => void }) {
+  const tone = useTone();
+  const [asking, setAsking] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const remove = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await api.removeFriend(f.username);
+      playSound('paper');
+      onRemoved();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusy(false);
+    }
+  };
+
+  return (
+    <View style={[styles.friend, { borderColor: tone.line, backgroundColor: tone.raised }]}>
+      <View style={styles.row}>
+        <View style={[styles.avatar, { backgroundColor: personColour(f.username) }]} />
+        <View style={styles.flex}>
+          <Text style={{ color: tone.text, fontSize: 15, fontWeight: '600' }}>
+            {f.display_name}
+          </Text>
+          <Muted>@{f.username}</Muted>
+        </View>
+        <Text style={{ color: f.status === 'absent' ? tone.muted : tone.text, fontSize: 13 }}>
+          {WHERE[f.status]}
+          {f.status === 'focused' && f.ends_at ? (
+            <>
+              {' · '}
+              <Countdown until={f.ends_at} minutes style={{ color: tone.muted, fontSize: 13 }} />
+              {' left'}
+            </>
+          ) : null}
+        </Text>
+        {!asking && (
+          <Button
+            title="Unpin"
+            variant="ghost"
+            small
+            accessibilityLabel={`Unpin ${f.display_name}`}
+            onPress={() => setAsking(true)}
+          />
+        )}
+      </View>
+      {asking && (
+        <View style={{ gap: 6 }}>
+          <Muted>
+            Take {f.display_name} off your board? You&apos;ll both stop seeing each other, and any
+            offers between you are called off. You can add them again later.
+          </Muted>
+          {error && <Text style={{ color: tone.danger, fontSize: 13 }}>{error}</Text>}
+          <View style={styles.row}>
+            <Button
+              title="Unpin"
+              variant="danger"
+              small
+              accessibilityLabel={`Yes, unpin ${f.display_name}`}
+              onPress={remove}
+              disabled={busy}
+            />
+            <Button title="Keep" variant="quiet" small onPress={() => setAsking(false)} />
+          </View>
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -247,6 +305,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
   },
+  friend: { gap: 8, padding: 10, borderRadius: 12, borderWidth: 1 },
   avatar: { width: 26, height: 26, borderRadius: 13 },
   flex: { flex: 1 },
   row: { flexDirection: 'row', gap: 8, alignItems: 'center' },

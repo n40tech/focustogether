@@ -50,6 +50,3 @@ export function rpcKeepalive(fn: string, args: Record<string, unknown>) {
     body: JSON.stringify(args),
   }).catch(() => {});
 }
-
-// Accounts are username-based in the UI; Supabase auth needs an email.
-export const usernameToEmail = (username: string) => `${username.trim().toLowerCase()}@focus.test`;
