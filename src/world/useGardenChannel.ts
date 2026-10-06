@@ -24,11 +24,24 @@ let nextId = 1;
 type Handlers = {
   /** A friend moved (or told us where they are, and whether they're sitting on a bench). */
   onMove: (username: string, at: Point, sitting: boolean) => void;
+  /**
+   * You moved on another device (or it said where you are). `walking` means
+   * someone's steering you there.
+   */
+  onSelf: (at: Point, sitting: boolean, walking: boolean) => void;
+  /** A rift opened at `at`: between your own devices, or a friend's. */
+  onRift: (username: string, at: Point) => void;
   /** Where you are, to answer a friend who's just come into the garden. */
   where: () => Point;
   /** Whether you're sitting on a bench. */
   sitting: () => boolean;
+  /** Whether you're being steered on this device. */
+  steering: () => boolean;
 };
+
+const isPoint = (
+  p: { x?: unknown; y?: unknown } | undefined
+): p is Point & Record<string, unknown> => Number.isFinite(p?.x) && Number.isFinite(p?.y);
 
 /**
  * The garden's live link: who's in it, where they're standing, and
@@ -37,8 +50,14 @@ type Handlers = {
  * policies in 0002_game.sql enforce both. Nothing is stored: if you're not in
  * the garden when someone speaks, you don't see it.
  *
- * Events: "hello" (just arrived: say where you are), "pos" {x, y, sit?}, "say"
- * {text} and "bye" (left the garden).
+ * Events: "hello" (just arrived: say where you are), "pos" {x, y, sit?, walk?,
+ * new?}, "say" {text}, "rift" {x, y} and "bye" (left the garden).
+ *
+ * You can be in the garden on more than one device at once. They listen on
+ * your own channel too, and keep to one position: whichever is being steered
+ * leads, and the rest follow. A device that's just arrived marks its first
+ * position "new", and the others answer with where you really are. If two
+ * are steered apart at once, a rift opens (see the garden).
  */
 export function useGardenChannel(
   me: string,
@@ -81,7 +100,7 @@ export function useGardenChannel(
     [publishPresent]
   );
 
-  const sendPos = useCallback(() => {
+  const sendPos = useCallback((arriving = false) => {
     if (!ready.current) return;
     const at = on.current.where();
     sentAt.current = Date.now();
@@ -92,6 +111,8 @@ export function useGardenChannel(
         x: Math.round(at.x),
         y: Math.round(at.y),
         ...(on.current.sitting() && { sit: 1 }),
+        ...(on.current.steering() && { walk: 1 }),
+        ...(arriving && { new: 1 }),
       },
     });
   }, []);
@@ -107,11 +128,32 @@ export function useGardenChannel(
       if (greeted || !ready.current) return;
       greeted = true;
       mine.current?.send({ type: 'broadcast', event: 'hello', payload: {} });
-      sendPos();
+      sendPos(true);
     };
     const channels = topics.map((username) => {
       const channel = supabase.channel(`garden:${username}`, { config: { private: true } });
-      if (username !== me) {
+      // Your other devices. (Nothing you send here comes back to this one.)
+      if (username === me) {
+        channel
+          .on('broadcast', { event: 'pos' }, ({ payload }) => {
+            if (!isPoint(payload)) return;
+            // Just arrived there: this device knows better, so say where you are.
+            if (payload.new === 1) return sendPos();
+            on.current.onSelf(
+              clampToGarden({ x: payload.x, y: payload.y }),
+              payload.sit === 1,
+              payload.walk === 1
+            );
+          })
+          .on('broadcast', { event: 'say' }, ({ payload }) => {
+            if (typeof payload?.text !== 'string') return;
+            show(me, payload.text);
+            playSound('pop');
+          })
+          .on('broadcast', { event: 'rift' }, ({ payload }) => {
+            if (isPoint(payload)) on.current.onRift(me, { x: payload.x, y: payload.y });
+          });
+      } else {
         channel
           .on('broadcast', { event: 'say' }, ({ payload }) => {
             if (typeof payload?.text !== 'string') return;
@@ -129,6 +171,9 @@ export function useGardenChannel(
             hear(username);
           })
           .on('broadcast', { event: 'hello' }, () => sendPos())
+          .on('broadcast', { event: 'rift' }, ({ payload }) => {
+            if (isPoint(payload)) on.current.onRift(username, { x: payload.x, y: payload.y });
+          })
           .on('broadcast', { event: 'bye' }, () => {
             if (heard.current.delete(username)) publishPresent();
           });
@@ -183,6 +228,15 @@ export function useGardenChannel(
     [me, show]
   );
 
+  /** Your devices disagree: a rift opens at `at`, for them and your friends to see. */
+  const rift = useCallback((at: Point) => {
+    mine.current?.send({
+      type: 'broadcast',
+      event: 'rift',
+      payload: { x: Math.round(at.x), y: Math.round(at.y) },
+    });
+  }, []);
+
   /** You moved: tell friends, no more often than POS_EVERY_MS (always ending where you stopped). */
   const moved = useCallback(() => {
     if (pending.current) return;
@@ -194,7 +248,7 @@ export function useGardenChannel(
     }, wait);
   }, [sendPos]);
 
-  return { bubbles, present, say, moved };
+  return { bubbles, present, say, moved, rift };
 }
 
 function omit<T>(record: Record<string, T>, key: string) {

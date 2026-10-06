@@ -522,10 +522,16 @@ describe('a first day', () => {
     assert.equal(me.last_completed.duration_min, 25);
     assert.equal(me.last_completed.break_min, 5);
     assertPayout(me.chips, 25);
+    // A skipped session wasn't studied.
+    assert.equal(me.sessions_studied, 0);
 
     await travel(10);
     await call('alice', 'start_session', 10, 'tab-a');
     await rejects(call('alice', 'skip_first_session'), /Only your first session/);
+    await travel(10);
+    me = await call('alice', 'get_me');
+    assert.equal(me.sessions_done, 2);
+    assert.equal(me.sessions_studied, 1);
   });
 
   test('tips are remembered once each, and can be brought back', async () => {

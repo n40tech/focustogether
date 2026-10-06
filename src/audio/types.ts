@@ -16,6 +16,7 @@ export type Sfx =
   | 'paper' // a trade offer
   | 'rustle' // clearing a withered crop
   | 'bin' // throwing something away
+  | 'rift' // your two devices pulled you apart
   | 'step' // a footstep on grass
   | 'gravel'; // a footstep on the gravel path
 

@@ -1,10 +1,16 @@
+import { ALL_TIPS } from './fake-supabase';
 import { button, expect, test, walk } from './test';
 
 test('a first day: tips, then skipping the first session to see the garden', async ({
   page,
   fake,
 }) => {
-  Object.assign(fake.me, { sessions_done: 0, tips: [], inventory: { radish_seeds: 3 } });
+  Object.assign(fake.me, {
+    sessions_done: 0,
+    sessions_studied: 0,
+    tips: [],
+    inventory: { radish_seeds: 3 },
+  });
   await fake.open('/');
   await expect(page.getByText(/Welcome to Focus Together/)).toBeVisible();
 
@@ -35,4 +41,35 @@ test('a first day: tips, then skipping the first session to see the garden', asy
   await expect(walkTip).toBeHidden();
   expect(fake.called('done_tip')).toContainEqual({ p_tip: 'walk' });
   await expect(page.getByText(/Walk up to one of your beds to plant/)).toBeVisible();
+  // A skipped session wasn't studied, so it's too soon to suggest inviting friends.
+  await expect(page.getByText(/Make an invite on the noticeboard/)).toBeHidden();
+});
+
+test('after a studied session, a tip suggests inviting friends', async ({ page, fake }) => {
+  fake.onBreak();
+  Object.assign(fake.me, {
+    sessions_done: 1,
+    sessions_studied: 1,
+    tips: ALL_TIPS.filter((t) => t !== 'invite'),
+  });
+  await fake.open('/garden');
+  const invite = page.getByText(/Make an invite on the noticeboard/);
+  await expect(invite).toBeVisible();
+
+  await fake.open('/');
+  await expect(invite).toBeVisible();
+  await button(page, 'Got it: hide this tip').click();
+  await expect(invite).toBeHidden();
+  expect(fake.called('done_tip')).toEqual([{ p_tip: 'invite' }]);
+});
+
+test('a skipped first session is not enough for the invite tip', async ({ page, fake }) => {
+  Object.assign(fake.me, {
+    sessions_done: 1,
+    sessions_studied: 0,
+    tips: ALL_TIPS.filter((t) => t !== 'invite'),
+  });
+  await fake.open('/');
+  await expect(button(page, 'Walk in')).toBeVisible();
+  await expect(page.getByText(/Make an invite on the noticeboard/)).toBeHidden();
 });

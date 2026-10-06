@@ -1,3 +1,4 @@
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -9,7 +10,8 @@ import { Button } from '@/components/Button';
 import { Body, HeaderDetail, Muted, Panel, SceneHeader, Toast } from '@/components/Chrome';
 import { Countdown } from '@/components/Countdown';
 import { RipeNote } from '@/components/RipeNote';
-import { Tip } from '@/components/Tip';
+import { HomeScreenTip, useHomeScreenTip } from '@/components/HomeScreenTip';
+import { INVITE_TIP, Tip } from '@/components/Tip';
 import { api, DESKS, type Me } from '@/lib/api';
 import { itemInfo } from '@/lib/catalog';
 import { cancelSessionEnd } from '@/lib/notifications';
@@ -20,6 +22,10 @@ import { seatsOf } from '@/world/seats';
 import { useGo, useWorld } from '@/world/World';
 
 const C = palette.carpark;
+
+/** After a rift in the garden (see the garden screen): why you're here. */
+const RIFT_NOTE =
+  'You were walked two ways at once, on two devices, and a rift opened in the garden. You landed back in the car park.';
 
 /**
  * Three even rows of four bays, and a rack slot each for bikes. Bay n and slot n
@@ -46,6 +52,10 @@ export default function CarPark() {
   const [leaving, setLeaving] = useState(false);
   const [notice, setNotice] = useState<{ id: number; text: string } | null>(null);
   const clearNotice = useCallback(() => setNotice(null), []);
+  const { rift } = useLocalSearchParams<{ rift?: string }>();
+  const router = useRouter();
+  // Just joined, on a phone: adding it to the home screen comes before anything else.
+  const homeScreenTip = useHomeScreenTip(me.sessions_done === 0);
   const say = (e: unknown) =>
     setNotice({ id: Date.now(), text: e instanceof Error ? e.message : String(e) });
 
@@ -245,18 +255,15 @@ export default function CarPark() {
         detail={<HeaderDetail>{conditions.label}</HeaderDetail>}
       />
       <Panel>
-        {me.sessions_done === 0 ? (
+        {homeScreenTip ? (
+          <HomeScreenTip />
+        ) : me.sessions_done === 0 ? (
           <Tip id="welcome">
             Welcome to Focus Together. Study in the office to earn chips and a break, then spend the
             break in the garden with your friends. Walk in to start.
           </Tip>
         ) : (
-          friends.length === 0 && (
-            <Tip id="friends">
-              Focus Together is better with friends: add them on the noticeboard by their username,
-              or make an invite there to send them.
-            </Tip>
-          )
+          me.sessions_studied > 0 && <Tip id="invite">{INVITE_TIP}</Tip>
         )}
         <Greeting me={me} inCount={inCount} />
         <Button title="Walk in" onPress={() => go('/office')} />
@@ -291,6 +298,9 @@ export default function CarPark() {
         <Button title="Log out" variant="ghost" small onPress={logOut} disabled={leaving} />
       </Panel>
       {notice && <Toast key={notice.id} text={notice.text} onDone={clearNotice} />}
+      {rift === '1' && (
+        <Toast key="rift" text={RIFT_NOTE} onDone={() => router.setParams({ rift: undefined })} />
+      )}
     </Scene>
   );
 }

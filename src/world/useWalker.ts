@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated } from 'react-native';
+import { Animated, Easing } from 'react-native';
 
 import { STAGE } from '@/art/Scene';
 import { blocked, type Point, type Rect, WORLD } from './gardenMap';
@@ -29,7 +29,7 @@ type Options = {
 /** The camera holds still until you get within this share of the screen's edge. */
 const EDGE = 0.32;
 
-function follow(cam: number, x: number, viewWidth: number) {
+function cameraAt(cam: number, x: number, viewWidth: number) {
   if (viewWidth >= WORLD.w) return WORLD.w / 2;
   const slack = viewWidth * (0.5 - EDGE);
   const target = Math.min(Math.max(cam, x - slack), x + slack);
@@ -93,7 +93,7 @@ export function useWalker({
         }
       }
 
-      const target = follow(cam.current, here.current.x, viewWidth);
+      const target = cameraAt(cam.current, here.current.x, viewWidth);
       const gap = target - cam.current;
       cam.current = reduceMotion || Math.abs(gap) < 0.3 ? target : cam.current + gap * 0.1;
       pan.setValue(STAGE.width / 2 - cam.current);
@@ -202,5 +202,31 @@ export function useWalker({
     [pos, wake]
   );
 
-  return { pos, pan, steer, where, place };
+  /** True while the stick or the keys are steering you. */
+  const steering = useCallback(() => {
+    const s = stick.current.x || stick.current.y ? stick.current : keys.current;
+    return !opts.current.paused && (s.x !== 0 || s.y !== 0);
+  }, []);
+
+  /**
+   * Goes where another device of yours says you are: there at once as far as
+   * the game's concerned, and drawn walking there over `ms` (or there at once).
+   */
+  const follow = useCallback(
+    (at: Point, ms: number) => {
+      here.current = { ...at };
+      if (ms > 0 && !opts.current.reduceMotion)
+        Animated.timing(pos, {
+          toValue: at,
+          duration: ms,
+          easing: Easing.linear,
+          useNativeDriver: false,
+        }).start();
+      else pos.setValue(at);
+      wake();
+    },
+    [pos, wake]
+  );
+
+  return { pos, pan, steer, where, place, steering, follow };
 }

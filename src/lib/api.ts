@@ -45,6 +45,8 @@ export type Me = {
   left_session: { id: number; started_at: string; left_at: string; duration_min: number } | null;
   /** Sessions you've finished, ever. */
   sessions_done: number;
+  /** Of those, the ones you studied: all but your first, if you skipped it. */
+  sessions_studied: number;
   /** Your crops that are ready to pick, soonest to wither first. */
   ripe: { bed: number; crop: string; withers_at: string | null }[];
   /** Letters waiting for you in the garden's post box. */

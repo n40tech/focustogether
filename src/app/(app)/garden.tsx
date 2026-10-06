@@ -16,6 +16,7 @@ import {
 } from '@/art/Garden';
 import { ChatBubble, Person } from '@/art/People';
 import { Box, Dot, Glow, Shadow, Tag } from '@/art/primitives';
+import { Rift } from '@/art/Rift';
 import { BLEED, Scene, STAGE, useTone } from '@/art/Scene';
 import { playSound, setSmoking, useAmbience } from '@/audio/sound';
 import { Button } from '@/components/Button';
@@ -36,7 +37,7 @@ import {
 } from '@/components/GardenSheets';
 import { Joystick } from '@/components/Joystick';
 import { Noticeboard } from '@/components/Noticeboard';
-import { Tip, useTips } from '@/components/Tip';
+import { INVITE_TIP, Tip, useTips } from '@/components/Tip';
 import { useNow } from '@/hooks/useNow';
 import { usePolled } from '@/hooks/usePolled';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -97,6 +98,15 @@ const REACH = {
 const STRIDE = 26;
 /** About this many steps and you've got the hang of walking. */
 const STEPS_TO_LEARN = 8;
+/**
+ * Steered on two devices at once, you can be pulled this far apart before a
+ * rift opens between them. Walking the same way, they stay well within it.
+ */
+const RIFT_AT = 96;
+/** How long a rift stays open before you land in the car park. */
+const RIFT_MS = 1600;
+/** Further than this from where another device says you are, and you're there at once. */
+const JUMP_AT = 160;
 
 /**
  * Where you were standing, so popping into the shed doesn't send you back to
@@ -169,6 +179,9 @@ export default function GardenScene() {
   const [breakOver, setBreakOver] = useState(false);
   const [viewWidth, setViewWidth] = useState<number>(STAGE.width);
   const [near, setNear] = useState<Near>(NOWHERE);
+  // A rift between your devices, where it opened; and friends' rifts, briefly.
+  const [rift, setRift] = useState<Point | null>(null);
+  const [friendRifts, setFriendRifts] = useState<{ id: number; at: Point }[]>([]);
 
   const status = garden?.me.status ?? me.status;
   const breakEndsAt = garden?.me.break_ends_at ?? me.break_ends_at;
@@ -231,7 +244,7 @@ export default function GardenScene() {
     obstacles,
     viewWidth,
     reduceMotion,
-    paused: !onBreak || sheet !== null,
+    paused: !onBreak || sheet !== null || rift !== null,
     onStep,
     onMove,
   });
@@ -272,15 +285,80 @@ export default function GardenScene() {
   );
   const isSitting = useCallback(() => seated.current !== null, []);
 
+  // --- you on another device -------------------------------------------------
+
+  const steering = walker.steering;
+  const follow = walker.follow;
+  const sendRift = useRef<(at: Point) => void>(() => {});
+  const rifted = useRef(false);
+  const riftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (riftTimer.current) clearTimeout(riftTimer.current);
+    },
+    []
+  );
+  // Your devices were pulled apart: a rift opens between them, and you land in the car park.
+  const openRift = useCallback(
+    (at: Point, tell: boolean) => {
+      if (rifted.current) return;
+      rifted.current = true;
+      if (tell) sendRift.current(at);
+      setSheet(null);
+      setRift(at);
+      playSound('rift');
+      riftTimer.current = setTimeout(
+        () => go({ pathname: '/', params: { rift: '1' } }, null),
+        RIFT_MS
+      );
+    },
+    [go]
+  );
+  const selfMoved = useCallback(
+    (at: Point, sat: boolean, walking: boolean) => {
+      if (rifted.current) return;
+      const here = where();
+      // Steered here and there at once: the one being steered here stays put,
+      // unless they've come too far apart.
+      if (steering()) {
+        if (walking && dist(here, at) > RIFT_AT)
+          openRift({ x: (here.x + at.x) / 2, y: (here.y + at.y) / 2 }, true);
+        return;
+      }
+      follow(at, dist(here, at) > JUMP_AT ? 0 : POS_EVERY_MS);
+      const bench = sat ? SEATS.findIndex((p) => dist(p, at) < 2) : -1;
+      setSeat(bench >= 0 ? bench : null);
+      // Out through the gate there, so out through it here too.
+      if (at.y > GATE_OUT_Y && !leftByGate.current) {
+        leftByGate.current = true;
+        go('/office');
+      }
+    },
+    [where, steering, follow, openRift, go]
+  );
+  const riftSeen = useCallback(
+    (username: string, at: Point) => {
+      if (username === me.username) return openRift(at, false);
+      const id = Date.now() + Math.random();
+      setFriendRifts((list) => [...list, { id, at }]);
+      setTimeout(() => setFriendRifts((list) => list.filter((r) => r.id !== id)), 5000);
+    },
+    [me.username, openRift]
+  );
+
   const friendNames = useMemo(() => neighbours.map((n) => n.username), [neighbours]);
   const chat = useGardenChannel(me.username, friendNames, onBreak && !!garden, {
     onMove: friendMoved,
+    onSelf: selfMoved,
+    onRift: riftSeen,
     where,
     sitting: isSitting,
+    steering,
   });
   useEffect(() => {
     moved.current = chat.moved;
-  }, [chat.moved]);
+    sendRift.current = chat.rift;
+  }, [chat.moved, chat.rift]);
 
   // Sitting down or getting up: friends see it straight away.
   useEffect(() => {
@@ -467,7 +545,7 @@ export default function GardenScene() {
           />
         </Follow>
       ))}
-      {onBreak && (
+      {onBreak && !rift && (
         <Animated.View
           pointerEvents="none"
           style={[styles.figure, { transform: walker.pos.getTranslateTransform() }]}
@@ -483,6 +561,10 @@ export default function GardenScene() {
           />
         </Animated.View>
       )}
+      {friendRifts.map((r) => (
+        <Rift key={r.id} x={r.at.x} y={r.at.y} fade reduceMotion={reduceMotion} />
+      ))}
+      {rift && <Rift x={rift.x} y={rift.y} reduceMotion={reduceMotion} />}
       <Boundary y={HEDGE_Y} gateX={GATE.x} width={WORLD.w} />
       <Surroundings />
     </Pan>
@@ -528,7 +610,7 @@ export default function GardenScene() {
           <Label name={n.display_name} bubble={chat.bubbles[n.username]} />
         </Follow>
       ))}
-      {onBreak && (
+      {onBreak && !rift && (
         <Animated.View
           pointerEvents="none"
           style={[styles.figure, { transform: walker.pos.getTranslateTransform() }]}
@@ -653,24 +735,26 @@ export default function GardenScene() {
           id: 'walk',
           text: 'Drag the stick (or use the arrow keys) to walk. Your plot is marked "Your plot". Walk out through the gate to go back to work.',
         }
-      : myPlots.length === 0 && !hasSeeds && !tips.has('seeds')
-        ? { id: 'seeds', text: "You'll need seeds to plant: the shed, bottom left, sells them." }
-        : myPlots.length === 0 && hasSeeds && !tips.has('plant')
-          ? {
-              id: 'plant',
-              text: `Walk up to one of your beds to plant. Each seed makes one plant, and a bed holds ${PLANTS_PER_BED}.`,
-            }
-          : myPlots.some(isDry) && !tips.has('water')
+      : me.sessions_studied > 0 && !tips.has('invite')
+        ? { id: 'invite', text: INVITE_TIP }
+        : myPlots.length === 0 && !hasSeeds && !tips.has('seeds')
+          ? { id: 'seeds', text: "You'll need seeds to plant: the shed, bottom left, sells them." }
+          : myPlots.length === 0 && hasSeeds && !tips.has('plant')
             ? {
-                id: 'water',
-                text: 'Water your beds and they grow half as fast again for a day. Crops grow in real time, studying or not.',
+                id: 'plant',
+                text: `Walk up to one of your beds to plant. Each seed makes one plant, and a bed holds ${PLANTS_PER_BED}.`,
               }
-            : neighbours.length > 0 && !tips.has('post')
+            : myPlots.some(isDry) && !tips.has('water')
               ? {
-                  id: 'post',
-                  text: 'Leave a friend a letter in the post box, bottom right. It waits there until they come by.',
+                  id: 'water',
+                  text: 'Water your beds and they grow half as fast again for a day. Crops grow in real time, studying or not.',
                 }
-              : null;
+              : neighbours.length > 0 && !tips.has('post')
+                ? {
+                    id: 'post',
+                    text: 'Leave a friend a letter in the post box, bottom right. It waits there until they come by.',
+                  }
+                : null;
 
   return (
     <Scene

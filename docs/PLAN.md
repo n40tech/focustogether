@@ -126,8 +126,9 @@ never available during a session.
 
 ### Noticeboard (friends and invites)
 See where everyone is, add a friend by username, unpin a friend, and make
-invites. There's one in the car park and one in the garden. It also brings
-back the tips for new players.
+invites. Only invites still waiting to be used are listed: once someone joins,
+they're on the board as a friend. There's one in the car park and one in the
+garden. It also brings back the tips for new players.
 
 Unpinning asks first, then ends the friendship both ways (as adding makes
 it): you stop seeing each other, and any offers between you are called off,
@@ -188,9 +189,17 @@ however long ago your break ended; close it and the usual timings apply.
 ### A first day
 - **Tips** guide a new player, one at a time, at the top of the panel: walk
   in, pick a length and start, stay on the page, walk about the garden, buy
-  seeds, plant, water, write to a friend, add friends. Each goes once it's
-  done or put away (*Got it*), and is remembered per account (`profiles.tips`);
-  the noticeboard brings them all back.
+  seeds, plant, water, write to a friend. After their first studied session
+  (not a skipped one), the car park and the garden suggest making an invite on
+  the noticeboard. Each goes once it's done or put away (*Got it*), and is
+  remembered per account (`profiles.tips`); the noticeboard brings them all
+  back.
+- **On a phone's browser**, a new player's first tip in the car park says how
+  to add Focus Together to the home screen, with the steps for their phone:
+  Safari's on an iPhone (and to sign in again from there, as the home-screen
+  app keeps its own sign-in), Chrome's on Android. When Chrome offers to
+  install it, that's a single *Add*. Opened from the home screen, it's not
+  shown.
 - **The first session can be skipped** once it's started: it ends at once, as
   a session of the length chosen (25 minutes at most), with its payout and
   break, so there's something to spend in the garden. Only ever the first.
@@ -292,6 +301,20 @@ your garden channel about 5 times a second, and friends' screens ease between
 updates. You say hello when you arrive (friends reply with where they are),
 bye when you leave, and where you are every 20 seconds while you stand still;
 a friend not heard from for 50 seconds has gone.
+
+### On two devices at once
+You can be in the garden on a phone and a laptop at once, and you're in one
+place on both: your devices listen on your own channel too. Steer on either
+and the other follows; a device that's just arrived takes the position the
+others have, rather than starting at the gate. Walking out through the gate on
+one takes both to the office. What you say shows on both.
+
+Steer on both at once and they can disagree. Walking the same way they stay
+together, but once they're 96 units apart (the garden is 1080 across) a
+**rift** opens at the midpoint between them, with a low rushing sound. You
+vanish into it, and a moment later both devices land in the car park, with a
+note saying why. The break carries on. Friends in the garden see the rift
+open where you were, and close again a few seconds later.
 
 ## 5. Weather
 
@@ -408,9 +431,10 @@ deployment/               numbered runbooks for setting up and shipping each upd
   comes back after an action's own answer (going home, say) is dropped, so it
   can't undo the action.
 - **Garden channel:** Supabase Realtime Broadcast on private channels named
-  `garden:<username>`, carrying chat and positions. RLS on `realtime.messages`
-  lets you listen to your own and your friends' channels, and speak only on
-  your own.
+  `garden:<username>`, carrying chat, positions and rifts. RLS on
+  `realtime.messages` lets you listen to your own and your friends' channels,
+  and speak only on your own. Your own channel is how your devices keep
+  together.
 - **Seats:** the server hands out desks so friends at work never share one.
   Two of your friends who aren't friends with each other can hold the same
   number, though; then the later arrival moves along to the next free desk on
@@ -443,6 +467,7 @@ deployment/               numbered runbooks for setting up and shipping each upd
 | `invites` | code, who made it, expiry, who used it (0003) |
 | `letters` | from, to, body (up to 1000 characters), sent at, picked up at (0007) |
 | `profiles` | + `tips`: tips for new players already seen to (0007) |
+| `sessions` | + `skipped`: ended early by `skip_first_session` (0009) |
 
 | RPC | Allowed when | Returns |
 |---|---|---|
@@ -451,7 +476,7 @@ deployment/               numbered runbooks for setting up and shipping each upd
 | `arrive()` | signed in (gives you a desk if you haven't one) | me |
 | `start_session(minutes, device)` | not studying | me |
 | `leave_page(session, device)`, `back_to_page(session, device, away_s)` | the page the session was started on (0007) | – / me |
-| `skip_first_session()` | your first session is running (0007) | me |
+| `skip_first_session()` | your first session is running (0007; marks it skipped from 0009) | me |
 | `done_tip(tip)`, `reset_tips()` | signed in (0007) | me |
 | `get_post()`, `pick_up_post()` | signed in (0007) | post |
 | `send_letter(to, body)` | on a break, to a friend (0007) | post |

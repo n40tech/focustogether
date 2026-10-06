@@ -212,6 +212,10 @@ const inviteLink = (code: string) =>
 const until = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
+/** Invites still to be used. Once someone joins with one, they're on the board as a friend. */
+const waiting = (invites: Invite[]) =>
+  invites.filter((i) => !i.used_by && Date.parse(i.expires_at) > Date.now());
+
 /**
  * Focus is invite-only: make an invite, send the link (or the code), and
  * whoever joins with it starts out as your friend.
@@ -222,7 +226,10 @@ function useInvites() {
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
 
   useEffect(() => {
-    api.getInvites().then(setList, () => {});
+    api.getInvites().then(
+      (all) => setList(waiting(all)),
+      () => {}
+    );
   }, []);
 
   const send = async (code: string) => {
@@ -249,7 +256,7 @@ function useInvites() {
     try {
       const { code } = await api.createInvite();
       playSound('paper');
-      setList(await api.getInvites());
+      setList(waiting(await api.getInvites()));
       await send(code);
     } catch (e) {
       setMessage({ text: e instanceof Error ? e.message : String(e), ok: false });
@@ -273,20 +280,14 @@ function InviteList({ invites, onSend }: { invites: Invite[]; onSend: (code: str
       )}
       {invites.map((i) => (
         <View key={i.code} style={[styles.card, { borderColor: tone.line }]}>
-          <Text style={[styles.code, { color: i.used_by ? tone.muted : tone.text }]}>
-            {formatInvite(i.code)}
-          </Text>
-          <Muted style={styles.flex}>
-            {i.used_by ? `${i.used_by} joined` : `Unused, until ${until(i.expires_at)}`}
-          </Muted>
-          {!i.used_by && (
-            <Button
-              title={inviteLink(i.code) ? 'Copy link' : 'Share'}
-              small
-              variant="quiet"
-              onPress={() => onSend(i.code)}
-            />
-          )}
+          <Text style={[styles.code, { color: tone.text }]}>{formatInvite(i.code)}</Text>
+          <Muted style={styles.flex}>{`Unused, until ${until(i.expires_at)}`}</Muted>
+          <Button
+            title={inviteLink(i.code) ? 'Copy link' : 'Share'}
+            small
+            variant="quiet"
+            onPress={() => onSend(i.code)}
+          />
         </View>
       ))}
     </View>

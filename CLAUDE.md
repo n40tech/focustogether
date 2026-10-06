@@ -25,7 +25,8 @@ each update are in `deployment/`.
   `src/app/(app)/_layout.tsx`).
 - **The garden** is walkable (`src/world/useWalker.ts`, `gardenMap.ts`).
   Friends' positions and chat go over private Realtime channels named
-  `garden:<username>` (`src/world/useGardenChannel.ts`).
+  `garden:<username>` (`src/world/useGardenChannel.ts`). Your own devices
+  listen on yours to keep you in one place; steered apart, a rift opens.
 - **Leaving the page** mid-session stops the session after 10 seconds' grace
   (`src/lib/away.ts`).
 - **Sound** is synthesised with Web Audio (`src/audio/engine.web.ts`; native is

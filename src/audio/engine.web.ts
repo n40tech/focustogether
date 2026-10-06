@@ -246,6 +246,8 @@ class WebAudioEngine implements AudioEngine {
         return this.paper(t);
       case 'rustle':
         return this.rustle(t);
+      case 'rift':
+        return this.rift(t);
       case 'step':
         return this.step(t, options?.gain ?? 1, options?.pan ?? 0);
       case 'gravel':
@@ -834,6 +836,23 @@ class WebAudioEngine implements AudioEngine {
 
   private pop(t: number) {
     this.tone(t, this.n!.sfx, { freq: 520, to: 840, level: 0.09, decay: 0.1 });
+  }
+
+  /** A rift tearing open: a low rushing swell, and two tones sinking apart. */
+  private rift(t: number) {
+    const src = this.source('brown');
+    const env = this.gainNode();
+    src
+      .connect(this.filterNode('lowpass', 420, 1.2))
+      .connect(env)
+      .connect(this.n!.sfx);
+    env.gain.setValueAtTime(0, t);
+    env.gain.linearRampToValueAtTime(0.32, t + 0.5);
+    env.gain.exponentialRampToValueAtTime(0.0001, t + 1.6);
+    src.start(t, Math.random());
+    src.stop(t + 1.7);
+    this.tone(t + 0.1, this.n!.sfx, { freq: 220, to: 160, level: 0.07, attack: 0.3, decay: 1.2 });
+    this.tone(t + 0.1, this.n!.sfx, { freq: 233, to: 290, level: 0.05, attack: 0.3, decay: 1.2 });
   }
 
   /** Dry stalks pulled up and dropped on the compost: a papery swish, then a soft thump. */
