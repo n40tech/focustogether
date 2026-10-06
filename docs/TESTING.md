@@ -257,6 +257,12 @@ bigger change), do the whole round:
       (the other player sees you sitting), throw something in a bin, and open
       the noticeboard. Walking out through the gate goes to the office, and
       when the break runs out a bell rings.
+- [ ] **Two devices, one player:** sign in as the same player in a second
+      window (a private one, or another browser) and go into the garden on
+      both. The second arrives where the first has you. Walk on either: the
+      other follows. Walk both the same way at once: nothing happens. Walk
+      them apart at once: a rift opens between them, and both land in the car
+      park with a note. A friend in the garden sees the rift too.
 - [ ] **Shed:** buying something takes the chips, and it turns up where it
       should (in the car park, on your desk, or in your basket).
 - [ ] **Sound:** after the first tap, the Sound button says **♪ Sound on**,

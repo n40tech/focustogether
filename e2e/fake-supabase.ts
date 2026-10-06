@@ -160,6 +160,8 @@ export class FakeSupabase {
   invites: Invite[] = [];
   /** Friends in the garden as you get there. */
   inGarden: Walker[] = [];
+  /** You, already in the garden on another device: it says where you are as you get there. */
+  elsewhere: Omit<Walker, 'username'> | null = null;
   shop: ShopItem[] = [
     {
       slug: 'bike',
@@ -188,6 +190,18 @@ export class FakeSupabase {
 
   constructor(page: Page) {
     this.page = page;
+  }
+
+  /** The page's Realtime connections. */
+  private sockets: WebSocketRoute[] = [];
+  /** The Realtime channels the page has joined, such as "garden:bob". */
+  readonly joined = new Set<string>();
+
+  /** A broadcast on `username`'s garden channel: a friend's, or yours from another device. */
+  broadcastAs(username: string, event: string, payload: object) {
+    const topic = `realtime:garden:${username}`;
+    const message = [null, null, topic, 'broadcast', { type: 'broadcast', event, payload }];
+    this.sockets.forEach((ws) => ws.send(JSON.stringify(message)));
   }
 
   /** The arguments of each call to `fn`, in order. */
@@ -298,6 +312,7 @@ export class FakeSupabase {
 
   /** Realtime: every channel joins, and friends already in the garden say where they are. */
   private realtime(ws: WebSocketRoute) {
+    this.sockets.push(ws);
     ws.onMessage((message) => {
       // The app's own broadcasts come as binary.
       if (typeof message !== 'string') {
@@ -307,8 +322,12 @@ export class FakeSupabase {
       const [joinRef, ref, topic, event] = JSON.parse(message) as [string, string, string, string];
       if (event === 'broadcast') this.broadcasts += 1;
       if (event !== 'phx_join' && event !== 'heartbeat') return;
+      if (event === 'phx_join') this.joined.add(topic.replace(/^realtime:/, ''));
       const reply = { status: 'ok', response: { postgres_changes: [] } };
       ws.send(JSON.stringify([joinRef, ref, topic, 'phx_reply', reply]));
+      const you = this.elsewhere;
+      if (event === 'phx_join' && you && topic === `realtime:garden:${this.me.username}`)
+        setTimeout(() => this.broadcastAs(this.me.username, 'pos', you), 300);
       const friend = this.inGarden.find((f) => topic === `realtime:garden:${f.username}`);
       if (event !== 'phx_join' || !friend) return;
       const broadcast = (event: string, payload: object) =>

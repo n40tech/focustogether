@@ -1,3 +1,4 @@
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -21,6 +22,10 @@ import { seatsOf } from '@/world/seats';
 import { useGo, useWorld } from '@/world/World';
 
 const C = palette.carpark;
+
+/** After a rift in the garden (see the garden screen): why you're here. */
+const RIFT_NOTE =
+  'You were walked two ways at once, on two devices, and a rift opened in the garden. You landed back in the car park.';
 
 /**
  * Three even rows of four bays, and a rack slot each for bikes. Bay n and slot n
@@ -47,6 +52,8 @@ export default function CarPark() {
   const [leaving, setLeaving] = useState(false);
   const [notice, setNotice] = useState<{ id: number; text: string } | null>(null);
   const clearNotice = useCallback(() => setNotice(null), []);
+  const { rift } = useLocalSearchParams<{ rift?: string }>();
+  const router = useRouter();
   // Just joined, on a phone: adding it to the home screen comes before anything else.
   const homeScreenTip = useHomeScreenTip(me.sessions_done === 0);
   const say = (e: unknown) =>
@@ -291,6 +298,9 @@ export default function CarPark() {
         <Button title="Log out" variant="ghost" small onPress={logOut} disabled={leaving} />
       </Panel>
       {notice && <Toast key={notice.id} text={notice.text} onDone={clearNotice} />}
+      {rift === '1' && (
+        <Toast key="rift" text={RIFT_NOTE} onDone={() => router.setParams({ rift: undefined })} />
+      )}
     </Scene>
   );
 }

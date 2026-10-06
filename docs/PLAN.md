@@ -302,6 +302,20 @@ updates. You say hello when you arrive (friends reply with where they are),
 bye when you leave, and where you are every 20 seconds while you stand still;
 a friend not heard from for 50 seconds has gone.
 
+### On two devices at once
+You can be in the garden on a phone and a laptop at once, and you're in one
+place on both: your devices listen on your own channel too. Steer on either
+and the other follows; a device that's just arrived takes the position the
+others have, rather than starting at the gate. Walking out through the gate on
+one takes both to the office. What you say shows on both.
+
+Steer on both at once and they can disagree. Walking the same way they stay
+together, but once they're 96 units apart (the garden is 1080 across) a
+**rift** opens at the midpoint between them, with a low rushing sound. You
+vanish into it, and a moment later both devices land in the car park, with a
+note saying why. The break carries on. Friends in the garden see the rift
+open where you were, and close again a few seconds later.
+
 ## 5. Weather
 
 - One **shared, deterministic** weather cycle computed from the clock.
@@ -417,9 +431,10 @@ deployment/               numbered runbooks for setting up and shipping each upd
   comes back after an action's own answer (going home, say) is dropped, so it
   can't undo the action.
 - **Garden channel:** Supabase Realtime Broadcast on private channels named
-  `garden:<username>`, carrying chat and positions. RLS on `realtime.messages`
-  lets you listen to your own and your friends' channels, and speak only on
-  your own.
+  `garden:<username>`, carrying chat, positions and rifts. RLS on
+  `realtime.messages` lets you listen to your own and your friends' channels,
+  and speak only on your own. Your own channel is how your devices keep
+  together.
 - **Seats:** the server hands out desks so friends at work never share one.
   Two of your friends who aren't friends with each other can hold the same
   number, though; then the later arrival moves along to the next free desk on
