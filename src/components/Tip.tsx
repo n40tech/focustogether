@@ -26,6 +26,10 @@ export function useTips() {
   return { has, done };
 }
 
+/** After your first studied session, in the car park and the garden (one tip, put away in either). */
+export const INVITE_TIP =
+  'Studying is better with company. Make an invite on the noticeboard and send a friend the link: whoever joins starts out as your friend.';
+
 /** Tips put away on this page, so a reply that was already on its way can't bring one back. */
 const doneHere = new Set<string>();
 
@@ -34,8 +38,16 @@ export function forgetTips() {
   doneHere.clear();
 }
 
-/** A tip, unless it's been seen to. `children` is what it says. */
-export function Tip({ id, children }: { id: string; children: ReactNode }) {
+/** A tip, unless it's been seen to. `children` is what it says; `action` goes beside "Got it". */
+export function Tip({
+  id,
+  children,
+  action,
+}: {
+  id: string;
+  children: ReactNode;
+  action?: { title: string; onPress: () => void };
+}) {
   const tone = useTone();
   const tips = useTips();
   if (tips.has(id)) return null;
@@ -45,6 +57,16 @@ export function Tip({ id, children }: { id: string; children: ReactNode }) {
       accessibilityRole="summary"
     >
       <Text style={[styles.text, { color: tone.text }]}>{children}</Text>
+      {action && (
+        <Pressable
+          onPress={action.onPress}
+          accessibilityRole="button"
+          hitSlop={10}
+          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+        >
+          <Text style={[styles.ok, { color: tone.accent }]}>{action.title}</Text>
+        </Pressable>
+      )}
       <Pressable
         onPress={() => tips.done(id)}
         accessibilityRole="button"

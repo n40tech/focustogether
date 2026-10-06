@@ -42,7 +42,8 @@ export const ALL_TIPS = [
   'plant',
   'water',
   'post',
-  'friends',
+  'invite',
+  'home_screen',
 ];
 
 const USER_ID = '00000000-0000-4000-8000-00000000000a';
@@ -123,6 +124,7 @@ export class FakeSupabase {
     last_completed: null,
     left_session: null,
     sessions_done: 3,
+    sessions_studied: 3,
     ripe: [],
     letters: 0,
     tips: [...ALL_TIPS],
@@ -154,6 +156,8 @@ export class FakeSupabase {
   /** Letters to you (waiting in the post box until `read_at`), and from you. */
   letters: Post['letters'] = [];
   sent: Post['sent'] = [];
+  /** Invites you've made that the server still lists (it leaves out expired ones). */
+  invites: Invite[] = [];
   /** Friends in the garden as you get there. */
   inGarden: Walker[] = [];
   shop: ShopItem[] = [
@@ -392,7 +396,7 @@ export class FakeSupabase {
   private readonly rpc: Record<string, (args: Args) => unknown> = {
     get_me: () => this.now(),
     get_friends_board: () => this.friends,
-    get_invites: (): Invite[] => [],
+    get_invites: (): Invite[] => this.invites,
     remove_friend: ({ p_username }) => {
       const friend = this.friends.find((f) => f.username === p_username);
       if (!friend) throw new Error(`You're not friends with ${String(p_username)}`);

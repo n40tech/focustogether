@@ -36,7 +36,7 @@ import {
 } from '@/components/GardenSheets';
 import { Joystick } from '@/components/Joystick';
 import { Noticeboard } from '@/components/Noticeboard';
-import { Tip, useTips } from '@/components/Tip';
+import { INVITE_TIP, Tip, useTips } from '@/components/Tip';
 import { useNow } from '@/hooks/useNow';
 import { usePolled } from '@/hooks/usePolled';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -653,24 +653,26 @@ export default function GardenScene() {
           id: 'walk',
           text: 'Drag the stick (or use the arrow keys) to walk. Your plot is marked "Your plot". Walk out through the gate to go back to work.',
         }
-      : myPlots.length === 0 && !hasSeeds && !tips.has('seeds')
-        ? { id: 'seeds', text: "You'll need seeds to plant: the shed, bottom left, sells them." }
-        : myPlots.length === 0 && hasSeeds && !tips.has('plant')
-          ? {
-              id: 'plant',
-              text: `Walk up to one of your beds to plant. Each seed makes one plant, and a bed holds ${PLANTS_PER_BED}.`,
-            }
-          : myPlots.some(isDry) && !tips.has('water')
+      : me.sessions_studied > 0 && !tips.has('invite')
+        ? { id: 'invite', text: INVITE_TIP }
+        : myPlots.length === 0 && !hasSeeds && !tips.has('seeds')
+          ? { id: 'seeds', text: "You'll need seeds to plant: the shed, bottom left, sells them." }
+          : myPlots.length === 0 && hasSeeds && !tips.has('plant')
             ? {
-                id: 'water',
-                text: 'Water your beds and they grow half as fast again for a day. Crops grow in real time, studying or not.',
+                id: 'plant',
+                text: `Walk up to one of your beds to plant. Each seed makes one plant, and a bed holds ${PLANTS_PER_BED}.`,
               }
-            : neighbours.length > 0 && !tips.has('post')
+            : myPlots.some(isDry) && !tips.has('water')
               ? {
-                  id: 'post',
-                  text: 'Leave a friend a letter in the post box, bottom right. It waits there until they come by.',
+                  id: 'water',
+                  text: 'Water your beds and they grow half as fast again for a day. Crops grow in real time, studying or not.',
                 }
-              : null;
+              : neighbours.length > 0 && !tips.has('post')
+                ? {
+                    id: 'post',
+                    text: 'Leave a friend a letter in the post box, bottom right. It waits there until they come by.',
+                  }
+                : null;
 
   return (
     <Scene

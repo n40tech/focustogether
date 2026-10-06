@@ -126,8 +126,9 @@ never available during a session.
 
 ### Noticeboard (friends and invites)
 See where everyone is, add a friend by username, unpin a friend, and make
-invites. There's one in the car park and one in the garden. It also brings
-back the tips for new players.
+invites. Only invites still waiting to be used are listed: once someone joins,
+they're on the board as a friend. There's one in the car park and one in the
+garden. It also brings back the tips for new players.
 
 Unpinning asks first, then ends the friendship both ways (as adding makes
 it): you stop seeing each other, and any offers between you are called off,
@@ -188,9 +189,17 @@ however long ago your break ended; close it and the usual timings apply.
 ### A first day
 - **Tips** guide a new player, one at a time, at the top of the panel: walk
   in, pick a length and start, stay on the page, walk about the garden, buy
-  seeds, plant, water, write to a friend, add friends. Each goes once it's
-  done or put away (*Got it*), and is remembered per account (`profiles.tips`);
-  the noticeboard brings them all back.
+  seeds, plant, water, write to a friend. After their first studied session
+  (not a skipped one), the car park and the garden suggest making an invite on
+  the noticeboard. Each goes once it's done or put away (*Got it*), and is
+  remembered per account (`profiles.tips`); the noticeboard brings them all
+  back.
+- **On a phone's browser**, a new player's first tip in the car park says how
+  to add Focus Together to the home screen, with the steps for their phone:
+  Safari's on an iPhone (and to sign in again from there, as the home-screen
+  app keeps its own sign-in), Chrome's on Android. When Chrome offers to
+  install it, that's a single *Add*. Opened from the home screen, it's not
+  shown.
 - **The first session can be skipped** once it's started: it ends at once, as
   a session of the length chosen (25 minutes at most), with its payout and
   break, so there's something to spend in the garden. Only ever the first.
@@ -443,6 +452,7 @@ deployment/               numbered runbooks for setting up and shipping each upd
 | `invites` | code, who made it, expiry, who used it (0003) |
 | `letters` | from, to, body (up to 1000 characters), sent at, picked up at (0007) |
 | `profiles` | + `tips`: tips for new players already seen to (0007) |
+| `sessions` | + `skipped`: ended early by `skip_first_session` (0009) |
 
 | RPC | Allowed when | Returns |
 |---|---|---|
@@ -451,7 +461,7 @@ deployment/               numbered runbooks for setting up and shipping each upd
 | `arrive()` | signed in (gives you a desk if you haven't one) | me |
 | `start_session(minutes, device)` | not studying | me |
 | `leave_page(session, device)`, `back_to_page(session, device, away_s)` | the page the session was started on (0007) | – / me |
-| `skip_first_session()` | your first session is running (0007) | me |
+| `skip_first_session()` | your first session is running (0007; marks it skipped from 0009) | me |
 | `done_tip(tip)`, `reset_tips()` | signed in (0007) | me |
 | `get_post()`, `pick_up_post()` | signed in (0007) | post |
 | `send_letter(to, body)` | on a break, to a friend (0007) | post |

@@ -180,8 +180,13 @@ the old values stick.
   night colours. This changes only what you see and hear.
 - **A first day:** join as a new player with the invite `TESTJOIN`
   (**Got an invite? Join**), or with an invite made on the noticeboard. You'll
-  see the welcome, the tips, and skipping the first session. The noticeboard's
+  see the welcome, the tips, and skipping the first session. The tip about
+  invites waits for a session you studied, not the skipped one (the Test
+  panel's **Finish my session** counts as studied). The noticeboard's
   **Show the tips for new players again** brings the tips back for anyone.
+- **Adding to the home screen:** the tip only shows on a phone's browser, for
+  a player with no sessions yet. In Chrome's device mode, pick an iPhone or an
+  Android phone and reload to see each one's steps.
 - **Phone sizes:** the browser's developer tools have a device mode (in
   Chrome, F12, then the phone icon). It's good for layout, and with a phone
   picked, Focus Together treats the page as a phone's (so another tab stops
