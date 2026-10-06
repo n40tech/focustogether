@@ -1343,8 +1343,8 @@ describe('usernames', () => {
     // The email has to be the plain spelling, which is what the app signs in with.
     await rejects(signUp('josé', code, { email: 'josé@focus.test' }), /must be/);
     // A decomposed é (e + accent) is the same username as a composed one.
-    await signUp('josé', code, { email: 'jose@focus.test', name: 'José' });
-    ids['josé'] = ids['josé'];
+    await signUp('jose\u0301', code, { email: 'jose@focus.test', name: 'José' });
+    ids['josé'] = ids['jose\u0301'];
     const me = await call('josé', 'get_me');
     assert.equal(me.username, 'josé');
     assert.equal(me.display_name, 'José');

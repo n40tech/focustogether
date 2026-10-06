@@ -37,7 +37,7 @@ set search_path = ''
 as $$
   select replace(replace(replace(replace(
     translate(
-      regexp_replace(normalize(lower(trim(p_username)), nfd), '[̀-ͯ]', '', 'g'),
+      regexp_replace(normalize(lower(trim(p_username)), nfd), '[\u0300-\u036f]', '', 'g'),
       U&'\00f8\00f0\0142\0111\0127\0131\0167\014b\0140',
       'odldhitnl'
     ),
@@ -56,7 +56,7 @@ set search_path = ''
 as $$
   select char_length(p_username) between 3 and 20
      and p_username = private.normal_username(p_username)
-     and p_username !~ '[̀-ͯ]'
+     and p_username !~ '[\u0300-\u036f]'
      and private.username_key(p_username) ~ '^[a-z0-9_]+$';
 $$;
 

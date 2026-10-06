@@ -33,7 +33,7 @@ export const usernameKey = (username: string) =>
     .trim()
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/[øðłđħıŧŋŀßæœþ]/g, (c) => SPELT[c]);
 
 /** Accounts are username-based in the UI; Supabase auth needs an email. */
@@ -44,5 +44,5 @@ export const isUsername = (username: string) =>
   username.length >= 3 &&
   username.length <= 20 &&
   username === normalUsername(username) &&
-  !/[̀-ͯ]/.test(username) &&
+  !/[\u0300-\u036f]/.test(username) &&
   /^[a-z0-9_]+$/.test(usernameKey(username));
