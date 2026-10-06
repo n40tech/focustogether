@@ -1327,3 +1327,118 @@ describe('access', () => {
     await rejects(speak('alice', 'garden:carol'), /row-level security/);
   });
 });
+
+// These come last: they sign up new players and change friendships, which the
+// tests above don't expect.
+describe('usernames', () => {
+  test('can have accents, and the account email is the plain spelling', async () => {
+    const { code } = await call('alice', 'create_invite');
+    assert.equal((await call('anon', 'check_signup', code, ' José ')).ok, true);
+    assert.equal((await call('anon', 'check_signup', code, 'straße')).ok, true);
+    assert.equal((await call('anon', 'check_signup', code, 'zoë_øre')).ok, true);
+    for (const bad of ['jo', 'ab!', 'ǃǃǃ', 'аня', '😀😀😀', 'a'.repeat(21), 'jo sé']) {
+      assert.match((await call('anon', 'check_signup', code, bad)).reason, /3 to 20/, bad);
+    }
+
+    // The email has to be the plain spelling, which is what the app signs in with.
+    await rejects(signUp('josé', code, { email: 'josé@focus.test' }), /must be/);
+    // A decomposed é (e + accent) is the same username as a composed one.
+    await signUp('jose\u0301', code, { email: 'jose@focus.test', name: 'José' });
+    ids['josé'] = ids['jose\u0301'];
+    const me = await call('josé', 'get_me');
+    assert.equal(me.username, 'josé');
+    assert.equal(me.display_name, 'José');
+    assert.deepEqual((await call('alice', 'get_friends_board')).map((f) => f.username).sort(), [
+      'bob',
+      'josé',
+    ]);
+
+    // Spellings that differ only in accents can't both be taken.
+    const next = await call('alice', 'create_invite');
+    assert.match((await call('anon', 'check_signup', next.code, 'josé')).reason, /taken/);
+    assert.match(
+      (await call('anon', 'check_signup', next.code, 'jose')).reason,
+      /too close to @josé/
+    );
+    await rejects(
+      q(`update public.profiles set username = 'jösé' where id = $1`, [ids.alice]),
+      /duplicate key/
+    );
+    await rejects(
+      q(`update public.profiles set username = 'Ìnés' where id = $1`, [ids.alice]),
+      /username_check/
+    );
+  });
+
+  test('friends can be added by either spelling', async () => {
+    const added = await call('carol', 'add_friend', ' JOSE ');
+    assert.deepEqual(added, { username: 'josé' });
+    await rejects(call('carol', 'add_friend', 'josé'), /already friends with josé/);
+    await rejects(call('carol', 'add_friend', 'nobody_here'), /No user called "nobody_here"/);
+    await rejects(call('carol', 'add_friend', 'Carol'), /can't add yourself/);
+    assert.deepEqual((await call('josé', 'get_friends_board')).map((f) => f.username).sort(), [
+      'alice',
+      'carol',
+    ]);
+    await call('carol', 'remove_friend', 'josé');
+  });
+});
+
+describe('un-adding a friend', () => {
+  test('ends the friendship both ways, and hands back anything on offer', async () => {
+    await call('carol', 'add_friend', 'josé');
+    await give('carol', 'tomato', 3);
+    await give('josé', 'carrot', 2);
+    await study(['carol', 'josé'], 25);
+    await call('carol', 'offer_trade', 'josé', 'tomato', 2, 'carrot', 1);
+    await call('josé', 'offer_trade', 'carol', 'carrot', 1, null, null);
+    await call('carol', 'send_letter', 'josé', 'See you in the garden');
+    const [offer] = (await call('josé', 'get_garden')).trades.filter((t) => t.incoming);
+
+    await rejects(call('carol', 'remove_friend', 'alice'), /not friends with alice/);
+    assert.deepEqual(await call('carol', 'remove_friend', 'josé'), { username: 'josé' });
+
+    // (dave joined with carol's invite earlier.)
+    assert.deepEqual((await call('carol', 'get_friends_board')).map((f) => f.username).sort(), [
+      'bob',
+      'dave',
+    ]);
+    assert.deepEqual(
+      (await call('josé', 'get_friends_board')).map((f) => f.username),
+      ['alice']
+    );
+    // Offers between them are called off, and the goods go home.
+    let garden = await call('carol', 'get_garden');
+    assert.equal(garden.trades.length, 0);
+    assert.equal(garden.me.inventory.tomato, 3);
+    garden = await call('josé', 'get_garden');
+    assert.equal(garden.trades.length, 0);
+    assert.equal(garden.me.inventory.carrot, 2);
+    await rejects(call('josé', 'respond_trade', offer.id, true), /no longer open/);
+
+    // Nothing that needs a friendship works any more...
+    await rejects(call('carol', 'send_letter', 'josé', 'Hello?'), /only write to friends/);
+    await rejects(call('carol', 'water_friend', 'josé'), /friend's plot/);
+    await rejects(
+      call('josé', 'offer_trade', 'carol', 'carrot', 1, null, null),
+      /only trade with friends/
+    );
+    const hears = async (user, topic) =>
+      (await asUser(user, 'select count(*)::int as n from realtime.messages', [], topic))[0].n > 0;
+    await q(
+      `insert into realtime.messages (topic, extension, event) values ('garden:josé', 'broadcast', 'say')`
+    );
+    assert.equal(await hears('carol', 'garden:josé'), false);
+    assert.equal(await hears('alice', 'garden:josé'), true);
+
+    // ...but letters already sent stay where they are, and they can be friends again.
+    assert.equal((await call('josé', 'get_post')).letters.length, 1);
+    await rejects(call('carol', 'remove_friend', 'josé'), /not friends with josé/);
+    await call('josé', 'add_friend', 'carol');
+    assert.deepEqual((await call('carol', 'get_friends_board')).map((f) => f.username).sort(), [
+      'bob',
+      'dave',
+      'josé',
+    ]);
+  });
+});

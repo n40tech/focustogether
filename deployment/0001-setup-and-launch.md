@@ -43,7 +43,8 @@ from (values
   ('0006_growing_and_desks',  exists (select 1 from information_schema.columns
                                        where table_schema = 'public' and table_name = 'plots'
                                          and column_name = 'grown_s')),
-  ('0007_post_and_first_day', to_regclass('public.letters') is not null)
+  ('0007_post_and_first_day', to_regclass('public.letters') is not null),
+  ('0008_accents_and_unfriending', to_regprocedure('public.remove_friend(text)') is not null)
 ) as m (migration, done);
 ```
 

@@ -125,9 +125,14 @@ Reached from the shed door in the garden and from the payout screen. It's
 never available during a session.
 
 ### Noticeboard (friends and invites)
-See where everyone is, add a friend by username, and make invites. There's
-one in the car park and one in the garden. It also brings back the tips for
-new players.
+See where everyone is, add a friend by username, unpin a friend, and make
+invites. There's one in the car park and one in the garden. It also brings
+back the tips for new players.
+
+Unpinning asks first, then ends the friendship both ways (as adding makes
+it): you stop seeing each other, and any offers between you are called off,
+with what was offered handed back. Letters already sent stay. Nobody is told;
+they just drop off each other's board, and either can add the other again.
 
 ## 4. Rules
 
@@ -427,7 +432,7 @@ deployment/               numbered runbooks for setting up and shipping each upd
 |---|---|
 | `profiles` | + `chips` (was `points`), `went_home_at` (was `left_at`), `vehicle`, `activity`, `activity_until`; + `arrived_at`, `desk` (0–11), `plot_slot` (0003) |
 | `sessions` | + `chips`: what a completed session paid (0003); + `device`: the page it was started on, and `left_at`: when that page was left (0007) |
-| `friendships` | unchanged |
+| `friendships` | unchanged; `remove_friend` deletes both rows (0008) |
 | `items` | catalogue: slug, kind, name, price, pack size |
 | `crops` | per crop: its seed, study minutes to ripen, harvest size, seeds saved |
 | `inventory` | (player, item) → quantity |
@@ -442,6 +447,7 @@ deployment/               numbered runbooks for setting up and shipping each upd
 | RPC | Allowed when | Returns |
 |---|---|---|
 | `get_me`, `get_friends_board`, `add_friend` | signed in | me / friends |
+| `remove_friend(username)` | signed in, a friend (0008) | the username |
 | `arrive()` | signed in (gives you a desk if you haven't one) | me |
 | `start_session(minutes, device)` | not studying | me |
 | `leave_page(session, device)`, `back_to_page(session, device, away_s)` | the page the session was started on (0007) | – / me |
@@ -469,6 +475,15 @@ deployment/               numbered runbooks for setting up and shipping each upd
 Sign-up itself is Supabase Auth's: a trigger on `auth.users` (0003) refuses
 any account without a valid invite in its metadata, then makes the profile,
 uses up the invite and befriends whoever made it.
+
+Usernames (0008) are 3 to 20 letters, numbers or `_`, stored in lower case.
+Letters can have accents (josé, zoë, straße). Supabase Auth only takes plain
+emails, so an account's email is the username's *plain spelling*: accents
+off, and ß, æ, ø and a few others spelt out (`zoe_strasse@focus.test`). No
+two players share a plain spelling, so "jose" and "josé" can't both exist,
+and you can sign in or add a friend by either. The rules are
+`private.is_username` and `private.username_key`, mirrored in
+`src/lib/username.ts`.
 
 ## 10. Web deployment stack
 
@@ -562,6 +577,8 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 | Perspective | Top-front for every place, with no sky: time of day only shows as the scene's changing hues. |
 | Web hosting | EAS Hosting with a static export; Supabase for the backend. |
 | Social model | Pairwise friendships, as in the MVP. |
+| Un-adding a friend | "Unpin" on the noticeboard, after a question. It ends the friendship both ways and calls off offers between you; nobody is told. |
+| Usernames with accents | Allowed (Latin letters). The plain spelling is unique, so accents never tell two players apart. |
 | Eating | Just a munching sound. Nothing to see, no effect. |
 | Friends' plots | You can water them, but not plant or harvest. |
 | Sign-ups | Invite-only for now. Whoever invites you starts as your friend. |

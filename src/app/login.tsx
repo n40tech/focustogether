@@ -18,8 +18,9 @@ import { Button } from '@/components/Button';
 import { Muted } from '@/components/Chrome';
 import { api } from '@/lib/api';
 import { formatInvite, normaliseInvite } from '@/lib/invites';
-import { supabase, usernameToEmail } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
+import { normalUsername, usernameToEmail } from '@/lib/username';
 import { useConditions } from '@/weather/useConditions';
 
 const C = palette.carpark;
@@ -193,7 +194,7 @@ function Join({ invite, onSignIn }: { invite: string; onSignIn: () => void }) {
         options: {
           data: {
             invite: normaliseInvite(code),
-            username: username.trim().toLowerCase(),
+            username: normalUsername(username),
             display_name: name.trim() || username.trim(),
           },
         },

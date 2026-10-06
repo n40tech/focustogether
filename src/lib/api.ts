@@ -194,6 +194,9 @@ export const api = {
   getFriendsBoard: () => rpc<Friend[]>('get_friends_board'),
   addFriend: (username: string) =>
     rpc<{ username: string }>('add_friend', { p_username: username }),
+  /** Both ways; offers between you are called off. */
+  removeFriend: (username: string) =>
+    rpc<{ username: string }>('remove_friend', { p_username: username }),
 
   /** Moves you (going to the office hands you a desk if you've just arrived). */
   setPlace: (place: Place) => rpc<Me>('set_place', { p_place: place }),

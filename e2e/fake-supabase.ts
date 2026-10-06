@@ -14,6 +14,7 @@ import type {
   SignupCheck,
   Status,
 } from '@/lib/api';
+import { isUsername, normalUsername } from '@/lib/username';
 
 /**
  * A pretend Supabase for the browser tests. The app's calls are answered from
@@ -392,6 +393,12 @@ export class FakeSupabase {
     get_me: () => this.now(),
     get_friends_board: () => this.friends,
     get_invites: (): Invite[] => [],
+    remove_friend: ({ p_username }) => {
+      const friend = this.friends.find((f) => f.username === p_username);
+      if (!friend) throw new Error(`You're not friends with ${String(p_username)}`);
+      this.friends = this.friends.filter((f) => f !== friend);
+      return { username: friend.username };
+    },
 
     check_signup: ({ p_code, p_username }): SignupCheck => {
       const code = String(p_code)
@@ -399,11 +406,11 @@ export class FakeSupabase {
         .toUpperCase();
       if (code !== INVITE)
         return { ok: false, reason: "That invite code isn't valid, or it's been used" };
-      if (!/^[a-z0-9_]{3,20}$/.test(String(p_username)))
+      if (!isUsername(normalUsername(String(p_username))))
         return {
           ok: false,
           from: 'Alice',
-          reason: 'Usernames are 3 to 20 lowercase letters, numbers or _',
+          reason: 'Usernames are 3 to 20 letters, numbers or _. Accents are fine',
         };
       return { ok: true, from: 'Alice' };
     },

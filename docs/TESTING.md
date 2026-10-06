@@ -227,7 +227,11 @@ and the places around it, in both windows. Every so often (and always for a
 bigger change), do the whole round:
 
 - [ ] **Join and sign in:** join with an invite, log out, sign in again.
-      Logging out on a break counts as going home.
+      Logging out on a break counts as going home. A username with accents
+      (say `zoë`) can sign in as `zoe` too.
+- [ ] **Noticeboard:** add a friend by username (with or without its
+      accents), then unpin them: it asks first, and they drop off both
+      players' boards.
 - [ ] **Car park:** friends at work show as their car or bike, the
       noticeboard opens, and the garden gate only works on a break.
 - [ ] **Office:** you get a desk and the other player sees you at it. Start a
