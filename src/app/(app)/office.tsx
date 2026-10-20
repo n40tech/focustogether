@@ -8,6 +8,7 @@ import { playSound, useAmbience } from '@/audio/sound';
 import { Button } from '@/components/Button';
 import { Body, SceneHeader, Sheet } from '@/components/Chrome';
 import { Countdown } from '@/components/Countdown';
+import { FriendOfFriendSheet } from '@/components/FriendOfFriendSheet';
 import { StudyPanel } from '@/components/StudyPanel';
 import { useTips } from '@/components/Tip';
 import { api, type Friend, type Me } from '@/lib/api';
@@ -20,12 +21,12 @@ import { useGo, useWorld } from '@/world/World';
 
 export default function Office() {
   useAmbience('office');
-  const { me, friends, setMe, refresh } = useWorld();
+  const { me, friends, friendsOfFriends, setMe, refresh } = useWorld();
   const conditions = useConditions();
   const go = useGo();
   const studying = me.status === 'focused';
-  const [tapped, setTapped] = useState<string | null>(null);
-  const friend = friends.find((f) => f.username === tapped);
+  // The desk you tapped: a friend's, a friend of a friend's, or an empty one.
+  const [tapped, setTapped] = useState<number | null>(null);
 
   // Walking in sits you at your desk: a random free one when you've just
   // arrived, kept until you go home. You stay there (for friends too) until you
@@ -45,7 +46,12 @@ export default function Office() {
     go('/');
   };
 
-  const seats = seatsOf(me, friends);
+  const seats = seatsOf(me, friends, friendsOfFriends);
+  const seat = tapped === null ? null : seats[tapped];
+  const friend = seat && !seat.via ? friends.find((f) => f.username === seat.username) : undefined;
+  const close = () => setTapped(null);
+  // You can move to an empty desk while you're at work, between sessions.
+  const canMove = me.desk !== null && !studying;
 
   const overlay = (
     <>
@@ -58,13 +64,13 @@ export default function Office() {
             x={x}
             y={y + 14}
             text={seat.isMe ? 'You' : seat.display_name}
-            dim={!seat.studying}
+            dim={!seat.studying || !!seat.via}
           />
         );
       })}
       {DESK_SPOTS.map(({ x, y }, i) => {
         const seat = seats[i];
-        if (!seat || seat.isMe) return null;
+        if (seat?.isMe || (!seat && !canMove)) return null;
         return (
           <Hotspot
             key={i}
@@ -72,8 +78,8 @@ export default function Office() {
             y={y - 72}
             w={96}
             h={96}
-            label={`${seat.display_name}'s desk`}
-            onPress={() => setTapped(seat.username)}
+            label={seat ? `${seat.display_name}'s desk` : `Empty desk ${i + 1}`}
+            onPress={() => setTapped(i)}
           />
         );
       })}
@@ -96,12 +102,57 @@ export default function Office() {
           canJoin={!studying}
           onJoined={(next) => {
             setMe(next);
-            setTapped(null);
+            close();
           }}
-          onClose={() => setTapped(null)}
+          onClose={close}
+        />
+      )}
+      {seat?.via && <FriendOfFriendSheet person={{ ...seat, via: seat.via }} onClose={close} />}
+      {tapped !== null && !seat && canMove && (
+        <EmptyDeskSheet
+          desk={tapped}
+          onSat={(next) => {
+            setMe(next);
+            close();
+          }}
+          onClose={close}
         />
       )}
     </Scene>
+  );
+}
+
+/** An empty desk: sitting at it instead of yours. Your bay and rack slot move with you. */
+function EmptyDeskSheet({
+  desk,
+  onSat,
+  onClose,
+}: {
+  desk: number;
+  onSat: (me: Me) => void;
+  onClose: () => void;
+}) {
+  const tone = useTone();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const sit = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      onSat(await api.switchDesk(desk));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusy(false);
+    }
+  };
+  return (
+    <Sheet title={`Desk ${desk + 1}`} onClose={onClose}>
+      <View style={{ gap: 10 }}>
+        <Body>{"Nobody's at this desk. Your bay outside moves with you."}</Body>
+        <Button title="Sit here" onPress={sit} disabled={busy} />
+        {error && <Text style={{ color: tone.danger, fontSize: 13 }}>{error}</Text>}
+      </View>
+    </Sheet>
   );
 }
 

@@ -158,7 +158,17 @@ export function Tag({ x, y, text, dim }: { x: number; y: number; text: string; d
   );
 }
 
-/** A tappable region of the scene (a door, the noticeboard). */
+/** Draws its children see-through: friends of friends, who aren't your friends yet. */
+export function Faint({ on = true, children }: { on?: boolean; children: ReactNode }) {
+  if (!on) return <>{children}</>;
+  return (
+    <View pointerEvents="none" style={{ position: 'absolute', left: 0, top: 0, opacity: 0.45 }}>
+      {children}
+    </View>
+  );
+}
+
+/** A tappable region of the scene (a door, the Friends board). */
 export function Hotspot({
   x,
   y,

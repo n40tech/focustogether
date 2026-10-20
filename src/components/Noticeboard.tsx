@@ -31,7 +31,7 @@ const WHERE: Record<Friend['status'], string> = {
 };
 
 /** "Bob and José", "Bob, José and Zoë". */
-const listOf = (names: string[]) =>
+export const listOf = (names: string[]) =>
   names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
 
 /**

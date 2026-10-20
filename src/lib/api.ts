@@ -79,6 +79,15 @@ export type Friend = {
   activity: Activity;
 };
 
+/**
+ * A friend of a friend at work: shown greyed out at their desk and in their
+ * bay. `via`: which of your friends they know.
+ */
+export type FriendOfFriend = Pick<
+  Friend,
+  'username' | 'display_name' | 'status' | 'place' | 'arrived_at' | 'vehicle' | 'desk_items'
+> & { desk: number; via: string[] };
+
 /** Asking to be friends: the requests to you, and the ones you've made. */
 export type FriendRequests = {
   /** Oldest first. `via`: your friends who are friends with them too. */
@@ -221,6 +230,7 @@ async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
 export const api = {
   getMe: () => rpc<Me>('get_me'),
   getFriendsBoard: () => rpc<Friend[]>('get_friends_board'),
+  getFriendsOfFriends: () => rpc<FriendOfFriend[]>('get_friends_of_friends'),
   /** Asks them; if they'd already asked you, you're friends now (`friends`). */
   addFriend: (username: string) =>
     rpc<{ username: string; friends: boolean }>('add_friend', { p_username: username }),
@@ -234,6 +244,8 @@ export const api = {
   removeFriend: (username: string) =>
     rpc<{ username: string }>('remove_friend', { p_username: username }),
 
+  /** Sits you at another desk, if nobody you know (or they know) is at it. */
+  switchDesk: (desk: number) => rpc<Me>('switch_desk', { p_desk: desk }),
   /** Moves you (going to the office hands you a desk if you've just arrived). */
   setPlace: (place: Place) => rpc<Me>('set_place', { p_place: place }),
   /** `device` is this page's id: leaving this page stops the session. */

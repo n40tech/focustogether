@@ -6,7 +6,8 @@
 **What this update brings:** the noticeboard becomes the Friends board.
 Adding a friend asks them first. A friend's profile shows what they've
 studied and what they're worth. In the office, you can join a friend's
-session so you finish together.
+session so you finish together, and move to an empty desk. Friends of your
+friends at work show see-through, so you can ask them to be friends.
 
 ---
 
@@ -37,7 +38,20 @@ select count(*) from public.friend_requests;
 An app page left open from before keeps working: its **Add** button now asks
 instead of adding.
 
-## 2. Merge
+## 2. Run migration 0011
+
+The new app calls `get_friends_of_friends` and `switch_desk`. Check:
+
+```sql
+select to_regprocedure('public.switch_desk(integer)') is not null as done;
+```
+
+If `false`, run `supabase/migrations/0011_desks_and_friends_of_friends.sql`
+the same way. It replaces `private.arrive` (desks now avoid friends of
+friends) and adds the two functions. Nobody's desk changes until they next
+arrive. Afterwards the query says `true`.
+
+## 3. Merge
 
 Merging deploys the app (GitHub Actions). Then, with a friend:
 
@@ -46,3 +60,6 @@ Merging deploys the app (GitHub Actions). Then, with a friend:
 - [ ] Tap a friend's name on the board: their profile opens.
 - [ ] While a friend studies, tap their desk in the office and **Join** them.
       Both countdowns match, and both sessions pay out together.
+- [ ] Tap an empty desk and **Sit here**. Your car moves to the matching bay.
+- [ ] With a friend of a friend at work, they show see-through at their
+      desk; tapping them offers **Ask to be friends**.

@@ -203,3 +203,48 @@ test('joining a friend: your session ends when theirs does', async ({ page, fake
   expect(joined.p_device).toMatch(/^[a-z0-9]{10,}$/);
   expect(fake.me.active_session?.ends_at).toBe(fake.friends[0].ends_at);
 });
+
+test('a friend of a friend sits greyed out, and you can ask them to be friends', async ({
+  page,
+  fake,
+}) => {
+  fake.atDesk();
+  fake.friendsOfFriends = [
+    {
+      username: 'dave',
+      display_name: 'Dave',
+      status: 'focused',
+      place: 'office',
+      arrived_at: iso(-10),
+      vehicle: 'hatchback',
+      desk_items: ['duck'],
+      desk: 2,
+      via: ['Bob'],
+    },
+  ];
+  await fake.open('/office');
+  await button(page, "Dave's desk").click();
+  await expect(page.getByText('@dave · friends with Bob')).toBeVisible();
+  await button(page, 'Ask to be friends').click();
+  await expect(
+    page.getByText('Asked. Dave will be on your Friends board once they say yes.')
+  ).toBeVisible();
+  expect(fake.called('add_friend')).toEqual([{ p_username: 'dave' }]);
+});
+
+test('moving to an empty desk, between sessions', async ({ page, fake }) => {
+  fake.atDesk();
+  await fake.open('/office');
+  await button(page, 'Empty desk 6').click();
+  await button(page, 'Sit here').click();
+  await expect(button(page, 'Sit here')).toBeHidden();
+  expect(fake.called('switch_desk')).toEqual([{ p_desk: 5 }]);
+  expect(fake.me.desk).toBe(5);
+});
+
+test("while you study, empty desks can't be taken", async ({ page, fake }) => {
+  fake.studying(50);
+  await fake.open('/office');
+  await expect(page.getByText('Studying · 50 min')).toBeVisible();
+  await expect(button(page, 'Empty desk 6')).toHaveCount(0);
+});

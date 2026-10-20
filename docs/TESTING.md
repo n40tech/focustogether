@@ -252,7 +252,12 @@ bigger change), do the whole round:
       **Test → Finish my session** pays out. Tap the other player's desk
       while they study: it says how long they've got left, and **Join**
       starts a session that ends when theirs does (the two countdowns
-      match).
+      match). Tap an empty desk and **Sit here**: you move, and the other
+      player sees you there (and your car in the matching bay). A third
+      player who's a friend of only one of you (locally, `dave` is only
+      `alice`'s, so try `bob` and `dave`) shows see-through at their desk
+      and in their bay. Tapping them says who you both know and asks them
+      to be friends.
 - [ ] **Payout:** chips are counted onto your desk and the break is shown.
       Take a break, go home, and spend chips all work.
 - [ ] **Garden:** walk with the thumbstick and the arrow keys; the other

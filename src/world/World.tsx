@@ -6,7 +6,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { playSound, type Sfx } from '@/audio/sound';
 import { Button } from '@/components/Button';
 import { usePolled } from '@/hooks/usePolled';
-import { api, type Friend, type Me } from '@/lib/api';
+import { api, type Friend, type FriendOfFriend, type Me } from '@/lib/api';
 import { fetchMe, startAwayWatch, watchSession } from '@/lib/away';
 import { supabase } from '@/lib/supabase';
 import { tones } from '@/lib/theme';
@@ -16,6 +16,8 @@ const POLL_MS = 10_000;
 type World = {
   me: Me;
   friends: Friend[];
+  /** Friends of your friends who are at work. */
+  friendsOfFriends: FriendOfFriend[];
   setMe: (me: Me) => void;
   /** Re-fetches you and your friends. */
   refresh: () => Promise<void>;
@@ -33,6 +35,7 @@ export function useWorld() {
 export function WorldProvider({ children }: { children: ReactNode }) {
   const me = usePolled(fetchMe, POLL_MS);
   const board = usePolled(api.getFriendsBoard, POLL_MS);
+  const others = usePolled(api.getFriendsOfFriends, POLL_MS);
 
   // Leaving the page mid-session stops the session (see src/lib/away).
   useEffect(startAwayWatch, []);
@@ -41,13 +44,23 @@ export function WorldProvider({ children }: { children: ReactNode }) {
 
   const refreshMe = me.refresh;
   const refreshBoard = board.refresh;
+  const refreshOthers = others.refresh;
   const refresh = useCallback(async () => {
-    await Promise.all([refreshMe(), refreshBoard()]);
-  }, [refreshMe, refreshBoard]);
+    await Promise.all([refreshMe(), refreshBoard(), refreshOthers()]);
+  }, [refreshMe, refreshBoard, refreshOthers]);
 
   const value = useMemo(
-    () => (me.data ? { me: me.data, friends: board.data ?? [], setMe: me.setData, refresh } : null),
-    [me.data, me.setData, board.data, refresh]
+    () =>
+      me.data
+        ? {
+            me: me.data,
+            friends: board.data ?? [],
+            friendsOfFriends: others.data ?? [],
+            setMe: me.setData,
+            refresh,
+          }
+        : null,
+    [me.data, me.setData, board.data, others.data, refresh]
   );
 
   if (!value) return <Arriving error={me.error} retry={refreshMe} />;

@@ -1303,6 +1303,7 @@ describe('access', () => {
       'arrive',
       'create_invite',
       'get_friend_requests',
+      'get_friends_of_friends',
     ]) {
       await rejects(call('anon', fn), /permission denied/);
     }
@@ -1597,5 +1598,82 @@ describe('studying together', () => {
     await call('bob', 'start_session', 5);
     await travel(4.5);
     await rejects(call('alice', 'join_session', 'bob'), /Bob is nearly done/);
+  });
+});
+
+describe('friends of friends, and changing desks', () => {
+  // By now: alice knows bob and josé; carol knows bob, dave and josé. So carol
+  // is a friend of alice's friends, and dave is further off.
+  const atDesk = (user, desk) =>
+    q(`update public.profiles set desk = $2, arrived_at = now(), seen_at = now() where id = $1`, [
+      ids[user],
+      desk,
+    ]);
+
+  test('friends of friends at work show, with which of your friends they know', async () => {
+    assert.deepEqual(await call('alice', 'get_friends_of_friends'), []);
+    await call('carol', 'set_place', 'office');
+    await call('bob', 'set_place', 'office');
+    await call('dave', 'set_place', 'office');
+
+    const [carol, ...others] = await call('alice', 'get_friends_of_friends');
+    assert.deepEqual(others, []);
+    assert.equal(carol.username, 'carol');
+    assert.equal(carol.display_name, 'Carol');
+    assert.equal(carol.status, 'idle');
+    assert.equal(carol.place, 'office');
+    assert.equal(carol.desk, (await call('carol', 'get_me')).desk);
+    assert.deepEqual(carol.desk_items, []);
+    assert.deepEqual(carol.via, ['Bob', 'José']);
+
+    // dave sees bob and josé the same way, through carol.
+    assert.deepEqual(
+      (await call('dave', 'get_friends_of_friends')).map((p) => [p.username, p.via]),
+      [['bob', ['Carol']]]
+    );
+    await call('carol', 'go_home');
+    assert.deepEqual(await call('alice', 'get_friends_of_friends'), []);
+  });
+
+  test("arriving avoids friends' and their friends' desks", async () => {
+    // Eight more of bob's friends, so alice's circle can fill every desk but one.
+    const mates = [];
+    for (let i = 1; i <= 8; i++) {
+      const [{ code }] = await q('select private.make_invite($1) as code', [ids.bob]);
+      await signUp(`mate${i}`, code);
+      mates.push(`mate${i}`);
+    }
+    const circle = ['bob', 'josé', 'carol', ...mates];
+    for (const [i, user] of circle.entries()) await atDesk(user, i < 7 ? i : i + 1);
+    // dave is at desk 7, but he's no friend of a friend of alice's.
+    await atDesk('dave', 7);
+
+    assert.equal((await call('alice', 'set_place', 'office')).desk, 7);
+
+    for (const mate of mates) await call('bob', 'remove_friend', mate);
+  });
+
+  test('you can move to a desk nobody in your circle is at, between sessions', async () => {
+    await rejects(call('alice', 'switch_desk', 2), /Walk into the office first/);
+    await atDesk('bob', 3); // a friend
+    await atDesk('carol', 4); // a friend of a friend
+    await atDesk('dave', 5); // neither
+    await call('alice', 'set_place', 'garden');
+    await call('alice', 'set_place', 'office');
+
+    await rejects(call('alice', 'switch_desk', 3), /Someone's at that desk/);
+    await rejects(call('alice', 'switch_desk', 4), /Someone's at that desk/);
+    await rejects(call('alice', 'switch_desk', 12), /no desk 12/);
+    await call('alice', 'set_place', 'garden');
+    const me = await call('alice', 'switch_desk', 5);
+    assert.equal(me.desk, 5);
+    assert.equal(me.place, 'office');
+    assert.equal(
+      (await call('bob', 'get_friends_board')).find((f) => f.username === 'alice').desk,
+      5
+    );
+
+    await call('alice', 'start_session', 25);
+    await rejects(call('alice', 'switch_desk', 6), /while you're studying/);
   });
 });

@@ -5,7 +5,7 @@ import { palette } from '@/lib/theme';
 import type { Seat } from '@/world/seats';
 import { rand, useLoop } from './motion';
 import { Person } from './People';
-import { Box, Dot, Glow, Shadow } from './primitives';
+import { Box, Dot, Faint, Glow, Shadow } from './primitives';
 import { BLEED } from './Scene';
 
 const P = palette.office;
@@ -56,6 +56,7 @@ export function OfficeFloor({
             leanBack={i === closeUp ? 16 : 0}
             screenOn={i === closeUp || !!sitting}
             items={seat?.deskItems ?? []}
+            faint={!!seat?.via}
           />
         );
       })}
@@ -151,6 +152,7 @@ export function Desk({
   leanBack = 0,
   items = [],
   scale = 1,
+  faint = false,
 }: {
   x: number;
   y: number;
@@ -162,6 +164,8 @@ export function Desk({
   screenOn?: boolean;
   items?: string[];
   scale?: number;
+  /** A friend of a friend's: they and their things are drawn see-through. */
+  faint?: boolean;
 }) {
   const s = scale;
   const on = screenOn;
@@ -184,18 +188,19 @@ export function Desk({
       />
       {/* keyboard */}
       <Box x={x - 15 * s} y={y - 30 * s} w={30 * s} h={7 * s} c="#d8d2c6" r={2 * s} />
-      {items.slice(0, SLOTS.length).map((item, i) => (
-        <DeskItem
-          key={item}
-          item={item}
-          x={x + SLOTS[i][0] * s}
-          y={y + SLOTS[i][1] * s}
-          scale={s}
-        />
-      ))}
-      {occupant ? (
-        <Person username={occupant} x={x} y={y + (12 + leanBack) * s} pose="sit" />
-      ) : (
+      <Faint on={faint}>
+        {items.slice(0, SLOTS.length).map((item, i) => (
+          <DeskItem
+            key={item}
+            item={item}
+            x={x + SLOTS[i][0] * s}
+            y={y + SLOTS[i][1] * s}
+            scale={s}
+          />
+        ))}
+        {occupant && <Person username={occupant} x={x} y={y + (12 + leanBack) * s} pose="sit" />}
+      </Faint>
+      {!occupant && (
         // An empty chair, pushed in.
         <>
           <Box x={x - 13 * s} y={y - 8 * s} w={26 * s} h={14 * s} c={P.chair} r={6 * s} />

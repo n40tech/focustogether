@@ -61,23 +61,29 @@ agreed; **Open questions** lists what hasn't.
   a bike rack. Bays and rack slots follow desks: whoever has desk 5 parks in
   bay 5 (or rack slot 5). Friends who are *at work* (arrived, studying, on a
   break, or between the two) appear as their **car** or **bike**; friends with
-  neither aren't shown. Nobody's bay is reserved, yours included.
+  neither aren't shown. Friends of your friends' cars and bikes are there
+  too, see-through; tap a car to ask its owner to be friends. Nobody's bay is
+  reserved, yours included.
 - **Do:** walk in (office) · the Friends board (friends, requests and invites) · the garden
   gate (only while you're on a break) · go home (while you're at work) · log out.
 - **Hear:** open-air weather, distant traffic.
 
 ### Office
 - **See:** twelve identical desks in four rows of three. When you walk in you
-  get a random desk that none of your friends at work is using, and it stays
-  yours (across breaks) until you go home. Friends appear at their desks as
+  get a random desk that none of your friends at work is using (nor their
+  friends), and it stays yours (across breaks) until you go home, or you move
+  to an empty one. Friends appear at their desks as
   they arrive: sitting with their back to you and their monitor glowing while
   they study, an empty chair otherwise. You sit at yours while you're in the
   office, among them rather than in front. Everyone's desk shows what they've
-  bought for it. Frosted windows with blinds let the light in, and rain runs
+  bought for it. Friends of your friends at work sit there too, see-through,
+  with their names dimmed. Frosted windows with blinds let the light in, and rain runs
   down the glass, but they show no sky.
 - **Do, before a session:** choose a length (1–120 min) and start, or walk out.
   Tap a friend's desk to see how long they've got left; while they study,
-  **Join** them (see *Studying together*).
+  **Join** them (see *Studying together*). Tap a friend of a friend to see
+  which of your friends they know, and ask them to be friends. Tap an empty
+  desk to move to it (**Sit here**); your bay and rack slot move with you.
 - **Do, during a session:** nothing else. There's the countdown and a small
   *give up* link, which forfeits the session. The chip balance, shop and all
   navigation are hidden. **Stay on the page**: on a phone, switch apps or
@@ -298,7 +304,10 @@ touching code.
 - Sign-up is invite-only. Invites are 8-character codes (no look-alike
   characters) that last 14 days; you can hold 5 unused ones at a time.
 - Whoever joins with your invite starts out as your friend. Friendships stay
-  pairwise: you see your friends, not your friends' friends.
+  pairwise, but friends of your friends who are at work show see-through at
+  their desks and in their bays, with which of your friends they know. They
+  see you the same way. Their profile, garden and chat stay private until
+  you're friends.
 
 ### Cigarettes
 Smoked in the garden, one at a time. Each burns for **3 minutes**, getting
@@ -451,7 +460,8 @@ deployment/               numbered runbooks for setting up and shipping each upd
   status, inventory, plots and trades. Clients never write tables. Every change
   is a security-definer Postgres function using `auth.uid()`, and RLS only
   allows reads.
-- **Polling:** the world polls `get_me` and `get_friends_board` every 10 s and
+- **Polling:** the world polls `get_me`, `get_friends_board` and
+  `get_friends_of_friends` every 10 s and
   when the app regains focus (back on the page mid-session, the first poll is
   `back_to_page` instead). The garden polls `get_garden` every 5 s. A poll that
   comes back after an action's own answer (going home, say) is dropped, so it
@@ -461,10 +471,11 @@ deployment/               numbered runbooks for setting up and shipping each upd
   `realtime.messages` lets you listen to your own and your friends' channels,
   and speak only on your own. Your own channel is how your devices keep
   together.
-- **Seats:** the server hands out desks so friends at work never share one.
-  Two of your friends who aren't friends with each other can hold the same
-  number, though; then the later arrival moves along to the next free desk on
-  your screen. Plot slots past the 21 cells of the grid wrap round the same way.
+- **Seats:** the server hands out desks so nobody shares one with a friend, or
+  a friend of a friend, at work; moving desks keeps to the same rule. People
+  further apart can hold the same number, though; then the later arrival moves
+  along to the next free desk on your screen (friends of friends after your
+  friends). Plot slots past the 21 cells of the grid wrap round the same way.
 - **Clock:** every RPC returns `server_now` and the client corrects its
   countdowns with it.
 - **Routing:** while a session runs, every place except the office is removed
@@ -503,6 +514,8 @@ deployment/               numbered runbooks for setting up and shipping each upd
 | `get_friend_requests()`, `answer_friend_request(username, accept)`, `withdraw_friend_request(username)` | signed in (0010) | requests to you and from you |
 | `get_profile(username)` | a friend (0010) | their profile |
 | `join_session(username, device)` | not studying; they're a friend who is, with a minute or more to go (0010) | me |
+| `get_friends_of_friends()` | signed in (0011) | friends of friends at work, with `via` |
+| `switch_desk(desk)` | at work, not studying; nobody in your circle at it (0011) | me |
 | `remove_friend(username)` | signed in, a friend (0008) | the username |
 | `arrive()` | signed in (gives you a desk if you haven't one) | me |
 | `start_session(minutes, device)` | not studying | me |
@@ -611,6 +624,9 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 - [x] Migration `0010_friend_requests_and_joining.sql`: asking to be friends,
       friends' profiles, and joining a friend's session (68 scenario tests in
       all). The noticeboard is called the Friends board.
+- [x] Migration `0011_desks_and_friends_of_friends.sql`: friends of friends
+      at work show see-through in the office and the car park, desks avoid
+      them, and you can move to an empty desk (71 scenario tests in all).
 
 **M2: feel**
 - Illustrated art, recorded audio (layer by layer), a typeface, gentle
@@ -637,7 +653,8 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 | How does a break end? | An earned break timer (1 min per 5 studied), then a bell and a choice of office or home. |
 | Perspective | Top-front for every place, with no sky: time of day only shows as the scene's changing hues. |
 | Web hosting | EAS Hosting with a static export; Supabase for the backend. |
-| Social model | Pairwise friendships, as in the MVP. |
+| Social model | Pairwise friendships, as in the MVP. Friends of friends at work show see-through, so you can ask them to be friends. |
+| Changing desks | Tap an empty desk between sessions. Your bay follows. |
 | Un-adding a friend | "Unpin" on the Friends board, after a question. It ends the friendship both ways and calls off offers between you; nobody is told. |
 | Adding a friend | Asks them first; they accept or say not now, and the asker isn't told which. Invites still make you friends at once. |
 | A friend's profile | Shows minutes, sessions and days studied, and what they're worth (chips plus the shed's price of what they own). Only friends see it. |
@@ -667,11 +684,11 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 
 ## 13. Open questions
 
-1. **Overlapping friend circles:** with pairwise friendships, two of your
-   friends who aren't friends with each other can hold the same desk number.
-   Each viewer then sees one of them moved along a desk, so people can sit in
-   slightly different places on different screens. Rare in a friend group;
-   shared "offices" (groups) would remove it.
+1. **Overlapping friend circles:** with pairwise friendships, two people three
+   steps apart can hold the same desk number. Each viewer then sees one of them
+   moved along a desk, so people can sit in slightly different places on
+   different screens. Since 0011 desks avoid friends of friends too, so it's
+   rare; shared "offices" (groups) would remove it.
 2. **Swaps by offer:** keep asynchronous offers alongside the face-to-face
    market, or make all trading face to face?
 3. **Thumbstick on computers:** keep it on screen when there's a keyboard, or

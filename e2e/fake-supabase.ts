@@ -2,6 +2,7 @@ import type { Page, Route, WebSocketRoute } from '@playwright/test';
 
 import type {
   Friend,
+  FriendOfFriend,
   FriendRequests,
   Garden,
   Invite,
@@ -151,6 +152,8 @@ export class FakeSupabase {
       activity: null,
     },
   ];
+  /** Friends of your friends who are at work. */
+  friendsOfFriends: FriendOfFriend[] = [];
   /** Asking to be friends: who has asked you, and whom you've asked. */
   requests: FriendRequests = { to_you: [], from_you: [] };
   /** What a friend's profile says, whoever they are. */
@@ -449,6 +452,16 @@ export class FakeSupabase {
     get_friends_board: () => this.friends,
     get_invites: (): Invite[] => this.invites,
     get_friend_requests: () => this.requests,
+    get_friends_of_friends: () => this.friendsOfFriends,
+    switch_desk: ({ p_desk }) => {
+      const desk = Number(p_desk);
+      if (this.me.status === 'focused')
+        throw new Error("You can't change desks while you're studying");
+      if ([...this.friends, ...this.friendsOfFriends].some((f) => f.desk === desk))
+        throw new Error("Someone's at that desk");
+      Object.assign(this.me, { desk, place: 'office' } satisfies Partial<Me>);
+      return this.now();
+    },
     add_friend: ({ p_username }) => {
       const username = normalUsername(String(p_username));
       if (this.friends.some((f) => f.username === username))

@@ -77,3 +77,23 @@ test("tapping a friend shows what they've studied and what they're worth", async
   await expect(page.getByText('1,420')).toBeVisible();
   expect(fake.called('get_profile')).toEqual([{ p_username: 'bob' }]);
 });
+
+test("a friend of a friend's car is in their bay, and tapping it asks", async ({ page, fake }) => {
+  fake.friendsOfFriends = [
+    {
+      username: 'dave',
+      display_name: 'Dave',
+      status: 'focused',
+      place: 'office',
+      arrived_at: iso(-10),
+      vehicle: 'hatchback',
+      desk_items: ['duck'],
+      desk: 2,
+      via: ['Bob'],
+    },
+  ];
+  await fake.open('/');
+  await button(page, "Dave's car").click();
+  await expect(page.getByText('@dave · friends with Bob')).toBeVisible();
+  await expect(button(page, 'Ask to be friends')).toBeVisible();
+});
