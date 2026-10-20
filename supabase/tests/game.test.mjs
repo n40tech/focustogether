@@ -180,7 +180,7 @@ before(async () => {
 beforeEach(async () => {
   await q(
     `truncate public.sessions, public.inventory, public.plots, public.trades, public.listings,
-       public.letters, public.friend_requests`
+       public.letters, public.friend_requests, public.desk_layout`
   );
   await q(
     `update public.profiles set chips = 0, vehicle = null, went_home_at = null, activity = null,
@@ -1047,6 +1047,8 @@ describe('the friends board and garden', () => {
     await call('bob', 'buy', 'lamp');
     await call('bob', 'buy', 'mug');
     await call('bob', 'buy', 'bike');
+    await call('bob', 'place_desk_item', 'mug', 36, -26);
+    await call('bob', 'place_desk_item', 'lamp', -36, -24);
     await call('bob', 'start_session', 30);
 
     const board = await call('alice', 'get_friends_board');
@@ -1058,7 +1060,11 @@ describe('the friends board and garden', () => {
     assert.equal(bob.status, 'focused');
     assert.ok(bob.ends_at);
     assert.equal(bob.vehicle, 'bike');
-    assert.deepEqual(bob.desk_items, ['mug', 'lamp']);
+    // Back to front.
+    assert.deepEqual(bob.desk_items, [
+      { item: 'mug', x: 36, y: -26 },
+      { item: 'lamp', x: -36, y: -24 },
+    ]);
     assert.ok(bob.desk >= 0);
     assert.equal('chips' in bob, false);
     assert.equal('points' in bob, false);
@@ -1711,5 +1717,57 @@ describe('looks', () => {
     assert.equal((await call('alice', 'get_looks')).carol.skin, 5);
     assert.equal((await call('carol', 'get_looks')).carol.colour, 2);
     assert.equal('carol' in (await call('mate1', 'get_looks')), false);
+  });
+});
+
+describe('arranging your desk', () => {
+  const things = async (user) =>
+    (await call(user, 'get_me')).desk_items.map(({ item, x, y }) => [item, x, y]);
+
+  test('new things start in the drawer, and go where you put them, kept to the desk top', async () => {
+    await give('alice', 'mug', 1);
+    await give('alice', 'lamp', 1);
+    assert.deepEqual(await things('alice'), []);
+
+    const me = await call('alice', 'place_desk_item', 'mug', 10.5, -20);
+    assert.deepEqual(me.desk_items, [{ item: 'mug', x: 10.5, y: -20 }]);
+    await call('alice', 'place_desk_item', 'lamp', 99, -99);
+    assert.deepEqual(await things('alice'), [
+      ['lamp', 42, -44],
+      ['mug', 10.5, -20],
+    ]);
+    // Friends see it as it is.
+    const board = await call('bob', 'get_friends_board');
+    assert.deepEqual(board.find((f) => f.username === 'alice').desk_items, [
+      { item: 'lamp', x: 42, y: -44 },
+      { item: 'mug', x: 10.5, y: -20 },
+    ]);
+  });
+
+  test('things put away go back in the drawer, and can come out again', async () => {
+    await give('alice', 'mug', 1);
+    await give('alice', 'duck', 1);
+    await call('alice', 'place_desk_item', 'mug', -36, -24);
+    await call('alice', 'place_desk_item', 'duck', 36, -26);
+    await call('alice', 'store_desk_item', 'mug');
+    assert.deepEqual(await things('alice'), [['duck', 36, -26]]);
+    assert.equal((await call('alice', 'get_me')).inventory.mug, 1, 'still yours, in the drawer');
+    await call('alice', 'place_desk_item', 'mug', 0, -40);
+    assert.deepEqual((await things('alice'))[0], ['mug', 0, -40]);
+  });
+
+  test('only between sessions, and only your own desk things', async () => {
+    await give('alice', 'mug', 1);
+    await give('alice', 'tomato', 2);
+    await rejects(call('alice', 'place_desk_item', 'lamp', 0, -20), /haven't got that/);
+    await rejects(call('alice', 'place_desk_item', 'tomato', 0, -20), /haven't got that/);
+    await rejects(call('alice', 'place_desk_item', 'mug', null, -20), /Somewhere on the desk/);
+    await call('alice', 'start_session', 25);
+    await rejects(call('alice', 'place_desk_item', 'mug', 0, -20), /Not while you're studying/);
+    await rejects(call('alice', 'store_desk_item', 'mug'), /Not while you're studying/);
+    await rejects(
+      asUser('alice', `insert into public.desk_layout values ($1, 'mug', 0, -20)`, [ids.alice]),
+      /row-level security/
+    );
   });
 });

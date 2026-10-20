@@ -10,6 +10,8 @@ export type ItemKind = 'vehicle' | 'desk' | 'seed' | 'produce' | 'cigarette';
 export type Place = 'office' | 'garden' | 'outside';
 /** Item slug -> how many you have. */
 export type Inventory = Record<string, number>;
+/** A desk thing where it sits on its desk, in desk units from the desk's front-centre. */
+export type DeskThing = { item: string; x: number; y: number };
 
 export type Me = {
   id: string;
@@ -56,6 +58,8 @@ export type Me = {
   friend_requests: number;
   /** Tips you've seen through or put away (see src/components/Tip). */
   tips: string[];
+  /** What's on your desk, back to front. Desk things you own that aren't here are in the drawer. */
+  desk_items: DeskThing[];
   inventory: Inventory;
   /** Testing tools on (profiles.tester, set in the SQL editor). */
   tester: boolean;
@@ -75,8 +79,8 @@ export type Friend = {
   place: Place | null;
   arrived_at: string | null;
   vehicle: string | null;
-  /** Desk item slugs, in display order. */
-  desk_items: string[];
+  /** What's on their desk, back to front. */
+  desk_items: DeskThing[];
   activity: Activity;
 };
 
@@ -248,6 +252,11 @@ export const api = {
   removeFriend: (username: string) =>
     rpc<{ username: string }>('remove_friend', { p_username: username }),
 
+  /** Puts one of your desk things at (x, y) on your desk; the server keeps it to the desk top. */
+  placeDeskItem: (item: string, x: number, y: number) =>
+    rpc<Me>('place_desk_item', { p_item: item, p_x: x, p_y: y }),
+  /** Puts one of your desk things away in the drawer. */
+  storeDeskItem: (item: string) => rpc<Me>('store_desk_item', { p_item: item }),
   /** Sits you at another desk, if nobody you know (or they know) is at it. */
   switchDesk: (desk: number) => rpc<Me>('switch_desk', { p_desk: desk }),
   /** Moves you (going to the office hands you a desk if you've just arrived). */

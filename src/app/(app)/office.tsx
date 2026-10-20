@@ -7,6 +7,7 @@ import { Scene, useTone } from '@/art/Scene';
 import { playSound, useAmbience } from '@/audio/sound';
 import { Button } from '@/components/Button';
 import { Body, SceneHeader, Sheet } from '@/components/Chrome';
+import { ArrangeSheet } from '@/components/ArrangeSheet';
 import { Countdown } from '@/components/Countdown';
 import { FriendOfFriendSheet } from '@/components/FriendOfFriendSheet';
 import { StudyPanel } from '@/components/StudyPanel';
@@ -27,6 +28,7 @@ export default function Office() {
   const studying = me.status === 'focused';
   // The desk you tapped: a friend's, a friend of a friend's, or an empty one.
   const [tapped, setTapped] = useState<number | null>(null);
+  const [arranging, setArranging] = useState(false);
 
   // Walking in sits you at your desk: a random free one when you've just
   // arrived, kept until you go home. You stay there (for friends too) until you
@@ -95,7 +97,16 @@ export default function Office() {
       overlay={overlay}
     >
       <SceneHeader place="Office" chips={studying ? undefined : me.chips} />
-      <StudyPanel me={me} setMe={setMe} refresh={refresh} onWalkOut={walkOut} />
+      <StudyPanel
+        me={me}
+        setMe={setMe}
+        refresh={refresh}
+        onWalkOut={walkOut}
+        onArrange={() => setArranging(true)}
+      />
+      {arranging && !studying && (
+        <ArrangeSheet me={me} setMe={setMe} onClose={() => setArranging(false)} />
+      )}
       {friend && (
         <DeskSheet
           friend={friend}

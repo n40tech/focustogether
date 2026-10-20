@@ -20,10 +20,12 @@ type Props = {
   setMe: (me: Me) => void;
   refresh: () => void;
   onWalkOut: () => void;
+  /** Opens your desk, to arrange it (between sessions). */
+  onArrange: () => void;
 };
 
 /** The office's bottom panel: pick a length and start, or the running countdown. */
-export function StudyPanel({ me, setMe, refresh, onWalkOut }: Props) {
+export function StudyPanel({ me, setMe, refresh, onWalkOut, onArrange }: Props) {
   const tone = useTone();
   const [minutes, setMinutes] = useState(25);
   const [busy, setBusy] = useState(false);
@@ -159,7 +161,16 @@ export function StudyPanel({ me, setMe, refresh, onWalkOut }: Props) {
         {`Earns about ${minutes} chip${minutes === 1 ? '' : 's'} and a ${breakMinutes(minutes)} min break.`}
       </Muted>
       <Button title={`Start ${minutes} min`} onPress={start} disabled={busy} />
-      <Button title="Walk out" variant="ghost" small onPress={onWalkOut} />
+      <View style={styles.presets}>
+        <Button
+          title="Arrange your desk"
+          variant="ghost"
+          small
+          onPress={onArrange}
+          style={styles.preset}
+        />
+        <Button title="Walk out" variant="ghost" small onPress={onWalkOut} style={styles.preset} />
+      </View>
       {error && <Text style={{ color: tone.danger, textAlign: 'center' }}>{error}</Text>}
     </Panel>
   );

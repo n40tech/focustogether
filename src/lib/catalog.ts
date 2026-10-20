@@ -52,9 +52,11 @@ export function countOf(slug: string, qty: number) {
   return `${qty} ${name.toLowerCase()}`;
 }
 
-/** Desk items you own, in the order they're arranged on a desk. */
-export function deskItemsOf(inventory: Record<string, number>) {
-  return Object.keys(ITEMS).filter((slug) => ITEMS[slug].kind === 'desk' && inventory[slug]);
+/** Desk things you own that aren't on your desk: they're in the drawer. */
+export function inTheDrawer(inventory: Record<string, number>, onDesk: { item: string }[]) {
+  return Object.keys(ITEMS).filter(
+    (slug) => ITEMS[slug].kind === 'desk' && inventory[slug] && !onDesk.some((t) => t.item === slug)
+  );
 }
 
 /** The seed packet a crop grows from, and vice versa. */

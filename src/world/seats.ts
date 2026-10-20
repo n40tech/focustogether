@@ -1,5 +1,4 @@
-import { DESKS, type Friend, type FriendOfFriend, type Me } from '@/lib/api';
-import { deskItemsOf } from '@/lib/catalog';
+import { DESKS, type DeskThing, type Friend, type FriendOfFriend, type Me } from '@/lib/api';
 
 /** Someone at work, and so at a desk (and, if they have one, a bay or rack slot). */
 export type Seat = {
@@ -10,7 +9,7 @@ export type Seat = {
   /** Sitting at their desk: studying, or still there after a session until they get up. */
   atDesk: boolean;
   vehicle: string | null;
-  deskItems: string[];
+  deskItems: DeskThing[];
   /** A friend of a friend (not yours yet): which of your friends they know. */
   via?: string[];
 };
@@ -46,7 +45,7 @@ export function seatsOf(
       studying: me.status === 'focused',
       atDesk: me.status === 'focused' || me.place === 'office',
       vehicle: me.vehicle,
-      deskItems: deskItemsOf(me.inventory),
+      deskItems: me.desk_items,
     });
   }
   const byArrival = (a: { arrived_at: string | null }, b: { arrived_at: string | null }) =>

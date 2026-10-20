@@ -52,7 +52,7 @@ function stacksFor(amount: number) {
 
 export default function Payout() {
   useAmbience('office');
-  const { me, friends, setMe } = useWorld();
+  const { me, friends, friendsOfFriends, setMe } = useWorld();
   const conditions = useConditions();
   const go = useGo();
   const session = me.status === 'on_break' ? me.last_completed : null;
@@ -100,7 +100,7 @@ export default function Payout() {
   };
 
   // A closer look at your own desk in the office, just as it is out there.
-  const seats = seatsOf(me, friends);
+  const seats = seatsOf(me, friends, friendsOfFriends);
   const mine = Math.max(
     0,
     seats.findIndex((s) => s?.isMe)

@@ -84,6 +84,10 @@ agreed; **Open questions** lists what hasn't.
   **Join** them (see *Studying together*). Tap a friend of a friend to see
   which of your friends they know, and ask them to be friends. Tap an empty
   desk to move to it (**Sit here**); your bay and rack slot move with you.
+  **Arrange your desk** opens a close-up of it: drag things from the drawer
+  (along the top) onto the desk, drag them about, or drag them back up to put
+  them away. A tip says so the first time, and for a keyboard you can pick a
+  thing by name and move it with arrow buttons. Not while you study.
 - **Do, during a session:** nothing else. There's the countdown and a small
   *give up* link, which forfeits the session. The chip balance, shop and all
   navigation are hidden. **Stay on the page**: on a phone, switch apps or
@@ -246,7 +250,8 @@ they're nearly done instead.
 | Cigarettes | Pack of 5 · 8 |
 
 Vehicles and desk items are one-offs. Buying a vehicle makes it the one you
-arrive in. The catalogue is one table (`items`), so prices are tuned without
+arrive in. Buying something for your desk opens your desk there and then,
+with the new thing waiting at the top for you to drag onto it. The catalogue is one table (`items`), so prices are tuned without
 touching code.
 
 ### Allotment
@@ -515,6 +520,7 @@ deployment/               numbered runbooks for setting up and shipping each upd
 | `sessions` | + `skipped`: ended early by `skip_first_session` (0009) |
 | `friend_requests` | from, to, asked at: waiting to be answered (0010) |
 | `profiles` | + `looks`: skin, colour, hair and hair colour you chose, or null (0012) |
+| `desk_layout` | (player, desk thing) → where it sits on their desk; no row means it's in the drawer (0013) |
 
 | RPC | Allowed when | Returns |
 |---|---|---|
@@ -526,6 +532,7 @@ deployment/               numbered runbooks for setting up and shipping each upd
 | `get_friends_of_friends()` | signed in (0011) | friends of friends at work, with `via` |
 | `switch_desk(desk)` | at work, not studying; nobody in your circle at it (0011) | me |
 | `get_looks()`, `set_looks(looks)` | signed in (0012) | looks of you, friends and theirs, by username |
+| `place_desk_item(item, x, y)`, `store_desk_item(item)` | not studying; a desk thing you own (0013) | me |
 | `remove_friend(username)` | signed in, a friend (0008) | the username |
 | `arrive()` | signed in (gives you a desk if you haven't one) | me |
 | `start_session(minutes, device)` | not studying | me |
@@ -639,6 +646,9 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
       them, and you can move to an empty desk (71 scenario tests in all).
 - [x] Migration `0012_looks.sql`: choose your skin, favourite colour,
       hairstyle and hair colour in the garden (73 scenario tests in all).
+- [x] Migration `0013_arranging_desks.sql`: drag your desk things where you
+      want them, or into the drawer; something new from the shed goes straight
+      onto your desk by dragging (76 scenario tests in all).
 
 **M2: feel**
 - Illustrated art, recorded audio (layer by layer), a typeface, gentle
@@ -647,7 +657,7 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
   they pass each other.
 - Server-side weather, so rain waters everyone's plots.
 - "Session over" and "break over" notifications (web push on web).
-- Arranging your desk, and choosing which owned vehicle to arrive in.
+- Choosing which owned vehicle to arrive in. (Arranging your desk came in 0013.)
 
 **M3: native apps**
 - Development build (`eas build --profile development`), the native audio
@@ -668,6 +678,7 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 | Social model | Pairwise friendships, as in the MVP. Friends of friends at work show see-through, so you can ask them to be friends. |
 | Changing desks | Tap an empty desk between sessions. Your bay follows. |
 | Looks | Chosen in the garden from a few skin tones, colours, hairstyles and hair colours. Until then, picked from your username. |
+| Arranging a desk | Drag things where you want them, between sessions. Something new from the shed starts in the drawer, and you drag it onto your desk there and then. |
 | Un-adding a friend | "Unpin" on the Friends board, after a question. It ends the friendship both ways and calls off offers between you; nobody is told. |
 | Adding a friend | Asks them first; they accept or say not now, and the asker isn't told which. Invites still make you friends at once. |
 | A friend's profile | Shows minutes, sessions and days studied, and what they're worth (chips plus the shed's price of what they own). Only friends see it. |

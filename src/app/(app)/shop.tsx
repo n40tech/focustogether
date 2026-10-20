@@ -7,6 +7,7 @@ import { ItemIcon } from '@/art/ItemIcon';
 import { Box, Dot } from '@/art/primitives';
 import { BLEED, Scene, useTone } from '@/art/Scene';
 import { playSound, useAmbience } from '@/audio/sound';
+import { ArrangeSheet } from '@/components/ArrangeSheet';
 import { Button } from '@/components/Button';
 import { ChipIcon, Muted, SceneHeader } from '@/components/Chrome';
 import { api, SMOKE_MINUTES, type ItemKind, type Shop, type ShopItem } from '@/lib/api';
@@ -42,7 +43,9 @@ export default function ShedShop() {
   useAmbience('indoors');
   const { from } = useLocalSearchParams<{ from?: string }>();
   const back = BACK[from ?? 'index'] ?? BACK.index;
-  const { refresh } = useWorld();
+  const { me, setMe, refresh } = useWorld();
+  // Something for your desk, just bought: you put it on your desk straight away.
+  const [arranging, setArranging] = useState<string | null>(null);
   const conditions = useConditions();
   const go = useGo();
   const [shop, setShop] = useState<Shop | null>(null);
@@ -60,7 +63,8 @@ export default function ShedShop() {
       try {
         setShop(await api.buy(item.slug));
         playSound('coin');
-        refresh();
+        await refresh();
+        if (item.kind === 'desk') setArranging(item.slug);
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       } finally {
@@ -102,6 +106,9 @@ export default function ShedShop() {
       <SceneHeader place="Shed" chips={shop?.chips} />
       <Catalogue shop={shop} busy={busy} error={error} onBuy={buy} />
       <Leave label={back.label} onPress={() => go(back.href, null)} />
+      {arranging && (
+        <ArrangeSheet me={me} setMe={setMe} fresh={arranging} onClose={() => setArranging(null)} />
+      )}
     </Scene>
   );
 }

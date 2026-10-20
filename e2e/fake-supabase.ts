@@ -48,6 +48,7 @@ export const ALL_TIPS = [
   'post',
   'invite',
   'home_screen',
+  'arrange',
 ];
 
 const USER_ID = '00000000-0000-4000-8000-00000000000a';
@@ -132,6 +133,7 @@ export class FakeSupabase {
     ripe: [],
     letters: 0,
     friend_requests: 0,
+    desk_items: [],
     tips: [...ALL_TIPS],
     inventory: { tomato_seeds: 2, tomato: 3, carrot: 2 },
     tester: false,
@@ -149,7 +151,7 @@ export class FakeSupabase {
       place: 'garden',
       arrived_at: iso(-30),
       vehicle: 'bike',
-      desk_items: ['mug'],
+      desk_items: [{ item: 'mug', x: -36, y: -24 }],
       activity: null,
     },
   ];
@@ -457,6 +459,17 @@ export class FakeSupabase {
     get_friend_requests: () => this.requests,
     get_friends_of_friends: () => this.friendsOfFriends,
     get_looks: () => this.looks,
+    place_desk_item: ({ p_item, p_x, p_y }) => {
+      const item = String(p_item);
+      const x = Math.max(-42, Math.min(42, Number(p_x)));
+      const y = Math.max(-44, Math.min(-12, Number(p_y)));
+      this.me.desk_items = [...this.me.desk_items.filter((t) => t.item !== item), { item, x, y }];
+      return this.now();
+    },
+    store_desk_item: ({ p_item }) => {
+      this.me.desk_items = this.me.desk_items.filter((t) => t.item !== p_item);
+      return this.now();
+    },
     set_looks: ({ p_looks }) => {
       this.looks = { ...this.looks, [this.me.username]: p_looks as Looks };
       return this.looks;
@@ -683,6 +696,7 @@ export class FakeSupabase {
       if (!item) throw new Error("The shed doesn't sell that");
       this.me.chips -= item.price;
       item.owned += item.pack_size;
+      this.give(item.slug, item.pack_size);
       if (item.kind === 'vehicle') this.me.vehicle = item.slug;
       return this.shopNow();
     },

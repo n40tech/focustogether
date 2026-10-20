@@ -1,6 +1,6 @@
 import { Animated } from 'react-native';
 
-import { DESKS } from '@/lib/api';
+import { DESKS, type DeskThing } from '@/lib/api';
 import { palette } from '@/lib/theme';
 import type { Seat } from '@/world/seats';
 import { rand, useLoop } from './motion';
@@ -127,18 +127,6 @@ function Surroundings() {
   );
 }
 
-/** Where things sit on a desk top, relative to the desk's front-centre. */
-const SLOTS: [number, number][] = [
-  [-36, -24],
-  [36, -26],
-  [-40, -38],
-  [40, -38],
-  [-24, -16],
-  [24, -16],
-  [-30, -44],
-  [30, -44],
-];
-
 /**
  * A desk seen from above and in front, facing away from us. `x` is its centre
  * and `y` the bottom of its front edge. Someone sitting at it has their back to
@@ -162,7 +150,8 @@ export function Desk({
   leanBack?: number;
   /** Whether the monitor is on; by default, whenever someone's sitting here. */
   screenOn?: boolean;
-  items?: string[];
+  /** What's on it, where (see public.desk_layout). */
+  items?: DeskThing[];
   scale?: number;
   /** A friend of a friend's: they and their things are drawn see-through. */
   faint?: boolean;
@@ -189,14 +178,8 @@ export function Desk({
       {/* keyboard */}
       <Box x={x - 15 * s} y={y - 30 * s} w={30 * s} h={7 * s} c="#d8d2c6" r={2 * s} />
       <Faint on={faint}>
-        {items.slice(0, SLOTS.length).map((item, i) => (
-          <DeskItem
-            key={item}
-            item={item}
-            x={x + SLOTS[i][0] * s}
-            y={y + SLOTS[i][1] * s}
-            scale={s}
-          />
+        {items.map((t) => (
+          <DeskItem key={t.item} item={t.item} x={x + t.x * s} y={y + t.y * s} scale={s} />
         ))}
         {occupant && <Person username={occupant} x={x} y={y + (12 + leanBack) * s} pose="sit" />}
       </Faint>
@@ -222,7 +205,7 @@ export function DeskGlow({
   x: number;
   y: number;
   on: boolean;
-  items?: string[];
+  items?: DeskThing[];
   scale?: number;
 }) {
   const s = scale;
@@ -234,8 +217,7 @@ export function DeskGlow({
           <Box x={x - 17 * s} y={y - 67 * s} w={34 * s} h={22 * s} c="#d4ecf8" r={2 * s} />
         </>
       )}
-      {items.slice(0, SLOTS.length).map((item, i) => {
-        const [dx, dy] = SLOTS[i];
+      {items.map(({ item, x: dx, y: dy }) => {
         if (item === 'lamp')
           return (
             <Glow

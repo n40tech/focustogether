@@ -8,7 +8,8 @@ Adding a friend asks them first. A friend's profile shows what they've
 studied and what they're worth. In the office, you can join a friend's
 session so you finish together, and move to an empty desk. Friends of your
 friends at work show see-through, so you can ask them to be friends. In
-the garden, everyone can choose how they look.
+the garden, everyone can choose how they look, and in the office everyone
+can arrange their desk.
 
 ---
 
@@ -64,7 +65,30 @@ If `false`, run `supabase/migrations/0012_looks.sql` the same way. It adds
 `profiles.looks` (empty for everyone, so nobody's look changes until they
 choose) and the two functions. Afterwards the query says `true`.
 
-## 4. Merge
+## 4. Run migration 0013
+
+The new app calls `place_desk_item` and `store_desk_item`, and expects desk
+things with positions. Check:
+
+```sql
+select to_regclass('public.desk_layout') is not null as done;
+```
+
+If `false`, run `supabase/migrations/0013_arranging_desks.sql` the same way.
+It puts everyone's desk things where they're drawn today (rehearsed on a
+database with a full desk), then replaces `get_me`, `get_friends_board` and
+`get_friends_of_friends`. Afterwards the query says `true`, and every desk
+thing anyone owns has a place:
+
+```sql
+select count(*) from public.inventory i join public.items it on it.slug = i.item
+where it.kind = 'desk' and not exists (
+  select 1 from public.desk_layout l where l.user_id = i.user_id and l.item = i.item);
+```
+
+That should say 0.
+
+## 5. Merge
 
 Merging deploys the app (GitHub Actions). Then, with a friend:
 
@@ -77,3 +101,5 @@ Merging deploys the app (GitHub Actions). Then, with a friend:
 - [ ] With a friend of a friend at work, they show see-through at their
       desk; tapping them offers **Ask to be friends**.
 - [ ] In the garden, **Your look**: save a new look, and a friend sees it.
+- [ ] **Arrange your desk**: drag something to a new place, and a friend
+      sees it there.

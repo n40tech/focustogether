@@ -87,7 +87,7 @@ test("a friend of a friend's car is in their bay, and tapping it asks", async ({
       place: 'office',
       arrived_at: iso(-10),
       vehicle: 'hatchback',
-      desk_items: ['duck'],
+      desk_items: [{ item: 'duck', x: 36, y: -26 }],
       desk: 2,
       via: ['Bob'],
     },
