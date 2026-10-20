@@ -168,7 +168,7 @@ function FriendCard({ friend: f, onRemoved }: { friend: Friend; onRemoved: () =>
           />
         )}
       </View>
-      {open && <FriendProfile username={f.username} lastActive />}
+      {open && <FriendProfile username={f.username} />}
       {asking && (
         <View style={{ gap: 6 }}>
           <Muted>

@@ -159,7 +159,7 @@ function EmptyDeskSheet({
   return (
     <Sheet title={`Desk ${desk + 1}`} onClose={onClose}>
       <View style={{ gap: 10 }}>
-        <Body>{"Nobody's at this desk. Your bay outside moves with you."}</Body>
+        <Body>{"Nobody's at this desk."}</Body>
         <Button title="Sit here" onPress={sit} disabled={busy} />
         {error && <Text style={{ color: tone.danger, fontSize: 13 }}>{error}</Text>}
       </View>

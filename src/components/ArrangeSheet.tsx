@@ -8,9 +8,9 @@ import { playSound } from '@/audio/sound';
 import { Button } from '@/components/Button';
 import { Muted, Sheet } from '@/components/Chrome';
 import { Tip } from '@/components/Tip';
-import { api, type Me } from '@/lib/api';
+import { api, type DeskThing, type Me } from '@/lib/api';
 import { inTheDrawer, itemInfo } from '@/lib/catalog';
-import { font, palette } from '@/lib/theme';
+import { palette } from '@/lib/theme';
 
 // Your desk, drawn S times bigger than in the office, its front-centre at
 // (W / 2, Y0), with its drawer pulled open in front of it.
@@ -27,7 +27,6 @@ const DRAWER_Y = 21;
 const drawerX = (i: number, n: number) => -38 + i * Math.min(22, 76 / Math.max(1, n - 1));
 /** Dropped lower than this (off the desk top, into the drawer), a thing is put away. */
 const PUT_AWAY_Y = -6;
-const NUDGE = 4;
 const P = palette.office;
 
 const nameOf = (slug: string) => itemInfo(slug).name.toLowerCase();
@@ -38,7 +37,6 @@ type Drag = { item: string; x: number; y: number; dx: number; dy: number; moved:
 /**
  * Arranging your desk, between sessions. Its drawer is open: drag things
  * from it onto the desk, about the desk, or back into it to put them away.
- * For a keyboard: pick a thing by name, then move it with the arrows.
  */
 export function ArrangeSheet({
   me,
@@ -53,7 +51,6 @@ export function ArrangeSheet({
   onClose: () => void;
 }) {
   const tone = useTone();
-  const [held, setHeld] = useState<string | null>(fresh ?? null);
   const [drag, setDrag] = useState<Drag | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Where the stage's top-left corner is on the page, found when a drag starts.
@@ -61,29 +58,37 @@ export function ArrangeSheet({
 
   const onDesk = me.desk_items;
   const drawer = inTheDrawer(me.inventory, onDesk);
-  const heldThing = onDesk.find((t) => t.item === held);
   const spots = [
     ...onDesk.map((t) => ({ item: t.item, x: t.x, y: t.y })),
     ...drawer.map((item, i) => ({ item, x: drawerX(i, drawer.length), y: DRAWER_Y })),
   ];
 
-  const run = async (action: () => Promise<Me>) => {
+  // Shows the desk as it will be straight away, so a dropped thing stays where
+  // it was dropped, then as the server has it (or as it was, if that fails).
+  const run = async (next: DeskThing[], action: () => Promise<Me>) => {
     setError(null);
+    setMe({ ...me, desk_items: next });
     try {
       setMe(await action());
       playSound('paper');
     } catch (e) {
+      setMe(me);
       setError(e instanceof Error ? e.message : String(e));
     }
   };
-  const place = (item: string, x: number, y: number) =>
-    run(() =>
-      api.placeDeskItem(item, clamp(x, TOP.left, TOP.right), clamp(y, TOP.back, TOP.front))
+  const place = (item: string, x: number, y: number) => {
+    const thing = { item, x: clamp(x, TOP.left, TOP.right), y: clamp(y, TOP.back, TOP.front) };
+    // In the server's order (private.desk_items_of), back to front.
+    const next = [...onDesk.filter((t) => t.item !== item), thing].sort(
+      (a, b) => a.y - b.y || a.x - b.x
     );
-  const putAway = (item: string) => {
-    setHeld(null);
-    run(() => api.storeDeskItem(item));
+    run(next, () => api.placeDeskItem(item, thing.x, thing.y));
   };
+  const putAway = (item: string) =>
+    run(
+      onDesk.filter((t) => t.item !== item),
+      () => api.storeDeskItem(item)
+    );
 
   /** A point on the stage, in desk units. */
   const at = (e: GestureResponderEvent) => ({
@@ -101,7 +106,6 @@ export function ArrangeSheet({
       .filter(({ d }) => d < 12)
       .sort((a, b) => a.d - b.d)[0]?.s;
     if (hit) {
-      setHeld(hit.item);
       setDrag({
         item: hit.item,
         x: hit.x,
@@ -110,8 +114,6 @@ export function ArrangeSheet({
         dy: hit.y - p.y,
         moved: false,
       });
-    } else if (held && p.y < PUT_AWAY_Y) {
-      place(held, p.x, p.y);
     }
   };
   const move = (e: GestureResponderEvent) => {
@@ -202,58 +204,10 @@ export function ArrangeSheet({
             ? `Your new ${nameOf(fresh)} is in the drawer. Drag it onto your desk.`
             : drawer.length
               ? 'Drag things from the drawer onto your desk.'
-              : 'Drag things about, or into the drawer to put them away.'}
+              : onDesk.length
+                ? 'Drag things about, or into the drawer to put them away.'
+                : 'Nothing for your desk yet. The shed sells things for it.'}
         </Muted>
-        <Text style={[font.label, { color: tone.muted }]}>Or pick one and move it</Text>
-        <View style={styles.row}>
-          {[...onDesk.map((t) => t.item), ...drawer].map((item) => (
-            <Button
-              key={item}
-              title={itemInfo(item).name}
-              variant={held === item ? 'primary' : 'quiet'}
-              small
-              onPress={() => setHeld(held === item ? null : item)}
-            />
-          ))}
-        </View>
-        {held && !heldThing && drawer.includes(held) && (
-          <Button
-            title="Put it on the desk"
-            variant="quiet"
-            small
-            onPress={() => place(held, 0, -28)}
-          />
-        )}
-        {heldThing && (
-          <View style={styles.row}>
-            {(
-              [
-                ['←', 'Move it left', -NUDGE, 0],
-                ['↑', 'Move it back', 0, -NUDGE],
-                ['↓', 'Move it forward', 0, NUDGE],
-                ['→', 'Move it right', NUDGE, 0],
-              ] as const
-            ).map(([title, label, dx, dy]) => (
-              <Button
-                key={label}
-                title={title}
-                accessibilityLabel={label}
-                variant="quiet"
-                small
-                onPress={() => place(heldThing.item, heldThing.x + dx, heldThing.y + dy)}
-              />
-            ))}
-            <Button
-              title="Put away"
-              variant="quiet"
-              small
-              onPress={() => putAway(heldThing.item)}
-            />
-          </View>
-        )}
-        {onDesk.length + drawer.length === 0 && (
-          <Muted>Nothing for your desk yet. The shed sells things for it.</Muted>
-        )}
         {error && <Text style={{ color: tone.danger, fontSize: 13 }}>{error}</Text>}
         <Button title="Done" onPress={onClose} />
       </View>
@@ -269,6 +223,5 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     overflow: 'hidden',
   },
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   center: { textAlign: 'center' },
 });

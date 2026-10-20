@@ -192,15 +192,7 @@ export function Hotspot({
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={({ pressed }) => ({
-        position: 'absolute',
-        left: x,
-        top: y,
-        width: w,
-        height: h,
-        borderRadius: 8,
-        backgroundColor: pressed ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
-      })}
+      style={{ position: 'absolute', left: x, top: y, width: w, height: h }}
     />
   );
 }

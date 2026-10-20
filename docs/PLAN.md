@@ -87,8 +87,8 @@ agreed; **Open questions** lists what hasn't.
   desk to move to it (**Sit here**); your bay and rack slot move with you.
   **Arrange your desk** opens a close-up of it with its drawer pulled open:
   drag things from the drawer onto the desk, drag them about, or drag them
-  back into the drawer to put them away. A tip says so the first time, and for a keyboard you can pick a
-  thing by name and move it with arrow buttons. Not while you study.
+  back into the drawer to put them away. Dragging is the only way to arrange
+  it. A tip says so the first time. Not while you study.
 - **Do, during a session:** nothing else. There's the countdown and a small
   *give up* link, which forfeits the session. The chip balance, shop and all
   navigation are hidden. **Stay on the page**: on a phone, switch apps or
@@ -156,13 +156,12 @@ makes you friends at once. The car park mentions waiting requests. Invites
 still make you friends straight away.
 
 **Profiles.** Tap a friend on the board (or walk up to them in the garden) to
-see their profile: minutes and sessions studied (a skipped first session
-doesn't count), the days they've studied on (UK dates), what they're worth
-(their chips, plus the shed's price of everything they own; produce has no
-price), how many friends they have and how many you share, and how long
-you've been friends. On the Friends board it also says when they were last
-active ("Just now", "3 hours ago"): when their app last checked in. Friends
-are shown by their faces, as their characters look.
+see their profile, and only four things: minutes studied (a skipped first
+session doesn't count), what they're worth (their chips, plus the shed's
+price of everything they own; produce has no price), how many friends they
+have and how many you share, and when they were last active ("Just now",
+"3 hours ago"): when their app last checked in. Friends are shown by their
+faces, as their characters look.
 
 Unpinning asks first, then ends the friendship both ways (as adding makes
 it): you stop seeing each other, and any offers between you are called off,

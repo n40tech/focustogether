@@ -299,6 +299,43 @@ test('something new for your desk goes on it straight from the shed', async ({ p
   await expect.poll(() => fake.me.desk_items).toEqual([{ item: 'mug', x: 10, y: -25 }]);
 });
 
+test("a dropped thing stays where it's dropped while the server catches up", async ({
+  page,
+  fake,
+}) => {
+  fake.atDesk();
+  fake.me.inventory = { ...fake.me.inventory, mug: 1 };
+  let answer = () => {};
+  const answered = new Promise<void>((resolve) => (answer = resolve));
+  await page.route('**/rest/v1/rpc/place_desk_item', async (route) => {
+    await answered;
+    await route.fallback();
+  });
+  await fake.open('/office');
+  await button(page, 'Arrange your desk').click();
+  await expect(page.getByText('Drag things from the drawer onto your desk.')).toBeVisible();
+  await dragOn(page, page.getByLabel('Your desk', { exact: true }))([-38, 16], [10, -30]);
+  // Out of the drawer before the server has said so.
+  await expect(
+    page.getByText('Drag things about, or into the drawer to put them away.')
+  ).toBeVisible();
+  answer();
+  await expect.poll(() => fake.me.desk_items).toEqual([{ item: 'mug', x: 10, y: -25 }]);
+});
+
+test("a thing the server won't place goes back in the drawer", async ({ page, fake }) => {
+  fake.atDesk();
+  fake.me.inventory = { ...fake.me.inventory, mug: 1 };
+  await page.route('**/rest/v1/rpc/place_desk_item', (route) =>
+    route.fulfill({ status: 400, json: { message: "That won't fit there" } })
+  );
+  await fake.open('/office');
+  await button(page, 'Arrange your desk').click();
+  await dragOn(page, page.getByLabel('Your desk', { exact: true }))([-38, 16], [10, -30]);
+  await expect(page.getByText("That won't fit there")).toBeVisible();
+  await expect(page.getByText('Drag things from the drawer onto your desk.')).toBeVisible();
+});
+
 /**
  * Drags on the desk close-up from one point to another, in desk units (as in
  * src/components/ArrangeSheet: S = 2.4, front-centre at (130, 176)).
