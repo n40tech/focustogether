@@ -76,7 +76,7 @@ test("tapping a friend shows what they've studied and what they're worth", async
   await expect(page.getByText('1,250 minutes')).toBeVisible();
   await expect(page.getByText('1,420')).toBeVisible();
   await expect(page.getByText('Net worth')).toBeVisible();
-  await expect(page.getByText('Friends in common')).toBeVisible();
+  await expect(page.getByText('6, 2 in common')).toBeVisible();
   await expect(page.getByText('45 minutes ago')).toBeVisible();
   expect(fake.called('get_profile')).toEqual([{ p_username: 'bob' }]);
 });

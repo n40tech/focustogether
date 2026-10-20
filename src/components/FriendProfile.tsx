@@ -12,21 +12,8 @@ const ago = (iso: string) => {
   return ms < 2 * 60_000 ? 'Just now' : `${formatSpan(ms)} ago`;
 };
 
-const since = (iso: string) =>
-  new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-
-/**
- * A friend's profile: what they've studied, what they're worth, their friends,
- * and how long you've been friends. `lastActive` adds when they were last
- * about (on the Friends board).
- */
-export function FriendProfile({
-  username,
-  lastActive,
-}: {
-  username: string;
-  lastActive?: boolean;
-}) {
+/** A friend's profile: what they've studied, what they're worth, their friends, and when they were last about. */
+export function FriendProfile({ username }: { username: string }) {
   const tone = useTone();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -47,8 +34,6 @@ export function FriendProfile({
 
   const rows: [string, ReactNode][] = [
     ['Studied', `${profile.minutes_studied.toLocaleString()} minutes`],
-    ['Days studied', profile.days_studied.toLocaleString()],
-    ['Sessions', profile.sessions_studied.toLocaleString()],
     [
       'Net worth',
       <View key="worth" style={styles.worth}>
@@ -58,12 +43,12 @@ export function FriendProfile({
         </Text>
       </View>,
     ],
-    ['Friends', profile.friends.toLocaleString()],
-    ['Friends in common', profile.in_common.toLocaleString()],
-    ['Friends since', since(profile.friends_since)],
+    [
+      'Friends',
+      `${profile.friends.toLocaleString()}, ${profile.in_common.toLocaleString()} in common`,
+    ],
+    ['Last active', profile.last_active ? ago(profile.last_active) : 'Not yet'],
   ];
-  if (lastActive)
-    rows.push(['Last active', profile.last_active ? ago(profile.last_active) : 'Not yet']);
   return (
     <View style={styles.rows} accessibilityLabel={`${profile.display_name}'s profile`}>
       {rows.map(([label, value]) => (
