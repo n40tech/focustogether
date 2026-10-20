@@ -7,7 +7,8 @@
 Adding a friend asks them first. A friend's profile shows what they've
 studied and what they're worth. In the office, you can join a friend's
 session so you finish together, and move to an empty desk. Friends of your
-friends at work show see-through, so you can ask them to be friends.
+friends at work show see-through, so you can ask them to be friends. In
+the garden, everyone can choose how they look.
 
 ---
 
@@ -51,7 +52,19 @@ the same way. It replaces `private.arrive` (desks now avoid friends of
 friends) and adds the two functions. Nobody's desk changes until they next
 arrive. Afterwards the query says `true`.
 
-## 3. Merge
+## 3. Run migration 0012
+
+The new app calls `get_looks` and `set_looks`. Check:
+
+```sql
+select to_regprocedure('public.set_looks(jsonb)') is not null as done;
+```
+
+If `false`, run `supabase/migrations/0012_looks.sql` the same way. It adds
+`profiles.looks` (empty for everyone, so nobody's look changes until they
+choose) and the two functions. Afterwards the query says `true`.
+
+## 4. Merge
 
 Merging deploys the app (GitHub Actions). Then, with a friend:
 
@@ -63,3 +76,4 @@ Merging deploys the app (GitHub Actions). Then, with a friend:
 - [ ] Tap an empty desk and **Sit here**. Your car moves to the matching bay.
 - [ ] With a friend of a friend at work, they show see-through at their
       desk; tapping them offers **Ask to be friends**.
+- [ ] In the garden, **Your look**: save a new look, and a friend sees it.

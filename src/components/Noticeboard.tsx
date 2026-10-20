@@ -18,10 +18,9 @@ import { Countdown } from '@/components/Countdown';
 import { FriendProfile } from '@/components/FriendProfile';
 import { forgetTips } from '@/components/Tip';
 import { api, type Friend, type FriendRequests, type Invite } from '@/lib/api';
-import { personColour } from '@/lib/catalog';
 import { formatInvite } from '@/lib/invites';
 import { font } from '@/lib/theme';
-import { useWorld } from '@/world/World';
+import { usePaintOf, useWorld } from '@/world/World';
 
 const WHERE: Record<Friend['status'], string> = {
   focused: 'Studying',
@@ -138,7 +137,7 @@ function FriendCard({ friend: f, onRemoved }: { friend: Friend; onRemoved: () =>
           accessibilityState={{ expanded: open }}
           style={[styles.row, styles.flex]}
         >
-          <View style={[styles.avatar, { backgroundColor: personColour(f.username) }]} />
+          <Avatar username={f.username} />
           <View style={styles.flex}>
             <Text style={{ color: tone.text, fontSize: 15, fontWeight: '600' }}>
               {f.display_name}
@@ -247,6 +246,11 @@ function AddFriend({ onAdded }: { onAdded: () => void }) {
   );
 }
 
+/** Someone's dot, in their favourite colour. */
+function Avatar({ username }: { username: string }) {
+  return <View style={[styles.avatar, { backgroundColor: usePaintOf(username).shirt }]} />;
+}
+
 /** Who has asked to be friends, and whom you've asked. Fetched again when the count in `me` changes. */
 function useFriendRequests(count: number) {
   const [list, setList] = useState<FriendRequests>({ to_you: [], from_you: [] });
@@ -292,7 +296,7 @@ function Requests({
           style={[styles.friend, { borderColor: tone.line, backgroundColor: tone.raised }]}
         >
           <View style={styles.row}>
-            <View style={[styles.avatar, { backgroundColor: personColour(r.username) }]} />
+            <Avatar username={r.username} />
             <View style={styles.flex}>
               <Text style={{ color: tone.text, fontSize: 15, fontWeight: '600' }}>
                 {r.display_name}

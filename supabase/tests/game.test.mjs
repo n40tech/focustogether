@@ -1677,3 +1677,39 @@ describe('friends of friends, and changing desks', () => {
     await rejects(call('alice', 'switch_desk', 6), /while you're studying/);
   });
 });
+
+describe('looks', () => {
+  const look = { skin: 5, colour: 2, hair: 'bun', hair_colour: 4 };
+
+  test('you choose from the skin tones, colours and hairstyles on offer', async () => {
+    assert.deepEqual(await call('alice', 'set_looks', look), { alice: look });
+    for (const bad of [
+      { ...look, skin: 6 },
+      { ...look, colour: -1 },
+      { ...look, colour: 1.5 },
+      { ...look, hair_colour: '3' },
+      { ...look, hair: 'mohican' },
+      { ...look, hat: 'top' },
+      { skin: 1, colour: 1, hair: 'short' },
+      [look],
+      5,
+    ]) {
+      await rejects(call('alice', 'set_looks', JSON.stringify(bad)), /isn't one of the choices/);
+    }
+    await rejects(
+      q(`update public.profiles set looks = '{"skin": 9}' where id = $1`, [ids.alice]),
+      /check constraint/
+    );
+  });
+
+  test('friends and their friends see your looks; nobody else does', async () => {
+    await call('carol', 'set_looks', look);
+    // carol is bob's friend and a friend of alice's friends; mate1 is nobody's friend now.
+    const bobSees = await call('bob', 'get_looks');
+    assert.equal(bobSees.carol.hair, 'bun');
+    assert.equal('bob' in bobSees, false, "bob hasn't chosen, so the app picks for him");
+    assert.equal((await call('alice', 'get_looks')).carol.skin, 5);
+    assert.equal((await call('carol', 'get_looks')).carol.colour, 2);
+    assert.equal('carol' in (await call('mate1', 'get_looks')), false);
+  });
+});

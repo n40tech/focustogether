@@ -123,8 +123,8 @@ agreed; **Open questions** lists what hasn't.
   their profile above their stall. With a friend beside
   you there, you get both: the place's button and theirs. Walking out through
   the gate takes you back to work. From anywhere: smoke · your basket (eat,
-  save seeds, sell, offer, and answer offers) · your stall · *Back to work*
-  (office) · *Go home*.
+  save seeds, sell, offer, and answer offers) · your stall · *Your look* ·
+  *Back to work* (office) · *Go home*.
 - **Hear:** the weather in full, birds when it's dry, crickets at night, wind
   chimes when it gusts, and footsteps (yours, and friends' from their side of
   you) on grass and gravel.
@@ -309,6 +309,14 @@ touching code.
   see you the same way. Their profile, garden and chat stay private until
   you're friends.
 
+### Looks
+Everyone chooses how they look, in the garden (*Your look*): a skin tone (6),
+a favourite colour (8; it's their shirt, and their dot on the Friends board),
+a hairstyle (short, long, bun, curly or shaved) and a hair colour (6). A
+preview changes as you choose, and *Save my look* keeps it. Until someone
+chooses, the app picks for them from their username, as it always did.
+Friends, and friends of friends, see it everywhere you're drawn.
+
 ### Cigarettes
 Smoked in the garden, one at a time. Each burns for **3 minutes**, getting
 shorter as it goes, then it's out. Friends see the smoke and hear a lighter
@@ -461,7 +469,7 @@ deployment/               numbered runbooks for setting up and shipping each upd
   is a security-definer Postgres function using `auth.uid()`, and RLS only
   allows reads.
 - **Polling:** the world polls `get_me`, `get_friends_board` and
-  `get_friends_of_friends` every 10 s and
+  `get_friends_of_friends` every 10 s (and `get_looks` every minute) and
   when the app regains focus (back on the page mid-session, the first poll is
   `back_to_page` instead). The garden polls `get_garden` every 5 s. A poll that
   comes back after an action's own answer (going home, say) is dropped, so it
@@ -506,6 +514,7 @@ deployment/               numbered runbooks for setting up and shipping each upd
 | `profiles` | + `tips`: tips for new players already seen to (0007) |
 | `sessions` | + `skipped`: ended early by `skip_first_session` (0009) |
 | `friend_requests` | from, to, asked at: waiting to be answered (0010) |
+| `profiles` | + `looks`: skin, colour, hair and hair colour you chose, or null (0012) |
 
 | RPC | Allowed when | Returns |
 |---|---|---|
@@ -516,6 +525,7 @@ deployment/               numbered runbooks for setting up and shipping each upd
 | `join_session(username, device)` | not studying; they're a friend who is, with a minute or more to go (0010) | me |
 | `get_friends_of_friends()` | signed in (0011) | friends of friends at work, with `via` |
 | `switch_desk(desk)` | at work, not studying; nobody in your circle at it (0011) | me |
+| `get_looks()`, `set_looks(looks)` | signed in (0012) | looks of you, friends and theirs, by username |
 | `remove_friend(username)` | signed in, a friend (0008) | the username |
 | `arrive()` | signed in (gives you a desk if you haven't one) | me |
 | `start_session(minutes, device)` | not studying | me |
@@ -627,6 +637,8 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 - [x] Migration `0011_desks_and_friends_of_friends.sql`: friends of friends
       at work show see-through in the office and the car park, desks avoid
       them, and you can move to an empty desk (71 scenario tests in all).
+- [x] Migration `0012_looks.sql`: choose your skin, favourite colour,
+      hairstyle and hair colour in the garden (73 scenario tests in all).
 
 **M2: feel**
 - Illustrated art, recorded audio (layer by layer), a typeface, gentle
@@ -655,6 +667,7 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 | Web hosting | EAS Hosting with a static export; Supabase for the backend. |
 | Social model | Pairwise friendships, as in the MVP. Friends of friends at work show see-through, so you can ask them to be friends. |
 | Changing desks | Tap an empty desk between sessions. Your bay follows. |
+| Looks | Chosen in the garden from a few skin tones, colours, hairstyles and hair colours. Until then, picked from your username. |
 | Un-adding a friend | "Unpin" on the Friends board, after a question. It ends the friendship both ways and calls off offers between you; nobody is told. |
 | Adding a friend | Asks them first; they accept or say not now, and the asker isn't told which. Invites still make you friends at once. |
 | A friend's profile | Shows minutes, sessions and days studied, and what they're worth (chips plus the shed's price of what they own). Only friends see it. |

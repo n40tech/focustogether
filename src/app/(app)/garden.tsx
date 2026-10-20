@@ -36,6 +36,7 @@ import {
   type Act,
 } from '@/components/GardenSheets';
 import { Joystick } from '@/components/Joystick';
+import { LooksSheet } from '@/components/LooksSheet';
 import { Noticeboard } from '@/components/Noticeboard';
 import { INVITE_TIP, Tip, useTips } from '@/components/Tip';
 import { useNow } from '@/hooks/useNow';
@@ -144,6 +145,7 @@ type SheetState =
   | { kind: 'post' }
   | { kind: 'board' }
   | { kind: 'bins' }
+  | { kind: 'looks' }
   | null;
 
 /** True until a cigarette lit until `until` burns out. */
@@ -844,6 +846,13 @@ export default function GardenScene() {
           </View>
           <View style={styles.row}>
             <Button title="Back to work" small style={styles.flex} onPress={() => go('/office')} />
+            <Button
+              title="Your look"
+              variant="ghost"
+              small
+              style={styles.flex}
+              onPress={() => setSheet({ kind: 'looks' })}
+            />
             <Button title="Go home" variant="ghost" small style={styles.flex} onPress={goHome} />
           </View>
         </Panel>
@@ -1077,6 +1086,8 @@ function GardenSheet({
       );
     case 'bins':
       return <BinSheet garden={garden} act={act} onClose={close} />;
+    case 'looks':
+      return <LooksSheet onClose={close} />;
   }
 }
 

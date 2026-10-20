@@ -17,6 +17,7 @@ import type {
   SignupCheck,
   Status,
 } from '@/lib/api';
+import type { Looks } from '@/lib/looks';
 import { isUsername, normalUsername } from '@/lib/username';
 
 /**
@@ -152,6 +153,8 @@ export class FakeSupabase {
       activity: null,
     },
   ];
+  /** Looks people have chosen, by username. */
+  looks: Record<string, Looks> = {};
   /** Friends of your friends who are at work. */
   friendsOfFriends: FriendOfFriend[] = [];
   /** Asking to be friends: who has asked you, and whom you've asked. */
@@ -453,6 +456,11 @@ export class FakeSupabase {
     get_invites: (): Invite[] => this.invites,
     get_friend_requests: () => this.requests,
     get_friends_of_friends: () => this.friendsOfFriends,
+    get_looks: () => this.looks,
+    set_looks: ({ p_looks }) => {
+      this.looks = { ...this.looks, [this.me.username]: p_looks as Looks };
+      return this.looks;
+    },
     switch_desk: ({ p_desk }) => {
       const desk = Number(p_desk);
       if (this.me.status === 'focused')

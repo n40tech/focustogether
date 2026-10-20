@@ -1,4 +1,5 @@
 import { syncClock } from './clock';
+import type { Looks } from './looks';
 import { supabase } from './supabase';
 
 /** See private.presence in supabase/migrations/0003_community.sql. */
@@ -240,6 +241,9 @@ export const api = {
   withdrawFriendRequest: (username: string) =>
     rpc<FriendRequests>('withdraw_friend_request', { p_username: username }),
   getProfile: (username: string) => rpc<Profile>('get_profile', { p_username: username }),
+  /** How you, your friends and theirs look, by username (only those who've chosen). */
+  getLooks: () => rpc<Record<string, Looks>>('get_looks'),
+  setLooks: (looks: Looks) => rpc<Record<string, Looks>>('set_looks', { p_looks: looks }),
   /** Both ways; offers between you are called off. */
   removeFriend: (username: string) =>
     rpc<{ username: string }>('remove_friend', { p_username: username }),

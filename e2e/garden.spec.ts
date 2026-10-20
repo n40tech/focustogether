@@ -181,3 +181,18 @@ test('going home ends the break', async ({ page, fake }) => {
   expect(fake.called('go_home')).toHaveLength(1);
   expect(fake.me.status).toBe('absent');
 });
+
+test('choosing your look', async ({ page, fake }) => {
+  await enterGarden(page, fake);
+  await button(page, 'Your look').click();
+  await button(page, 'Skin: Olive').click();
+  await button(page, 'Favourite colour: Teal').click();
+  await button(page, 'Hairstyle: Curly').click();
+  await button(page, 'Hair colour: Grey').click();
+  await button(page, 'Save my look').click();
+
+  await expect(button(page, 'Save my look')).toBeHidden();
+  expect(fake.called('set_looks')).toEqual([
+    { p_looks: { skin: 4, colour: 5, hair: 'curly', hair_colour: 5 } },
+  ]);
+});

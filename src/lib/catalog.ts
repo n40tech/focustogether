@@ -60,20 +60,3 @@ export function deskItemsOf(inventory: Record<string, number>) {
 /** The seed packet a crop grows from, and vice versa. */
 export const seedOf = (crop: string) => `${crop}_seeds`;
 export const cropOf = (seed: string) => seed.replace(/_seeds$/, '');
-
-/** A calm, stable colour per player for their avatar. */
-const PEOPLE = [
-  '#7a8fb0',
-  '#b0857a',
-  '#7aa58f',
-  '#a88cb5',
-  '#c2a46e',
-  '#6f9fa8',
-  '#b57a8f',
-  '#8c9b6a',
-];
-export function personColour(username: string) {
-  let h = 0;
-  for (const ch of username) h = (h * 31 + ch.charCodeAt(0)) | 0;
-  return PEOPLE[Math.abs(h) % PEOPLE.length];
-}

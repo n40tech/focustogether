@@ -268,7 +268,9 @@ bigger change), do the whole round:
       swap), post a letter and pick it up in the other window, sit on a bench
       (the other player sees you sitting), throw something in a bin, and open
       the Friends board. Walking up to the other player shows their profile
-      above their stall. Walking out through the gate goes to the office, and
+      above their stall. **Your look**: change everything, save, and the
+      other player sees it (within a minute, or at once if they open the
+      app afresh), and their Friends board dot takes your colour. Walking out through the gate goes to the office, and
       when the break runs out a bell rings.
 - [ ] **Two devices, one player:** sign in as the same player in a second
       window (a private one, or another browser) and go into the garden on
