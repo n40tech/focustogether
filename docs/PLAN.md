@@ -23,7 +23,8 @@ agreed; **Open questions** lists what hasn't.
 4. **Sound is the world.** The shared weather is something you *hear*: rain on
    the office window, wind through the allotments, birds when it clears.
 5. **Presence, not pressure.** You see friends' cars, desks and avatars. There
-   are no leaderboards and nobody else's chip count.
+   are no leaderboards. A friend's profile says what they've studied and what
+   they're worth, but nothing ranks you against each other.
 6. **Community first, you second.** You're never centre stage: your desk is one
    of twelve identical desks, your car takes a bay like anyone else's, and your
    allotment is one plot in a shared grid.
@@ -61,7 +62,7 @@ agreed; **Open questions** lists what hasn't.
   bay 5 (or rack slot 5). Friends who are *at work* (arrived, studying, on a
   break, or between the two) appear as their **car** or **bike**; friends with
   neither aren't shown. Nobody's bay is reserved, yours included.
-- **Do:** walk in (office) · the noticeboard (friends and invites) · the garden
+- **Do:** walk in (office) · the Friends board (friends, requests and invites) · the garden
   gate (only while you're on a break) · go home (while you're at work) · log out.
 - **Hear:** open-air weather, distant traffic.
 
@@ -75,6 +76,8 @@ agreed; **Open questions** lists what hasn't.
   bought for it. Frosted windows with blinds let the light in, and rain runs
   down the glass, but they show no sky.
 - **Do, before a session:** choose a length (1–120 min) and start, or walk out.
+  Tap a friend's desk to see how long they've got left; while they study,
+  **Join** them (see *Studying together*).
 - **Do, during a session:** nothing else. There's the countdown and a small
   *give up* link, which forfeits the session. The chip balance, shop and all
   navigation are hidden. **Stay on the page**: on a phone, switch apps or
@@ -99,7 +102,7 @@ agreed; **Open questions** lists what hasn't.
   grid by a slot handed out when they joined, so a plot is always in the same
   place for everyone who can see it; friends' plots appear as you add them.
   Along the front: a gravel path, the shed, a little market square with trestle
-  tables, two benches, two wheelie bins, a noticeboard, a post box and the
+  tables, two benches, two wheelie bins, the Friends board, a post box and the
   gate. Friends in the garden walk about too, with
   Club Penguin-style chat bubbles over their heads, smoke if they're having a
   cigarette and a basket if they've something on their stall. A quiet break
@@ -109,8 +112,9 @@ agreed; **Open questions** lists what hasn't.
   you're standing: plant, look at or harvest your beds and water them; water
   a friend's beds; go into the shed; buy from a friend's stall, or offer them
   a swap, when you're next to them; sit on a bench (friends see you sitting;
-  walk off to get up); throw things in a bin; the noticeboard (friends and
-  invites, as in the car park); the post box (letters). With a friend beside
+  walk off to get up); throw things in a bin; the Friends board (as in the
+  car park); the post box (letters). Next to a friend, their sheet shows
+  their profile above their stall. With a friend beside
   you there, you get both: the place's button and theirs. Walking out through
   the gate takes you back to work. From anywhere: smoke · your basket (eat,
   save seeds, sell, offer, and answer offers) · your stall · *Back to work*
@@ -124,11 +128,25 @@ agreed; **Open questions** lists what hasn't.
 Reached from the shed door in the garden and from the payout screen. It's
 never available during a session.
 
-### Noticeboard (friends and invites)
-See where everyone is, add a friend by username, unpin a friend, and make
-invites. Only invites still waiting to be used are listed: once someone joins,
-they're on the board as a friend. There's one in the car park and one in the
-garden. It also brings back the tips for new players.
+### Friends board (friends, requests and invites)
+It was the noticeboard. See where everyone is, ask someone to be friends by
+username, answer those who've asked you, unpin a friend, and make invites.
+Only invites still waiting to be used are listed: once someone joins, they're
+on the board as a friend. There's one in the car park and one in the garden.
+It also brings back the tips for new players.
+
+**Asking.** Adding someone asks them. They see who's asked, and which of their
+friends you both know, and choose **Accept** or **Not now**. Not now just
+takes the request away: the asker isn't told, and can ask again. You can
+withdraw a request while it waits. If they'd already asked you, asking them
+makes you friends at once. The car park mentions waiting requests. Invites
+still make you friends straight away.
+
+**Profiles.** Tap a friend on the board (or walk up to them in the garden) to
+see their profile: minutes and sessions studied (a skipped first session
+doesn't count), the days they've studied on (UK dates), what they're worth
+(their chips, plus the shed's price of everything they own; produce has no
+price), and how long you've been friends.
 
 Unpinning asks first, then ends the friendship both ways (as adding makes
 it): you stop seeing each other, and any offers between you are called off,
@@ -166,6 +184,14 @@ however long ago your break ended; close it and the usual timings apply.
   Starting a new session ends a break early; going home ends it too, and so
   does logging out (it counts as going home).
 
+### Studying together
+Tap a friend's desk in the office to see how long they've got left. While
+they study and you don't, **Join** starts a session that ends when theirs
+does: their time left, rounded up to a whole minute and started up to 59
+seconds ago, so both countdowns reach zero together. It pays and earns a
+break like any session of that length. With under a minute left, it says
+they're nearly done instead.
+
 ### Staying on the page
 - A session belongs to the page (browser tab) it was started on. On a phone
   or tablet, if that page is hidden (another app, another tab, the phone
@@ -191,8 +217,8 @@ however long ago your break ended; close it and the usual timings apply.
   in, pick a length and start, stay on the page, walk about the garden, buy
   seeds, plant, water, write to a friend. After their first studied session
   (not a skipped one), the car park and the garden suggest making an invite on
-  the noticeboard. Each goes once it's done or put away (*Got it*), and is
-  remembered per account (`profiles.tips`); the noticeboard brings them all
+  the Friends board. Each goes once it's done or put away (*Got it*), and is
+  remembered per account (`profiles.tips`); the Friends board brings them all
   back.
 - **On a phone's browser**, a new player's first tip in the car park says how
   to add Focus Together to the home screen, with the steps for their phone:
@@ -401,7 +427,7 @@ src/
     (app)/payout.tsx      end of session
     (app)/garden.tsx      garden
     (app)/shop.tsx        shed (shop)
-    (app)/friends.tsx     noticeboard
+    (app)/friends.tsx     the Friends board
   world/                  client game state: polling and the payout prompt (World),
                           who sits where (seats), the garden's layout (gardenMap),
                           walking (useWalker), the garden channel (useGardenChannel)
@@ -468,10 +494,15 @@ deployment/               numbered runbooks for setting up and shipping each upd
 | `letters` | from, to, body (up to 1000 characters), sent at, picked up at (0007) |
 | `profiles` | + `tips`: tips for new players already seen to (0007) |
 | `sessions` | + `skipped`: ended early by `skip_first_session` (0009) |
+| `friend_requests` | from, to, asked at: waiting to be answered (0010) |
 
 | RPC | Allowed when | Returns |
 |---|---|---|
-| `get_me`, `get_friends_board`, `add_friend` | signed in | me / friends |
+| `get_me`, `get_friends_board` | signed in | me / friends |
+| `add_friend(username)` | signed in; asks them, or makes you friends if they'd asked you (0010) | username, friends |
+| `get_friend_requests()`, `answer_friend_request(username, accept)`, `withdraw_friend_request(username)` | signed in (0010) | requests to you and from you |
+| `get_profile(username)` | a friend (0010) | their profile |
+| `join_session(username, device)` | not studying; they're a friend who is, with a minute or more to go (0010) | me |
 | `remove_friend(username)` | signed in, a friend (0008) | the username |
 | `arrive()` | signed in (gives you a desk if you haven't one) | me |
 | `start_session(minutes, device)` | not studying | me |
@@ -576,6 +607,11 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
       `deployment/0001-setup-and-launch.md`
 - [ ] Try it with friends, then tune prices, break length and the mix
 
+**M1.6: together (this branch)**
+- [x] Migration `0010_friend_requests_and_joining.sql`: asking to be friends,
+      friends' profiles, and joining a friend's session (68 scenario tests in
+      all). The noticeboard is called the Friends board.
+
 **M2: feel**
 - Illustrated art, recorded audio (layer by layer), a typeface, gentle
   character animation.
@@ -602,7 +638,11 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 | Perspective | Top-front for every place, with no sky: time of day only shows as the scene's changing hues. |
 | Web hosting | EAS Hosting with a static export; Supabase for the backend. |
 | Social model | Pairwise friendships, as in the MVP. |
-| Un-adding a friend | "Unpin" on the noticeboard, after a question. It ends the friendship both ways and calls off offers between you; nobody is told. |
+| Un-adding a friend | "Unpin" on the Friends board, after a question. It ends the friendship both ways and calls off offers between you; nobody is told. |
+| Adding a friend | Asks them first; they accept or say not now, and the asker isn't told which. Invites still make you friends at once. |
+| A friend's profile | Shows minutes, sessions and days studied, and what they're worth (chips plus the shed's price of what they own). Only friends see it. |
+| Studying together | Join a friend who's studying: your session ends when theirs does. |
+| The noticeboard | Is called the Friends board, which says what it's for. |
 | Usernames with accents | Allowed (Latin letters). The plain spelling is unique, so accents never tell two players apart. |
 | Eating | Just a munching sound. Nothing to see, no effect. |
 | Friends' plots | You can water them, but not plant or harvest. |

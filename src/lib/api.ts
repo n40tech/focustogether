@@ -51,6 +51,8 @@ export type Me = {
   ripe: { bed: number; crop: string; withers_at: string | null }[];
   /** Letters waiting for you in the garden's post box. */
   letters: number;
+  /** Players waiting for you to say whether you'll be friends. */
+  friend_requests: number;
   /** Tips you've seen through or put away (see src/components/Tip). */
   tips: string[];
   inventory: Inventory;
@@ -75,6 +77,31 @@ export type Friend = {
   /** Desk item slugs, in display order. */
   desk_items: string[];
   activity: Activity;
+};
+
+/** Asking to be friends: the requests to you, and the ones you've made. */
+export type FriendRequests = {
+  /** Oldest first. `via`: your friends who are friends with them too. */
+  to_you: { username: string; display_name: string; via: string[] }[];
+  from_you: { username: string; display_name: string }[];
+};
+
+/** A friend's profile (see public.get_profile). */
+export type Profile = {
+  username: string;
+  display_name: string;
+  status: Status;
+  ends_at: string | null;
+  break_ends_at: string | null;
+  friends_since: string;
+  /** Completed sessions they studied (a skipped first one doesn't count). */
+  minutes_studied: number;
+  sessions_studied: number;
+  /** Days they've studied on, by UK date. */
+  days_studied: number;
+  /** Their chips plus the shed's price of what they own. */
+  net_worth: number;
+  server_now: string;
 };
 
 export type ShopItem = {
@@ -194,8 +221,15 @@ async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
 export const api = {
   getMe: () => rpc<Me>('get_me'),
   getFriendsBoard: () => rpc<Friend[]>('get_friends_board'),
+  /** Asks them; if they'd already asked you, you're friends now (`friends`). */
   addFriend: (username: string) =>
-    rpc<{ username: string }>('add_friend', { p_username: username }),
+    rpc<{ username: string; friends: boolean }>('add_friend', { p_username: username }),
+  getFriendRequests: () => rpc<FriendRequests>('get_friend_requests'),
+  answerFriendRequest: (username: string, accept: boolean) =>
+    rpc<FriendRequests>('answer_friend_request', { p_username: username, p_accept: accept }),
+  withdrawFriendRequest: (username: string) =>
+    rpc<FriendRequests>('withdraw_friend_request', { p_username: username }),
+  getProfile: (username: string) => rpc<Profile>('get_profile', { p_username: username }),
   /** Both ways; offers between you are called off. */
   removeFriend: (username: string) =>
     rpc<{ username: string }>('remove_friend', { p_username: username }),
@@ -205,6 +239,9 @@ export const api = {
   /** `device` is this page's id: leaving this page stops the session. */
   startSession: (minutes: number, device: string) =>
     rpc<Me>('start_session', { p_minutes: minutes, p_device: device }),
+  /** Starts a session that ends when a friend's does. */
+  joinSession: (username: string, device: string) =>
+    rpc<Me>('join_session', { p_username: username, p_device: device }),
   cancelSession: () => rpc<Me>('cancel_session'),
   /** Your first session only: ends it now, as if you'd studied it. */
   skipFirstSession: () => rpc<Me>('skip_first_session'),

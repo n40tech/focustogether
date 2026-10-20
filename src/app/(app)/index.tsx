@@ -113,7 +113,7 @@ export default function CarPark() {
       <Box x={181} y={88} w={31} h={64} c={C.glass} r={1} />
       <Box x={174} y={114} w={3} h={12} c="#d9d4ca" r={1} />
       <Box x={183} y={114} w={3} h={12} c="#d9d4ca" r={1} />
-      {/* noticeboard */}
+      {/* the Friends board */}
       <Box x={238} y={94} w={54} h={36} c="#a4825e" r={2} />
       <Box x={242} y={98} w={46} h={28} c="#c49a6c" r={1} />
       {[
@@ -206,7 +206,7 @@ export default function CarPark() {
         y={90}
         w={62}
         h={44}
-        label="Noticeboard: friends"
+        label="Friends board"
         onPress={() => go('/friends', null)}
       />
       <Hotspot
@@ -269,7 +269,7 @@ export default function CarPark() {
         <Button title="Walk in" onPress={() => go('/office')} />
         <View style={styles.row}>
           <Button
-            title="Noticeboard"
+            title="Friends"
             variant="quiet"
             small
             onPress={() => go('/friends', null)}
@@ -321,6 +321,7 @@ function Greeting({ me, inCount }: { me: Me; inCount: number }) {
         </Body>
         <RipeNote ripe={me.ripe} />
         <PostNote letters={me.letters} />
+        <RequestNote requests={me.friend_requests} />
       </View>
     );
   }
@@ -340,6 +341,7 @@ function Greeting({ me, inCount }: { me: Me; inCount: number }) {
       </Muted>
       <RipeNote ripe={me.ripe} />
       <PostNote letters={me.letters} />
+      <RequestNote requests={me.friend_requests} />
     </View>
   );
 }
@@ -352,6 +354,18 @@ function PostNote({ letters }: { letters: number }) {
       {letters === 1
         ? "There's a letter for you in the garden's post box."
         : `There are ${letters} letters for you in the garden's post box.`}
+    </Muted>
+  );
+}
+
+/** Players waiting for you to say whether you'll be friends. */
+function RequestNote({ requests }: { requests: number }) {
+  if (!requests) return null;
+  return (
+    <Muted>
+      {requests === 1
+        ? 'Someone would like to be friends. Answer on the Friends board.'
+        : `${requests} people would like to be friends. Answer on the Friends board.`}
     </Muted>
   );
 }

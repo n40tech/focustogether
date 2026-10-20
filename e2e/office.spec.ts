@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 
-import { ALL_TIPS } from './fake-supabase';
+import { ALL_TIPS, iso } from './fake-supabase';
 import { button, expect, pathOf, test } from './test';
 
 /** Hides or shows the page, as switching tabs or locking a phone does. */
@@ -182,4 +182,24 @@ test('on a computer, other tabs are fine, but leaving the page stops a session',
     page.getByText(/You left the page .* into your session, so it stopped/)
   ).toBeVisible();
   expect(fake.called('back_to_page')[1].p_away_s).toBeGreaterThanOrEqual(40);
+});
+
+test('joining a friend: your session ends when theirs does', async ({ page, fake }) => {
+  fake.atDesk();
+  Object.assign(fake.friends[0], {
+    status: 'focused',
+    ends_at: iso(20),
+    break_ends_at: null,
+    place: 'office',
+  });
+  await fake.open('/office');
+  await button(page, "Bob's desk").click();
+  await expect(page.getByText('Studying: 20m left.')).toBeVisible();
+
+  await button(page, 'Join Bob').click();
+  await expect(page.getByText(/^Studying · 20 min/)).toBeVisible();
+  const [joined] = fake.called('join_session');
+  expect(joined.p_username).toBe('bob');
+  expect(joined.p_device).toMatch(/^[a-z0-9]{10,}$/);
+  expect(fake.me.active_session?.ends_at).toBe(fake.friends[0].ends_at);
 });

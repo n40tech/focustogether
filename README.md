@@ -24,11 +24,12 @@ change before a pull request is in **[docs/TESTING.md](docs/TESTING.md)**.
   bubbles, tend your allotment (one plant per seed, four to a bed; crops grow
   in real time over a few days; pick them within 2 days of ripening or they
   wither), water friends' plots, smoke, sit on a bench, throw things in the
-  bins, write letters at the post box, add friends at the noticeboard, and
+  bins, write letters at the post box, see friends at the Friends board, and
   buy and sell at the market with friends standing next to you. Walk out
   through the gate to go back to work.
 - **Shed**: vehicles, desk things, seeds and cigarettes.
-- **Noticeboard**: friends and invites.
+- **Friends board**: friends, their profiles, asking to be friends, and
+  invites. In the office, tap a friend's desk to join their session.
 
 ## One-time Supabase setup
 1. **SQL Editor → New query**: paste and run each file in

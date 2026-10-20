@@ -6,6 +6,7 @@ import { useTone } from '@/art/Scene';
 import { playSound, type Sfx } from '@/audio/sound';
 import { Button } from '@/components/Button';
 import { Body, Muted, Sheet } from '@/components/Chrome';
+import { FriendProfile } from '@/components/FriendProfile';
 import {
   api,
   KEEPS_FOR_DAYS,
@@ -391,7 +392,7 @@ export function PostSheet({
       </View>
       {writing ? (
         friends.length === 0 ? (
-          <Body>Add friends on the noticeboard, and you can write to them here.</Body>
+          <Body>Add friends on the Friends board, and you can write to them here.</Body>
         ) : (
           <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
             <Text style={[font.label, { color: tone.muted }]}>To</Text>
@@ -635,7 +636,7 @@ export function TradeSheet({
       <Sheet title="Offer a trade" onClose={onClose}>
         <Body>
           {friends.length === 0
-            ? 'Add some friends on the noticeboard first.'
+            ? 'Add some friends on the Friends board first.'
             : 'You need something to offer: crops, seeds or cigarettes.'}
         </Body>
       </Sheet>
@@ -825,12 +826,15 @@ export function FriendSheet({
   onSwap: () => void;
   onClose: () => void;
 }) {
+  const tone = useTone();
   const friend = garden.neighbours.find((n) => n.username === username);
   if (!friend) return null;
   const chips = garden.me.chips;
   return (
-    <Sheet title={`${friend.display_name}'s stall`} onClose={onClose}>
+    <Sheet title={friend.display_name} onClose={onClose}>
       <ScrollView contentContainerStyle={styles.list}>
+        <FriendProfile username={friend.username} />
+        <Text style={[font.label, { color: tone.muted }]}>Stall</Text>
         {friend.stall.length === 0 ? (
           <Body>{`${friend.display_name} hasn't put anything out.`}</Body>
         ) : (

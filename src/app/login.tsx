@@ -141,7 +141,7 @@ function SignIn({ onJoin }: { onJoin: () => void }) {
 
 /**
  * Sign-up, by invite only (the database refuses anyone without one): a friend
- * makes an invite on their noticeboard and sends you the link or code, and
+ * makes an invite on their Friends board and sends you the link or code, and
  * you start out as friends.
  */
 function Join({ invite, onSignIn }: { invite: string; onSignIn: () => void }) {

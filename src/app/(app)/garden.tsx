@@ -594,7 +594,7 @@ export default function GardenScene() {
       })}
       <Tag x={SHED.x + 42} y={SHED.y - 16} text="Shed" dim />
       <Tag x={MARKET.x + MARKET.w / 2} y={MARKET.y + 4} text="Market" dim />
-      <Tag x={NOTICEBOARD.x + 26} y={NOTICEBOARD.y - 18} text="Noticeboard" dim />
+      <Tag x={NOTICEBOARD.x + 26} y={NOTICEBOARD.y - 18} text="Friends" dim />
       <Tag x={POSTBOX.x} y={POSTBOX.y - 62} text="Post box" dim={me.letters === 0} />
       {BINS.map((b) => (
         <Tag key={b.x} x={b.x + 12} y={b.y - 50} text="Bin" dim />
@@ -694,7 +694,7 @@ export default function GardenScene() {
         });
         break;
       case 'board':
-        actions.push({ title: 'Noticeboard', onPress: () => setSheet({ kind: 'board' }) });
+        actions.push({ title: 'Friends', onPress: () => setSheet({ kind: 'board' }) });
         break;
       case 'bins':
         actions.push({ title: 'Throw something away', onPress: () => setSheet({ kind: 'bins' }) });
@@ -1071,7 +1071,7 @@ function GardenSheet({
       );
     case 'board':
       return (
-        <Sheet title="Noticeboard" onClose={close}>
+        <Sheet title="Friends" onClose={close}>
           <Noticeboard />
         </Sheet>
       );

@@ -42,7 +42,7 @@ test('a first day: tips, then skipping the first session to see the garden', asy
   expect(fake.called('done_tip')).toContainEqual({ p_tip: 'walk' });
   await expect(page.getByText(/Walk up to one of your beds to plant/)).toBeVisible();
   // A skipped session wasn't studied, so it's too soon to suggest inviting friends.
-  await expect(page.getByText(/Make an invite on the noticeboard/)).toBeHidden();
+  await expect(page.getByText(/Make an invite on the Friends board/)).toBeHidden();
 });
 
 test('after a studied session, a tip suggests inviting friends', async ({ page, fake }) => {
@@ -53,7 +53,7 @@ test('after a studied session, a tip suggests inviting friends', async ({ page, 
     tips: ALL_TIPS.filter((t) => t !== 'invite'),
   });
   await fake.open('/garden');
-  const invite = page.getByText(/Make an invite on the noticeboard/);
+  const invite = page.getByText(/Make an invite on the Friends board/);
   await expect(invite).toBeVisible();
 
   await fake.open('/');
@@ -71,5 +71,5 @@ test('a skipped first session is not enough for the invite tip', async ({ page, 
   });
   await fake.open('/');
   await expect(button(page, 'Walk in')).toBeVisible();
-  await expect(page.getByText(/Make an invite on the noticeboard/)).toBeHidden();
+  await expect(page.getByText(/Make an invite on the Friends board/)).toBeHidden();
 });

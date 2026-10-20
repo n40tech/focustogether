@@ -120,6 +120,12 @@ async function study(users, minutes) {
   return call(list[0], 'get_me');
 }
 
+/** Makes two players friends: one asks, and the other says yes. */
+async function befriend(a, b) {
+  await call(a, 'add_friend', b);
+  await call(b, 'answer_friend_request', a, true);
+}
+
 async function rejects(promise, pattern) {
   await assert.rejects(promise, (e) => {
     assert.match(e.message, pattern);
@@ -174,7 +180,7 @@ before(async () => {
 beforeEach(async () => {
   await q(
     `truncate public.sessions, public.inventory, public.plots, public.trades, public.listings,
-       public.letters`
+       public.letters, public.friend_requests`
   );
   await q(
     `update public.profiles set chips = 0, vehicle = null, went_home_at = null, activity = null,
@@ -1296,6 +1302,7 @@ describe('access', () => {
       'go_home',
       'arrive',
       'create_invite',
+      'get_friend_requests',
     ]) {
       await rejects(call('anon', fn), /permission denied/);
     }
@@ -1377,8 +1384,13 @@ describe('usernames', () => {
   });
 
   test('friends can be added by either spelling', async () => {
-    const added = await call('carol', 'add_friend', ' JOSE ');
-    assert.deepEqual(added, { username: 'josé' });
+    const asked = await call('carol', 'add_friend', ' JOSE ');
+    assert.deepEqual(asked, { username: 'josé', friends: false });
+    await rejects(call('carol', 'add_friend', 'josé'), /already asked josé/);
+    assert.deepEqual(await call('josé', 'answer_friend_request', 'CAROL', true), {
+      to_you: [],
+      from_you: [],
+    });
     await rejects(call('carol', 'add_friend', 'josé'), /already friends with josé/);
     await rejects(call('carol', 'add_friend', 'nobody_here'), /No user called "nobody_here"/);
     await rejects(call('carol', 'add_friend', 'Carol'), /can't add yourself/);
@@ -1392,7 +1404,7 @@ describe('usernames', () => {
 
 describe('un-adding a friend', () => {
   test('ends the friendship both ways, and hands back anything on offer', async () => {
-    await call('carol', 'add_friend', 'josé');
+    await befriend('carol', 'josé');
     await give('carol', 'tomato', 3);
     await give('josé', 'carrot', 2);
     await study(['carol', 'josé'], 25);
@@ -1440,11 +1452,150 @@ describe('un-adding a friend', () => {
     // ...but letters already sent stay where they are, and they can be friends again.
     assert.equal((await call('josé', 'get_post')).letters.length, 1);
     await rejects(call('carol', 'remove_friend', 'josé'), /not friends with josé/);
-    await call('josé', 'add_friend', 'carol');
+    await befriend('josé', 'carol');
     assert.deepEqual((await call('carol', 'get_friends_board')).map((f) => f.username).sort(), [
       'bob',
       'dave',
       'josé',
     ]);
+  });
+});
+
+describe('asking to be friends', () => {
+  test("adding someone asks them, and you're friends once they say yes", async () => {
+    // alice and carol aren't friends, but both know bob and josé.
+    assert.deepEqual(await call('alice', 'add_friend', 'carol'), {
+      username: 'carol',
+      friends: false,
+    });
+    await rejects(call('alice', 'add_friend', 'Carol'), /already asked carol/);
+    const boardOf = async (user) =>
+      (await call(user, 'get_friends_board')).map((f) => f.username).sort();
+    assert.deepEqual(await boardOf('alice'), ['bob', 'josé']);
+
+    assert.equal((await call('carol', 'get_me')).friend_requests, 1);
+    assert.deepEqual(await call('carol', 'get_friend_requests'), {
+      to_you: [{ username: 'alice', display_name: 'Alice', via: ['Bob', 'José'] }],
+      from_you: [],
+    });
+    assert.deepEqual(await call('alice', 'get_friend_requests'), {
+      to_you: [],
+      from_you: [{ username: 'carol', display_name: 'Carol' }],
+    });
+    await rejects(call('alice', 'answer_friend_request', 'carol', true), /No request from carol/);
+
+    assert.deepEqual(await call('carol', 'answer_friend_request', 'alice', true), {
+      to_you: [],
+      from_you: [],
+    });
+    assert.deepEqual(await boardOf('alice'), ['bob', 'carol', 'josé']);
+    assert.deepEqual(await boardOf('carol'), ['alice', 'bob', 'dave', 'josé']);
+    assert.equal((await call('carol', 'get_me')).friend_requests, 0);
+    await call('alice', 'remove_friend', 'carol');
+  });
+
+  test('asking someone who has asked you makes you friends at once', async () => {
+    await call('dave', 'add_friend', 'alice');
+    assert.deepEqual(await call('alice', 'add_friend', 'dave'), {
+      username: 'dave',
+      friends: true,
+    });
+    assert.deepEqual(await call('dave', 'get_friend_requests'), { to_you: [], from_you: [] });
+    assert.ok((await call('dave', 'get_friends_board')).some((f) => f.username === 'alice'));
+    await call('alice', 'remove_friend', 'dave');
+  });
+
+  test("saying no or withdrawing takes the request away, and nobody's told", async () => {
+    await call('dave', 'add_friend', 'bob');
+    assert.deepEqual(await call('bob', 'answer_friend_request', 'dave', false), {
+      to_you: [],
+      from_you: [],
+    });
+    assert.deepEqual(await call('dave', 'get_friend_requests'), { to_you: [], from_you: [] });
+    assert.ok(!(await call('dave', 'get_friends_board')).some((f) => f.username === 'bob'));
+
+    // dave can ask again, then think better of it.
+    await call('dave', 'add_friend', 'bob');
+    assert.deepEqual(await call('dave', 'withdraw_friend_request', 'bob'), {
+      to_you: [],
+      from_you: [],
+    });
+    assert.equal((await call('bob', 'get_me')).friend_requests, 0);
+    await rejects(call('dave', 'withdraw_friend_request', 'bob'), /haven't asked bob/);
+  });
+
+  test('only the two players can see a request, and nobody can write one directly', async () => {
+    await call('dave', 'add_friend', 'alice');
+    const seen = async (user) =>
+      (await asUser(user, 'select count(*)::int as n from public.friend_requests'))[0].n;
+    assert.equal(await seen('dave'), 1);
+    assert.equal(await seen('alice'), 1);
+    assert.equal(await seen('bob'), 0);
+    await rejects(
+      asUser('bob', 'insert into public.friend_requests (from_id, to_id) values ($1, $2)', [
+        ids.bob,
+        ids.alice,
+      ]),
+      /row-level security/
+    );
+  });
+});
+
+describe("friends' profiles", () => {
+  test("show what a friend has studied and what they're worth, to friends only", async () => {
+    await study('bob', 30);
+    await travel(24 * 60);
+    await study('bob', 20);
+    await setChips('bob', 100);
+    await give('bob', 'mug', 1); // 10 chips in the shed
+    await give('bob', 'radish_seeds', 3); // a packet of 3 for 6
+    await give('bob', 'tomato', 4); // produce has no price
+    await call('bob', 'start_session', 25);
+
+    const bob = await call('alice', 'get_profile', 'BOB');
+    assert.equal(bob.username, 'bob');
+    assert.equal(bob.display_name, 'Bob');
+    assert.equal(bob.status, 'focused');
+    assert.ok(Date.parse(bob.ends_at) > Date.now());
+    assert.equal(bob.minutes_studied, 50);
+    assert.equal(bob.sessions_studied, 2);
+    assert.equal(bob.days_studied, 2);
+    assert.equal(bob.net_worth, 116);
+    assert.ok(Date.parse(bob.friends_since) < Date.now());
+
+    await rejects(call('alice', 'get_profile', 'carol'), /not friends with carol/);
+  });
+});
+
+describe('studying together', () => {
+  test("joining a friend's session ends yours when theirs ends", async () => {
+    await call('bob', 'start_session', 30);
+    await travel(10.5);
+    const alice = await call('alice', 'join_session', 'bob', 'page-a');
+    const bob = await call('bob', 'get_me');
+    assert.equal(alice.status, 'focused');
+    assert.equal(alice.active_session.ends_at, bob.active_session.ends_at);
+    assert.equal(alice.active_session.duration_min, 20);
+    assert.equal(alice.active_session.device, 'page-a');
+    assert.equal(alice.place, 'office');
+    assert.notEqual(alice.desk, null);
+    await rejects(call('alice', 'join_session', 'bob'), /already running/);
+
+    await travel(19.5);
+    const ended = [];
+    for (const user of ['alice', 'bob']) {
+      const me = await call(user, 'get_me');
+      assert.equal(me.status, 'on_break', user);
+      ended.push(Date.parse(me.last_completed.ended_at));
+    }
+    assert.equal(ended[0], ended[1]);
+  });
+
+  test('only friends who are studying, with a minute or more to go', async () => {
+    await rejects(call('alice', 'join_session', 'carol'), /only join friends/);
+    await rejects(call('alice', 'join_session', 'bob'), /Bob isn't studying/);
+    await call('bob', 'start_session', 5);
+    await travel(4.5);
+    await rejects(call('alice', 'join_session', 'bob'), /Bob is nearly done/);
   });
 });

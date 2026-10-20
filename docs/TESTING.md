@@ -179,10 +179,10 @@ the old values stick.
   and/or `?hour=0-23` to the address, e.g. `?hour=22&weather=rain` to check the
   night colours. This changes only what you see and hear.
 - **A first day:** join as a new player with the invite `TESTJOIN`
-  (**Got an invite? Join**), or with an invite made on the noticeboard. You'll
+  (**Got an invite? Join**), or with an invite made on the Friends board. You'll
   see the welcome, the tips, and skipping the first session. The tip about
   invites waits for a session you studied, not the skipped one (the Test
-  panel's **Finish my session** counts as studied). The noticeboard's
+  panel's **Finish my session** counts as studied). The Friends board's
   **Show the tips for new players again** brings the tips back for anyone.
 - **Adding to the home screen:** the tip only shows on a phone's browser, for
   a player with no sessions yet. In Chrome's device mode, pick an iPhone or an
@@ -234,18 +234,25 @@ bigger change), do the whole round:
 - [ ] **Join and sign in:** join with an invite, log out, sign in again.
       Logging out on a break counts as going home. A username with accents
       (say `zoë`) can sign in as `zoe` too.
-- [ ] **Noticeboard:** add a friend by username (with or without its
-      accents), then unpin them: it asks first, and they drop off both
-      players' boards.
-- [ ] **Car park:** friends at work show as their car or bike, the
-      noticeboard opens, and the garden gate only works on a break.
+- [ ] **Friends board:** ask someone to be friends by username (with or
+      without its accents). The other player's car park says someone has
+      asked, and their board shows who you both know: **Accept** puts you on
+      each other's boards, **Not now** just takes the request away. Ask
+      again, then **Withdraw** it. Tap a friend's name for their profile
+      (minutes and days studied, sessions, what they're worth, friends
+      since). Unpin them: it asks first, and they drop off both boards.
+- [ ] **Car park:** friends at work show as their car or bike, the Friends
+      board opens, and the garden gate only works on a break.
 - [ ] **Office:** you get a desk and the other player sees you at it. Start a
       session and watch the countdown. Give up. Start another and switch to
       another tab for over 10 seconds: on a computer it carries on. Then try
       the same in the browser's device mode, or on a phone: it stops, and the
       office says so. On a computer, closing the tab stops a session (open
       Focus Together again to see the office say so), but a reload doesn't.
-      **Test → Finish my session** pays out.
+      **Test → Finish my session** pays out. Tap the other player's desk
+      while they study: it says how long they've got left, and **Join**
+      starts a session that ends when theirs does (the two countdowns
+      match).
 - [ ] **Payout:** chips are counted onto your desk and the break is shown.
       Take a break, go home, and spend chips all work.
 - [ ] **Garden:** walk with the thumbstick and the arrow keys; the other
@@ -255,7 +262,8 @@ bigger change), do the whole round:
       your stall and buy from theirs. Use the basket (eat, save seeds, offer a
       swap), post a letter and pick it up in the other window, sit on a bench
       (the other player sees you sitting), throw something in a bin, and open
-      the noticeboard. Walking out through the gate goes to the office, and
+      the Friends board. Walking up to the other player shows their profile
+      above their stall. Walking out through the gate goes to the office, and
       when the break runs out a bell rings.
 - [ ] **Two devices, one player:** sign in as the same player in a second
       window (a private one, or another browser) and go into the garden on
