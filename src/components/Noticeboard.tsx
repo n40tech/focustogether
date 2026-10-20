@@ -1,14 +1,25 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { Platform, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import {
+  Platform,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { useTone } from '@/art/Scene';
 import { playSound } from '@/audio/sound';
 import { Button } from '@/components/Button';
 import { Muted } from '@/components/Chrome';
 import { Countdown } from '@/components/Countdown';
+import { Face } from '@/components/Face';
+import { FriendProfile } from '@/components/FriendProfile';
+import { Notifications } from '@/components/Notifications';
 import { forgetTips } from '@/components/Tip';
-import { api, type Friend, type Invite } from '@/lib/api';
-import { personColour } from '@/lib/catalog';
+import { api, type Friend, type FriendRequests, type Invite } from '@/lib/api';
 import { formatInvite } from '@/lib/invites';
 import { font } from '@/lib/theme';
 import { useWorld } from '@/world/World';
@@ -20,15 +31,21 @@ const WHERE: Record<Friend['status'], string> = {
   absent: 'Away',
 };
 
+/** "Bob and José", "Bob, José and Zoë". */
+export const listOf = (names: string[]) =>
+  names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+
 /**
- * The noticeboard: your friends and where they are, adding a friend by their
- * username, and invites. On the wall in the car park, and on posts in the
- * garden. `footer` goes beside "Make an invite".
+ * The Friends board: your friends and where they are, asking someone to be
+ * friends by their username, answering when they ask you, and invites. On
+ * the wall in the car park, and on posts in the garden. `footer` goes beside
+ * "Make an invite".
  */
 export function Noticeboard({ footer }: { footer?: ReactNode }) {
   const tone = useTone();
-  const { friends, refresh, setMe } = useWorld();
+  const { me, friends, refresh, setMe } = useWorld();
   const invites = useInvites();
+  const requests = useFriendRequests(me.friend_requests);
   // Unpinning someone starts the add-a-friend box afresh, so an old "Pinned" note goes.
   const [unpinned, setUnpinned] = useState(0);
   const removed = () => {
@@ -39,11 +56,19 @@ export function Noticeboard({ footer }: { footer?: ReactNode }) {
     <>
       <Text style={[font.label, { color: tone.muted }]}>Friends</Text>
       <ScrollView contentContainerStyle={styles.list}>
-        {friends.length === 0 && <Muted>No friends yet. Add someone by their username.</Muted>}
+        <Requests
+          requests={requests.list}
+          onAnswered={(next) => {
+            requests.set(next);
+            refresh();
+          }}
+        />
+        {friends.length === 0 && <Muted>No friends yet. Ask someone by their username.</Muted>}
         {friends.map((f) => (
           <FriendCard key={f.username} friend={f} onRemoved={removed} />
         ))}
         <InviteList invites={invites.list} onSend={invites.send} />
+        <Notifications />
         <Button
           title="Show the tips for new players again"
           variant="ghost"
@@ -54,7 +79,13 @@ export function Noticeboard({ footer }: { footer?: ReactNode }) {
           }}
         />
       </ScrollView>
-      <AddFriend key={unpinned} onAdded={refresh} />
+      <AddFriend
+        key={unpinned}
+        onAdded={() => {
+          requests.reload();
+          refresh();
+        }}
+      />
       {invites.message && (
         <Text style={{ color: invites.message.ok ? tone.accent : tone.danger, fontSize: 13 }}>
           {invites.message.text}
@@ -81,6 +112,7 @@ export function Noticeboard({ footer }: { footer?: ReactNode }) {
  */
 function FriendCard({ friend: f, onRemoved }: { friend: Friend; onRemoved: () => void }) {
   const tone = useTone();
+  const [open, setOpen] = useState(false);
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,13 +133,21 @@ function FriendCard({ friend: f, onRemoved }: { friend: Friend; onRemoved: () =>
   return (
     <View style={[styles.friend, { borderColor: tone.line, backgroundColor: tone.raised }]}>
       <View style={styles.row}>
-        <View style={[styles.avatar, { backgroundColor: personColour(f.username) }]} />
-        <View style={styles.flex}>
-          <Text style={{ color: tone.text, fontSize: 15, fontWeight: '600' }}>
-            {f.display_name}
-          </Text>
-          <Muted>@{f.username}</Muted>
-        </View>
+        <Pressable
+          onPress={() => setOpen((o) => !o)}
+          accessibilityRole="button"
+          accessibilityLabel={`${f.display_name}'s profile`}
+          accessibilityState={{ expanded: open }}
+          style={[styles.row, styles.flex]}
+        >
+          <Face username={f.username} />
+          <View style={styles.flex}>
+            <Text style={{ color: tone.text, fontSize: 15, fontWeight: '600' }}>
+              {f.display_name}
+            </Text>
+            <Muted>@{f.username}</Muted>
+          </View>
+        </Pressable>
         <Text style={{ color: f.status === 'absent' ? tone.muted : tone.text, fontSize: 13 }}>
           {WHERE[f.status]}
           {f.status === 'focused' && f.ends_at ? (
@@ -128,11 +168,12 @@ function FriendCard({ friend: f, onRemoved }: { friend: Friend; onRemoved: () =>
           />
         )}
       </View>
+      {open && <FriendProfile username={f.username} lastActive />}
       {asking && (
         <View style={{ gap: 6 }}>
           <Muted>
             Take {f.display_name} off your board? You&apos;ll both stop seeing each other, and any
-            offers between you are called off. You can add them again later.
+            offers between you are called off. You can ask them again later.
           </Muted>
           {error && <Text style={{ color: tone.danger, fontSize: 13 }}>{error}</Text>}
           <View style={styles.row}>
@@ -164,7 +205,12 @@ function AddFriend({ onAdded }: { onAdded: () => void }) {
     setMessage(null);
     try {
       const res = await api.addFriend(username);
-      setMessage({ text: `Pinned @${res.username} to the board.`, ok: true });
+      setMessage({
+        text: res.friends
+          ? `You and @${res.username} are friends now.`
+          : `Asked @${res.username}. They'll be on your board once they say yes.`,
+        ok: true,
+      });
       setUsername('');
       playSound('paper');
       onAdded();
@@ -192,13 +238,105 @@ function AddFriend({ onAdded }: { onAdded: () => void }) {
             { color: tone.text, borderColor: tone.line, backgroundColor: tone.raised },
           ]}
         />
-        <Button title="Add" small onPress={submit} disabled={busy || !username.trim()} />
+        <Button title="Ask" small onPress={submit} disabled={busy || !username.trim()} />
       </View>
       {message && (
         <Text style={{ color: message.ok ? tone.accent : tone.danger, fontSize: 13 }}>
           {message.text}
         </Text>
       )}
+    </View>
+  );
+}
+
+/** Who has asked to be friends, and whom you've asked. Fetched again when the count in `me` changes. */
+function useFriendRequests(count: number) {
+  const [list, setList] = useState<FriendRequests>({ to_you: [], from_you: [] });
+  const reload = useCallback(() => {
+    api.getFriendRequests().then(setList, () => {});
+  }, []);
+  useEffect(reload, [reload, count]);
+  return { list, set: setList, reload };
+}
+
+/** Requests to you (Accept, or Not now: the asker isn't told) and yours (Withdraw). */
+function Requests({
+  requests,
+  onAnswered,
+}: {
+  requests: FriendRequests;
+  onAnswered: (next: FriendRequests) => void;
+}) {
+  const tone = useTone();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const run = async (action: () => Promise<FriendRequests>) => {
+    setBusy(true);
+    setError(null);
+    try {
+      onAnswered(await action());
+      playSound('paper');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  if (!requests.to_you.length && !requests.from_you.length) return null;
+  return (
+    <View style={styles.list}>
+      {requests.to_you.length > 0 && (
+        <Text style={[font.label, { color: tone.muted }]}>Would like to be friends</Text>
+      )}
+      {requests.to_you.map((r) => (
+        <View
+          key={r.username}
+          style={[styles.friend, { borderColor: tone.line, backgroundColor: tone.raised }]}
+        >
+          <View style={styles.row}>
+            <Face username={r.username} />
+            <View style={styles.flex}>
+              <Text style={{ color: tone.text, fontSize: 15, fontWeight: '600' }}>
+                {r.display_name}
+              </Text>
+              <Muted>
+                {r.via.length ? `@${r.username} · friends with ${listOf(r.via)}` : `@${r.username}`}
+              </Muted>
+            </View>
+          </View>
+          <View style={styles.row}>
+            <Button
+              title="Accept"
+              small
+              accessibilityLabel={`Accept ${r.display_name}`}
+              disabled={busy}
+              onPress={() => run(() => api.answerFriendRequest(r.username, true))}
+            />
+            <Button
+              title="Not now"
+              variant="quiet"
+              small
+              accessibilityLabel={`Not now, ${r.display_name}`}
+              disabled={busy}
+              onPress={() => run(() => api.answerFriendRequest(r.username, false))}
+            />
+          </View>
+        </View>
+      ))}
+      {requests.from_you.map((r) => (
+        <View key={r.username} style={[styles.card, { borderColor: tone.line }]}>
+          <Muted style={styles.flex}>{`Asked @${r.username}. Waiting for them to say yes.`}</Muted>
+          <Button
+            title="Withdraw"
+            variant="ghost"
+            small
+            accessibilityLabel={`Withdraw your request to ${r.display_name}`}
+            disabled={busy}
+            onPress={() => run(() => api.withdrawFriendRequest(r.username))}
+          />
+        </View>
+      ))}
+      {error && <Text style={{ color: tone.danger, fontSize: 13 }}>{error}</Text>}
     </View>
   );
 }
@@ -307,7 +445,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   friend: { gap: 8, padding: 10, borderRadius: 12, borderWidth: 1 },
-  avatar: { width: 26, height: 26, borderRadius: 13 },
   flex: { flex: 1 },
   row: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   input: {

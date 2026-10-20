@@ -35,7 +35,8 @@
     "lint": "expo lint",
     "test:db": "node --test supabase/tests/game.test.mjs",
     "test:web": "playwright test",
-    "icons": "node scripts/icons.mjs"
+    "icons": "node scripts/icons.mjs",
+    "vapid-keys": "node scripts/vapid-keys.mjs"
   },
   "private": true
 }

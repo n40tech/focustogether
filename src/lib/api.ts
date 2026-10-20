@@ -1,4 +1,5 @@
 import { syncClock } from './clock';
+import type { Looks } from './looks';
 import { supabase } from './supabase';
 
 /** See private.presence in supabase/migrations/0003_community.sql. */
@@ -9,6 +10,8 @@ export type ItemKind = 'vehicle' | 'desk' | 'seed' | 'produce' | 'cigarette';
 export type Place = 'office' | 'garden' | 'outside';
 /** Item slug -> how many you have. */
 export type Inventory = Record<string, number>;
+/** A desk thing where it sits on its desk, in desk units from the desk's front-centre. */
+export type DeskThing = { item: string; x: number; y: number };
 
 export type Me = {
   id: string;
@@ -51,8 +54,12 @@ export type Me = {
   ripe: { bed: number; crop: string; withers_at: string | null }[];
   /** Letters waiting for you in the garden's post box. */
   letters: number;
+  /** Players waiting for you to say whether you'll be friends. */
+  friend_requests: number;
   /** Tips you've seen through or put away (see src/components/Tip). */
   tips: string[];
+  /** What's on your desk, back to front. Desk things you own that aren't here are in the drawer. */
+  desk_items: DeskThing[];
   inventory: Inventory;
   /** Testing tools on (profiles.tester, set in the SQL editor). */
   tester: boolean;
@@ -72,9 +79,48 @@ export type Friend = {
   place: Place | null;
   arrived_at: string | null;
   vehicle: string | null;
-  /** Desk item slugs, in display order. */
-  desk_items: string[];
+  /** What's on their desk, back to front. */
+  desk_items: DeskThing[];
   activity: Activity;
+};
+
+/**
+ * A friend of a friend at work: shown greyed out at their desk and in their
+ * bay. `via`: which of your friends they know.
+ */
+export type FriendOfFriend = Pick<
+  Friend,
+  'username' | 'display_name' | 'status' | 'place' | 'arrived_at' | 'vehicle' | 'desk_items'
+> & { desk: number; via: string[] };
+
+/** Asking to be friends: the requests to you, and the ones you've made. */
+export type FriendRequests = {
+  /** Oldest first. `via`: your friends who are friends with them too. */
+  to_you: { username: string; display_name: string; via: string[] }[];
+  from_you: { username: string; display_name: string }[];
+};
+
+/** A friend's profile (see public.get_profile). */
+export type Profile = {
+  username: string;
+  display_name: string;
+  status: Status;
+  ends_at: string | null;
+  break_ends_at: string | null;
+  friends_since: string;
+  /** How many friends they have, and how many of them are yours too. */
+  friends: number;
+  in_common: number;
+  /** When their app last checked in (to within a minute), if ever. */
+  last_active: string | null;
+  /** Completed sessions they studied (a skipped first one doesn't count). */
+  minutes_studied: number;
+  sessions_studied: number;
+  /** Days they've studied on, by UK date. */
+  days_studied: number;
+  /** Their chips plus the shed's price of what they own. */
+  net_worth: number;
+  server_now: string;
 };
 
 export type ShopItem = {
@@ -194,17 +240,42 @@ async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
 export const api = {
   getMe: () => rpc<Me>('get_me'),
   getFriendsBoard: () => rpc<Friend[]>('get_friends_board'),
+  getFriendsOfFriends: () => rpc<FriendOfFriend[]>('get_friends_of_friends'),
+  /** Asks them; if they'd already asked you, you're friends now (`friends`). */
   addFriend: (username: string) =>
-    rpc<{ username: string }>('add_friend', { p_username: username }),
+    rpc<{ username: string; friends: boolean }>('add_friend', { p_username: username }),
+  getFriendRequests: () => rpc<FriendRequests>('get_friend_requests'),
+  answerFriendRequest: (username: string, accept: boolean) =>
+    rpc<FriendRequests>('answer_friend_request', { p_username: username, p_accept: accept }),
+  withdrawFriendRequest: (username: string) =>
+    rpc<FriendRequests>('withdraw_friend_request', { p_username: username }),
+  getProfile: (username: string) => rpc<Profile>('get_profile', { p_username: username }),
+  /** This device can get notifications for you (see src/lib/push), or no longer wants them. */
+  savePush: (endpoint: string, p256dh: string, auth: string) =>
+    rpc<void>('save_push', { p_endpoint: endpoint, p_p256dh: p256dh, p_auth: auth }),
+  dropPush: (endpoint: string) => rpc<void>('drop_push', { p_endpoint: endpoint }),
+  /** How you, your friends and theirs look, by username (only those who've chosen). */
+  getLooks: () => rpc<Record<string, Looks>>('get_looks'),
+  setLooks: (looks: Looks) => rpc<Record<string, Looks>>('set_looks', { p_looks: looks }),
   /** Both ways; offers between you are called off. */
   removeFriend: (username: string) =>
     rpc<{ username: string }>('remove_friend', { p_username: username }),
 
+  /** Puts one of your desk things at (x, y) on your desk; the server keeps it to the desk top. */
+  placeDeskItem: (item: string, x: number, y: number) =>
+    rpc<Me>('place_desk_item', { p_item: item, p_x: x, p_y: y }),
+  /** Puts one of your desk things away in the drawer. */
+  storeDeskItem: (item: string) => rpc<Me>('store_desk_item', { p_item: item }),
+  /** Sits you at another desk, if nobody you know (or they know) is at it. */
+  switchDesk: (desk: number) => rpc<Me>('switch_desk', { p_desk: desk }),
   /** Moves you (going to the office hands you a desk if you've just arrived). */
   setPlace: (place: Place) => rpc<Me>('set_place', { p_place: place }),
   /** `device` is this page's id: leaving this page stops the session. */
   startSession: (minutes: number, device: string) =>
     rpc<Me>('start_session', { p_minutes: minutes, p_device: device }),
+  /** Starts a session that ends when a friend's does. */
+  joinSession: (username: string, device: string) =>
+    rpc<Me>('join_session', { p_username: username, p_device: device }),
   cancelSession: () => rpc<Me>('cancel_session'),
   /** Your first session only: ends it now, as if you'd studied it. */
   skipFirstSession: () => rpc<Me>('skip_first_session'),

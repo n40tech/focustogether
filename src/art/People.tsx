@@ -3,28 +3,85 @@ import { Animated, Text, View } from 'react-native';
 
 import { useNow } from '@/hooks/useNow';
 import { SMOKE_MINUTES, type Activity } from '@/lib/api';
-import { personColour } from '@/lib/catalog';
+import { paint, type Hairstyle, type Looks } from '@/lib/looks';
+import { useLooksOf } from '@/world/World';
 import { nativeDriver, rand, useLoop } from './motion';
 import { Box, Dot, Shadow } from './primitives';
 
-const SKIN = ['#f0d0b4', '#dcae88', '#b47e57', '#7f5539'];
-const HAIR = ['#3b2f2a', '#6b4a33', '#a37c4f', '#2d2d33', '#8a5a3c'];
+/** Hair seen from the front, on a head centred at (x, y). */
+function HairFront({ x, y, style, c }: { x: number; y: number; style: Hairstyle; c: string }) {
+  const cap = <Box x={x - 7} y={y - 8} w={14} h={6} c={c} r={5} />;
+  switch (style) {
+    case 'shaved':
+      return <Box x={x - 6} y={y - 7} w={12} h={3} c={c} r={2} o={0.7} />;
+    case 'long':
+      return (
+        <>
+          <Box x={x - 8} y={y - 5} w={3} h={13} c={c} r={2} />
+          <Box x={x + 5} y={y - 5} w={3} h={13} c={c} r={2} />
+          {cap}
+        </>
+      );
+    case 'bun':
+      return (
+        <>
+          <Dot x={x} y={y - 10} d={7} c={c} />
+          {cap}
+        </>
+      );
+    case 'curly':
+      return (
+        <>
+          <Dot x={x - 5} y={y - 6} d={6} c={c} />
+          <Dot x={x} y={y - 8} d={7} c={c} />
+          <Dot x={x + 5} y={y - 6} d={6} c={c} />
+          <Dot x={x - 7} y={y - 1} d={4} c={c} />
+          <Dot x={x + 7} y={y - 1} d={4} c={c} />
+        </>
+      );
+    default:
+      return cap;
+  }
+}
 
-function looks(username: string) {
-  let h = 7;
-  for (const ch of username) h = (h * 31 + ch.charCodeAt(0)) | 0;
-  const n = Math.abs(h);
-  return {
-    shirt: personColour(username),
-    skin: SKIN[n % SKIN.length],
-    hair: HAIR[(n >> 3) % HAIR.length],
-  };
+/** Hair seen from behind, on a head centred at (x, y). */
+function HairBack({ x, y, style, c }: { x: number; y: number; style: Hairstyle; c: string }) {
+  const cap = <Dot x={x} y={y - 2} d={15} h={13} c={c} />;
+  switch (style) {
+    case 'shaved':
+      return <Dot x={x} y={y - 2} d={15} h={13} c={c} o={0.5} />;
+    case 'long':
+      return (
+        <>
+          {cap}
+          <Box x={x - 7} y={y} w={14} h={11} c={c} r={4} />
+        </>
+      );
+    case 'bun':
+      return (
+        <>
+          {cap}
+          <Dot x={x} y={y - 8} d={7} c={c} />
+        </>
+      );
+    case 'curly':
+      return (
+        <>
+          <Dot x={x} y={y - 2} d={17} h={15} c={c} />
+          <Dot x={x - 7} y={y + 2} d={5} c={c} />
+          <Dot x={x + 7} y={y + 2} d={5} c={c} />
+        </>
+      );
+    default:
+      return cap;
+  }
 }
 
 /**
  * A person seen from above and in front. `x` is their centre, `y` where their
  * feet meet the ground. At a desk ('sit') they face away from us; on a bench
- * they face us.
+ * they face us. They look as they've chosen, unless `looks` says otherwise
+ * (a preview).
  */
 export function Person({
   username,
@@ -34,6 +91,7 @@ export function Person({
   activity = null,
   smokingUntil = null,
   basket = false,
+  looks,
 }: {
   username: string;
   x: number;
@@ -44,8 +102,10 @@ export function Person({
   smokingUntil?: string | null;
   /** Carrying a basket: they've something on their stall. */
   basket?: boolean;
+  looks?: Looks;
 }) {
-  const { shirt, skin, hair } = looks(username);
+  const chosen = useLooksOf(username);
+  const { shirt, skin, hair, style } = paint(looks ?? chosen);
   if (pose === 'bench') {
     // Sitting on a bench, facing us: lap and shins in front of the seat.
     return (
@@ -53,7 +113,7 @@ export function Person({
         <Shadow x={x} y={y} w={20} o={0.1} />
         <Box x={x - 9} y={y - 27} w={18} h={17} c={shirt} r={7} />
         <Dot x={x} y={y - 31} d={14} c={skin} />
-        <Box x={x - 7} y={y - 39} w={14} h={6} c={hair} r={5} />
+        <HairFront x={x} y={y - 31} style={style} c={hair} />
         <Dot x={x - 3} y={y - 31} d={1.8} c="#2b2622" />
         <Dot x={x + 3} y={y - 31} d={1.8} c="#2b2622" />
         <Box x={x - 8} y={y - 13} w={16} h={6} c="#4a4d55" r={3} />
@@ -69,7 +129,7 @@ export function Person({
       <>
         <Box x={x - 13} y={y - 20} w={26} h={20} c={shirt} r={9} />
         <Dot x={x} y={y - 24} d={15} c={skin} />
-        <Dot x={x} y={y - 26} d={15} h={13} c={hair} />
+        <HairBack x={x} y={y - 24} style={style} c={hair} />
       </>
     );
   }
@@ -80,7 +140,7 @@ export function Person({
       <Box x={x + 1} y={y - 9} w={4} h={9} c="#4a4d55" r={2} />
       <Box x={x - 9} y={y - 27} w={18} h={20} c={shirt} r={7} />
       <Dot x={x} y={y - 33} d={14} c={skin} />
-      <Box x={x - 7} y={y - 41} w={14} h={6} c={hair} r={5} />
+      <HairFront x={x} y={y - 33} style={style} c={hair} />
       <Dot x={x - 3} y={y - 33} d={1.8} c="#2b2622" />
       <Dot x={x + 3} y={y - 33} d={1.8} c="#2b2622" />
       {basket && (

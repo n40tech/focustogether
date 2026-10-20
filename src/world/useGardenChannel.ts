@@ -45,13 +45,16 @@ const isPoint = (
 
 /**
  * The garden's live link: who's in it, where they're standing, and
- * Club Penguin-style chat bubbles. Everyone speaks on their own private
- * Realtime channel ("garden:<username>") and listens to their friends'; the RLS
- * policies in 0002_game.sql enforce both. Nothing is stored: if you're not in
- * the garden when someone speaks, you don't see it.
+ * Club Penguin-style chat bubbles. Everyone has two private Realtime channels:
+ * "garden:<username>", where they are, which friends and friends of friends
+ * hear; and "garden-chat:<username>", what they say, which only friends hear.
+ * Everyone speaks only on their own; the RLS policies in
+ * 0014_circles_and_last_active.sql enforce all that. Nothing is stored: if
+ * you're not in the garden when someone speaks, you don't see it.
  *
- * Events: "hello" (just arrived: say where you are), "pos" {x, y, sit?, walk?,
- * new?}, "say" {text}, "rift" {x, y} and "bye" (left the garden).
+ * Events on "garden:": "hello" (just arrived: say where you are), "pos" {x, y,
+ * sit?, walk?, new?}, "rift" {x, y} and "bye" (left the garden). On
+ * "garden-chat:": "say" {text}.
  *
  * You can be in the garden on more than one device at once. They listen on
  * your own channel too, and keep to one position: whichever is being steered
@@ -62,6 +65,8 @@ const isPoint = (
 export function useGardenChannel(
   me: string,
   friends: string[],
+  /** Friends of friends in the garden: you see them walk, but don't hear them talk. */
+  others: string[],
   enabled: boolean,
   handlers: Handlers
 ) {
@@ -70,12 +75,14 @@ export function useGardenChannel(
   const [present, setPresent] = useState<string[]>([]);
   const heard = useRef(new Map<string, number>());
   const mine = useRef<RealtimeChannel | null>(null);
+  const myChat = useRef<RealtimeChannel | null>(null);
   /** True once your own channel is joined and can carry messages. */
   const ready = useRef(false);
   const lastSaid = useRef(0);
   const sentAt = useRef(0);
   const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
   const friendKey = friends.join(',');
+  const othersKey = others.join(',');
   const on = useRef(handlers);
   useEffect(() => {
     on.current = handlers;
@@ -120,7 +127,9 @@ export function useGardenChannel(
   useEffect(() => {
     if (!enabled) return;
     const listening = heard.current;
-    const topics = [me, ...(friendKey ? friendKey.split(',') : [])];
+    const friendList = friendKey ? friendKey.split(',') : [];
+    const walkers = [me, ...friendList, ...(othersKey ? othersKey.split(',') : [])];
+    const talkers = [me, ...friendList];
     let settled = 0;
     let greeted = false;
     // Once we're listening everywhere, say hello so friends say where they are.
@@ -130,7 +139,7 @@ export function useGardenChannel(
       mine.current?.send({ type: 'broadcast', event: 'hello', payload: {} });
       sendPos(true);
     };
-    const channels = topics.map((username) => {
+    const where = walkers.map((username) => {
       const channel = supabase.channel(`garden:${username}`, { config: { private: true } });
       // Your other devices. (Nothing you send here comes back to this one.)
       if (username === me) {
@@ -145,22 +154,11 @@ export function useGardenChannel(
               payload.walk === 1
             );
           })
-          .on('broadcast', { event: 'say' }, ({ payload }) => {
-            if (typeof payload?.text !== 'string') return;
-            show(me, payload.text);
-            playSound('pop');
-          })
           .on('broadcast', { event: 'rift' }, ({ payload }) => {
             if (isPoint(payload)) on.current.onRift(me, { x: payload.x, y: payload.y });
           });
       } else {
         channel
-          .on('broadcast', { event: 'say' }, ({ payload }) => {
-            if (typeof payload?.text !== 'string') return;
-            hear(username);
-            show(username, payload.text);
-            playSound('pop');
-          })
           .on('broadcast', { event: 'pos' }, ({ payload }) => {
             if (!Number.isFinite(payload?.x) || !Number.isFinite(payload?.y)) return;
             on.current.onMove(
@@ -178,16 +176,31 @@ export function useGardenChannel(
             if (heard.current.delete(username)) publishPresent();
           });
       }
-      channel.subscribe((status) => {
-        if (username === me && status === 'SUBSCRIBED') ready.current = true;
-        if (status === 'SUBSCRIBED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          settled += 1;
-          if (settled >= topics.length) greet();
-        }
-      });
       return channel;
     });
-    mine.current = channels[0];
+    // What you and your friends say, on each one's chat channel (yours from your other devices too).
+    const said = talkers.map((username) =>
+      supabase
+        .channel(`garden-chat:${username}`, { config: { private: true } })
+        .on('broadcast', { event: 'say' }, ({ payload }) => {
+          if (typeof payload?.text !== 'string') return;
+          if (username !== me) hear(username);
+          show(username, payload.text);
+          playSound('pop');
+        })
+    );
+    const channels = [...where, ...said];
+    channels.forEach((channel, i) =>
+      channel.subscribe((status) => {
+        if (i === 0 && status === 'SUBSCRIBED') ready.current = true;
+        if (status === 'SUBSCRIBED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          settled += 1;
+          if (settled >= channels.length) greet();
+        }
+      })
+    );
+    mine.current = where[0];
+    myChat.current = said[0];
     // Don't wait forever on a friend's channel that won't join.
     const fallback = setTimeout(greet, 4000);
     const heartbeat = setInterval(sendPos, HEARTBEAT_MS);
@@ -208,11 +221,12 @@ export function useGardenChannel(
       if (ready.current) mine.current?.send({ type: 'broadcast', event: 'bye', payload: {} });
       ready.current = false;
       mine.current = null;
+      myChat.current = null;
       channels.forEach((c) => supabase.removeChannel(c));
       listening.clear();
       publishPresent();
     };
-  }, [me, friendKey, enabled, show, hear, publishPresent, sendPos]);
+  }, [me, friendKey, othersKey, enabled, show, hear, publishPresent, sendPos]);
 
   /** Says something; returns false if it was empty or too soon after the last. */
   const say = useCallback(
@@ -220,7 +234,7 @@ export function useGardenChannel(
       const text = raw.trim().slice(0, MAX_SAY);
       if (!text || Date.now() - lastSaid.current < MIN_GAP_MS) return false;
       lastSaid.current = Date.now();
-      mine.current?.send({ type: 'broadcast', event: 'say', payload: { text } });
+      myChat.current?.send({ type: 'broadcast', event: 'say', payload: { text } });
       show(me, text);
       playSound('pop');
       return true;

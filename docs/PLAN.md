@@ -23,7 +23,8 @@ agreed; **Open questions** lists what hasn't.
 4. **Sound is the world.** The shared weather is something you *hear*: rain on
    the office window, wind through the allotments, birds when it clears.
 5. **Presence, not pressure.** You see friends' cars, desks and avatars. There
-   are no leaderboards and nobody else's chip count.
+   are no leaderboards. A friend's profile says what they've studied and what
+   they're worth, but nothing ranks you against each other.
 6. **Community first, you second.** You're never centre stage: your desk is one
    of twelve identical desks, your car takes a bay like anyone else's, and your
    allotment is one plot in a shared grid.
@@ -60,21 +61,34 @@ agreed; **Open questions** lists what hasn't.
   a bike rack. Bays and rack slots follow desks: whoever has desk 5 parks in
   bay 5 (or rack slot 5). Friends who are *at work* (arrived, studying, on a
   break, or between the two) appear as their **car** or **bike**; friends with
-  neither aren't shown. Nobody's bay is reserved, yours included.
-- **Do:** walk in (office) · the noticeboard (friends and invites) · the garden
+  neither aren't shown. Friends of your friends' cars and bikes are there
+  too, see-through and labelled as a friend's friend ("Alice's friend"); tap
+  a car to see who it is and ask them to be friends. Nobody's bay is
+  reserved, yours included.
+- **Do:** walk in (office) · the Friends board (friends, requests and invites) · the garden
   gate (only while you're on a break) · go home (while you're at work) · log out.
 - **Hear:** open-air weather, distant traffic.
 
 ### Office
 - **See:** twelve identical desks in four rows of three. When you walk in you
-  get a random desk that none of your friends at work is using, and it stays
-  yours (across breaks) until you go home. Friends appear at their desks as
+  get a random desk that none of your friends at work is using (nor their
+  friends), and it stays yours (across breaks) until you go home, or you move
+  to an empty one. Friends appear at their desks as
   they arrive: sitting with their back to you and their monitor glowing while
   they study, an empty chair otherwise. You sit at yours while you're in the
   office, among them rather than in front. Everyone's desk shows what they've
-  bought for it. Frosted windows with blinds let the light in, and rain runs
+  bought for it. Friends of your friends at work sit there too, see-through,
+  labelled "Alice's friend" until you tap them. Frosted windows with blinds let the light in, and rain runs
   down the glass, but they show no sky.
 - **Do, before a session:** choose a length (1–120 min) and start, or walk out.
+  Tap a friend's desk to see how long they've got left; while they study,
+  **Join** them (see *Studying together*). Tap a friend of a friend to see
+  which of your friends they know, and ask them to be friends. Tap an empty
+  desk to move to it (**Sit here**); your bay and rack slot move with you.
+  **Arrange your desk** opens a close-up of it with its drawer pulled open:
+  drag things from the drawer onto the desk, drag them about, or drag them
+  back into the drawer to put them away. A tip says so the first time, and for a keyboard you can pick a
+  thing by name and move it with arrow buttons. Not while you study.
 - **Do, during a session:** nothing else. There's the countdown and a small
   *give up* link, which forfeits the session. The chip balance, shop and all
   navigation are hidden. **Stay on the page**: on a phone, switch apps or
@@ -99,22 +113,25 @@ agreed; **Open questions** lists what hasn't.
   grid by a slot handed out when they joined, so a plot is always in the same
   place for everyone who can see it; friends' plots appear as you add them.
   Along the front: a gravel path, the shed, a little market square with trestle
-  tables, two benches, two wheelie bins, a noticeboard, a post box and the
+  tables, two benches, two wheelie bins, the Friends board, a post box and the
   gate. Friends in the garden walk about too, with
   Club Penguin-style chat bubbles over their heads, smoke if they're having a
-  cigarette and a basket if they've something on their stall. A quiet break
+  cigarette and a basket if they've something on their stall. Friends of
+  friends on a break walk about see-through, labelled "Alice's friend" until
+  you walk up and tap them, and you don't see what they say. A quiet break
   timer.
 - **Do:** walk with the thumbstick (on the right, under your thumb; or the
   arrow keys / WASD) · say something. What else you can do depends on where
   you're standing: plant, look at or harvest your beds and water them; water
   a friend's beds; go into the shed; buy from a friend's stall, or offer them
   a swap, when you're next to them; sit on a bench (friends see you sitting;
-  walk off to get up); throw things in a bin; the noticeboard (friends and
-  invites, as in the car park); the post box (letters). With a friend beside
+  walk off to get up); throw things in a bin; the Friends board (as in the
+  car park); the post box (letters). Next to a friend, their sheet shows
+  their profile above their stall. With a friend beside
   you there, you get both: the place's button and theirs. Walking out through
   the gate takes you back to work. From anywhere: smoke · your basket (eat,
-  save seeds, sell, offer, and answer offers) · your stall · *Back to work*
-  (office) · *Go home*.
+  save seeds, sell, offer, and answer offers) · your stall · *Your look* ·
+  *Back to work* (office) · *Go home*.
 - **Hear:** the weather in full, birds when it's dry, crickets at night, wind
   chimes when it gusts, and footsteps (yours, and friends' from their side of
   you) on grass and gravel.
@@ -124,11 +141,28 @@ agreed; **Open questions** lists what hasn't.
 Reached from the shed door in the garden and from the payout screen. It's
 never available during a session.
 
-### Noticeboard (friends and invites)
-See where everyone is, add a friend by username, unpin a friend, and make
-invites. Only invites still waiting to be used are listed: once someone joins,
-they're on the board as a friend. There's one in the car park and one in the
-garden. It also brings back the tips for new players.
+### Friends board (friends, requests and invites)
+It was the noticeboard. See where everyone is, ask someone to be friends by
+username, answer those who've asked you, unpin a friend, and make invites.
+Only invites still waiting to be used are listed: once someone joins, they're
+on the board as a friend. There's one in the car park and one in the garden.
+It also brings back the tips for new players.
+
+**Asking.** Adding someone asks them. They see who's asked, and which of their
+friends you both know, and choose **Accept** or **Not now**. Not now just
+takes the request away: the asker isn't told, and can ask again. You can
+withdraw a request while it waits. If they'd already asked you, asking them
+makes you friends at once. The car park mentions waiting requests. Invites
+still make you friends straight away.
+
+**Profiles.** Tap a friend on the board (or walk up to them in the garden) to
+see their profile: minutes and sessions studied (a skipped first session
+doesn't count), the days they've studied on (UK dates), what they're worth
+(their chips, plus the shed's price of everything they own; produce has no
+price), how many friends they have and how many you share, and how long
+you've been friends. On the Friends board it also says when they were last
+active ("Just now", "3 hours ago"): when their app last checked in. Friends
+are shown by their faces, as their characters look.
 
 Unpinning asks first, then ends the friendship both ways (as adding makes
 it): you stop seeing each other, and any offers between you are called off,
@@ -166,6 +200,14 @@ however long ago your break ended; close it and the usual timings apply.
   Starting a new session ends a break early; going home ends it too, and so
   does logging out (it counts as going home).
 
+### Studying together
+Tap a friend's desk in the office to see how long they've got left. While
+they study and you don't, **Join** starts a session that ends when theirs
+does: their time left, rounded up to a whole minute and started up to 59
+seconds ago, so both countdowns reach zero together. It pays and earns a
+break like any session of that length. With under a minute left, it says
+they're nearly done instead.
+
 ### Staying on the page
 - A session belongs to the page (browser tab) it was started on. On a phone
   or tablet, if that page is hidden (another app, another tab, the phone
@@ -191,8 +233,8 @@ however long ago your break ended; close it and the usual timings apply.
   in, pick a length and start, stay on the page, walk about the garden, buy
   seeds, plant, water, write to a friend. After their first studied session
   (not a skipped one), the car park and the garden suggest making an invite on
-  the noticeboard. Each goes once it's done or put away (*Got it*), and is
-  remembered per account (`profiles.tips`); the noticeboard brings them all
+  the Friends board. Each goes once it's done or put away (*Got it*), and is
+  remembered per account (`profiles.tips`); the Friends board brings them all
   back.
 - **On a phone's browser**, a new player's first tip in the car park says how
   to add Focus Together to the home screen, with the steps for their phone:
@@ -214,7 +256,8 @@ however long ago your break ended; close it and the usual timings apply.
 | Cigarettes | Pack of 5 · 8 |
 
 Vehicles and desk items are one-offs. Buying a vehicle makes it the one you
-arrive in. The catalogue is one table (`items`), so prices are tuned without
+arrive in. Buying something for your desk opens your desk there and then,
+with the new thing in its open drawer for you to drag onto it. The catalogue is one table (`items`), so prices are tuned without
 touching code.
 
 ### Allotment
@@ -272,7 +315,19 @@ touching code.
 - Sign-up is invite-only. Invites are 8-character codes (no look-alike
   characters) that last 14 days; you can hold 5 unused ones at a time.
 - Whoever joins with your invite starts out as your friend. Friendships stay
-  pairwise: you see your friends, not your friends' friends.
+  pairwise, but friends of your friends who are at work show see-through at
+  their desks, in their bays and walking about the garden, as "Alice's
+  friend" until you tap them; then you see their name and how many friends
+  you have in common. They see you the same way. Their profile, plot and chat
+  stay private until you're friends.
+
+### Looks
+Everyone chooses how they look, in the garden (*Your look*): a skin tone (6),
+a favourite colour (8; it's their shirt, and their dot on the Friends board),
+a hairstyle (short, long, bun, curly or shaved) and a hair colour (6). A
+preview changes as you choose, and *Save my look* keeps it. Until someone
+chooses, the app picks for them from their username, as it always did.
+Friends, and friends of friends, see it everywhere you're drawn.
 
 ### Cigarettes
 Smoked in the garden, one at a time. Each burns for **3 minutes**, getting
@@ -286,6 +341,22 @@ flick and a quiet crackle.
   slot. Sent letters say whether they've been picked up.
 - Letters are only readable by whoever wrote them and whoever they're for.
 
+### Notifications
+Turned on per device on the Friends board, they arrive even with Focus
+Together closed (web push):
+- "Bob is studying right now", to his friends who aren't studying, with the
+  office a tap away to join him;
+- "Your session's done", with its chips and break;
+- "Your break's over", if it ran out on its own (not if you went home or
+  started another session first);
+- "Carol would like to be friends", to whoever she asked (not if she
+  withdrew first).
+
+Each goes once, within about a minute, and nothing more than 10 minutes old
+is sent. On an iPhone, web push only works in the home-screen app, so the
+Friends board says to add it there first. Logging out turns them off for that
+device.
+
 ### Bins
 Two wheelie bins in the garden take produce, seeds and cigarettes you don't
 want. Nothing comes back out.
@@ -293,12 +364,13 @@ want. Nothing comes back out.
 ### Chat
 Messages of up to 80 characters appear as a bubble over your head for a few
 seconds, Club Penguin style. Only friends who are in the garden at that moment
-see them, and nothing is stored.
+see them (friends of friends see you walk, but not what you say), and nothing
+is stored.
 
 ### Walking about
 Positions aren't stored either. While you walk, your position goes out on
-your garden channel about 5 times a second, and friends' screens ease between
-updates. You say hello when you arrive (friends reply with where they are),
+your garden channel about 5 times a second, and friends' (and friends of
+friends') screens ease between updates. You say hello when you arrive (friends reply with where they are),
 bye when you leave, and where you are every 20 seconds while you stand still;
 a friend not heard from for 50 seconds has gone.
 
@@ -401,7 +473,7 @@ src/
     (app)/payout.tsx      end of session
     (app)/garden.tsx      garden
     (app)/shop.tsx        shed (shop)
-    (app)/friends.tsx     noticeboard
+    (app)/friends.tsx     the Friends board
   world/                  client game state: polling and the payout prompt (World),
                           who sits where (seats), the garden's layout (gardenMap),
                           walking (useWalker), the garden channel (useGardenChannel)
@@ -411,7 +483,9 @@ src/
                           vehicles, desks, people, beds
   components/             UI pieces: buttons, header, toast, timer, thumbstick, sheets
   lib/                    Supabase client, typed RPC wrappers, catalogue art, time,
-                          leaving the page mid-session (away)
+                          leaving the page mid-session (away), notifications (push)
+public/sw.js              the service worker: shows notifications, opens the right place
+supabase/functions/push/  sends due notifications (Deno, web-push), every minute by Supabase Cron
 supabase/migrations/      0001 init (MVP), 0002 game, 0003 community, 0004 withering,
                           0005 testing tools, 0006 real-time growth and desks,
                           0007 staying on the page, a first day, post and bins
@@ -425,20 +499,24 @@ deployment/               numbered runbooks for setting up and shipping each upd
   status, inventory, plots and trades. Clients never write tables. Every change
   is a security-definer Postgres function using `auth.uid()`, and RLS only
   allows reads.
-- **Polling:** the world polls `get_me` and `get_friends_board` every 10 s and
+- **Polling:** the world polls `get_me`, `get_friends_board` and
+  `get_friends_of_friends` every 10 s (and `get_looks` every minute) and
   when the app regains focus (back on the page mid-session, the first poll is
   `back_to_page` instead). The garden polls `get_garden` every 5 s. A poll that
   comes back after an action's own answer (going home, say) is dropped, so it
   can't undo the action.
-- **Garden channel:** Supabase Realtime Broadcast on private channels named
-  `garden:<username>`, carrying chat, positions and rifts. RLS on
-  `realtime.messages` lets you listen to your own and your friends' channels,
-  and speak only on your own. Your own channel is how your devices keep
+- **Garden channels:** Supabase Realtime Broadcast on private channels:
+  `garden:<username>` carries positions, hellos and rifts, and
+  `garden-chat:<username>` carries chat (0014). RLS on `realtime.messages`
+  (through `may_listen`) lets you hear your own, your friends' and your
+  friends' friends' `garden:` channels, but only your own and your friends'
+  chat; you speak only on your own two. Your own channel is how your devices keep
   together.
-- **Seats:** the server hands out desks so friends at work never share one.
-  Two of your friends who aren't friends with each other can hold the same
-  number, though; then the later arrival moves along to the next free desk on
-  your screen. Plot slots past the 21 cells of the grid wrap round the same way.
+- **Seats:** the server hands out desks so nobody shares one with a friend, or
+  a friend of a friend, at work; moving desks keeps to the same rule. People
+  further apart can hold the same number, though; then the later arrival moves
+  along to the next free desk on your screen (friends of friends after your
+  friends). Plot slots past the 21 cells of the grid wrap round the same way.
 - **Clock:** every RPC returns `server_now` and the client corrects its
   countdowns with it.
 - **Routing:** while a session runs, every place except the office is removed
@@ -468,10 +546,27 @@ deployment/               numbered runbooks for setting up and shipping each upd
 | `letters` | from, to, body (up to 1000 characters), sent at, picked up at (0007) |
 | `profiles` | + `tips`: tips for new players already seen to (0007) |
 | `sessions` | + `skipped`: ended early by `skip_first_session` (0009) |
+| `friend_requests` | from, to, asked at: waiting to be answered (0010) |
+| `profiles` | + `looks`: skin, colour, hair and hair colour you chose, or null (0012) |
+| `desk_layout` | (player, desk thing) → where it sits on their desk; no row means it's in the drawer (0013) |
+| `profiles` | + `active_at`: when their app last checked in, to within a minute (0014) |
+| `push_subscriptions` | endpoint → player and keys: a device to notify (0015) |
+| `sessions`, `friend_requests` | + `start_pushed_at`, `end_pushed_at`, `break_pushed_at` / `pushed_at`: told once (0015) |
 
 | RPC | Allowed when | Returns |
 |---|---|---|
-| `get_me`, `get_friends_board`, `add_friend` | signed in | me / friends |
+| `get_me`, `get_friends_board` | signed in | me / friends |
+| `add_friend(username)` | signed in; asks them, or makes you friends if they'd asked you (0010) | username, friends |
+| `get_friend_requests()`, `answer_friend_request(username, accept)`, `withdraw_friend_request(username)` | signed in (0010) | requests to you and from you |
+| `get_profile(username)` | a friend (0010; + friends, in common and last active from 0014) | their profile |
+| `may_listen(topic)` | signed in (0014; for the realtime policies) | whether you may hear that garden topic |
+| `save_push(endpoint, p256dh, auth)`, `drop_push(endpoint)` | signed in (0015) | – |
+| `due_pushes()`, `forget_pushes(endpoints)` | the service role only: the push function (0015) | what to send now / – |
+| `join_session(username, device)` | not studying; they're a friend who is, with a minute or more to go (0010) | me |
+| `get_friends_of_friends()` | signed in (0011) | friends of friends at work, with `via` |
+| `switch_desk(desk)` | at work, not studying; nobody in your circle at it (0011) | me |
+| `get_looks()`, `set_looks(looks)` | signed in (0012) | looks of you, friends and theirs, by username |
+| `place_desk_item(item, x, y)`, `store_desk_item(item)` | not studying; a desk thing you own (0013) | me |
 | `remove_friend(username)` | signed in, a friend (0008) | the username |
 | `arrive()` | signed in (gives you a desk if you haven't one) | me |
 | `start_session(minutes, device)` | not studying | me |
@@ -518,6 +613,7 @@ and you can sign in or add a friend by either. The rules are
 | Web build | `npx expo export -p web` with `web.output: "static"` | Every route gets its own HTML file, so refreshing `/garden` works on any static host |
 | Hosting | **EAS Hosting** (`eas deploy`), served at `https://<name>.expo.app` | The project is already linked to EAS; free tier; a preview URL per deploy; custom domain later |
 | Backend | **Supabase**: Postgres, Auth, Realtime | Already in use. RLS and RPCs keep the rules server-side, and Realtime Broadcast carries chat |
+| Notifications | Web push from a Supabase Edge Function (`push`), called every minute by Supabase Cron (`pg_cron` and `pg_net`) | Reaches players with the app closed; the database decides what's due, so the function stays small |
 | CI | GitHub Actions: lint, typecheck, web export, the database tests and the browser tests, on pull requests and pushes to `main` | Catches a broken build, rule or screen before it ships |
 | CD | GitHub Actions: `eas deploy --prod` on push to `main`, a preview deploy for each PR | |
 | DB migrations | SQL files in `supabase/migrations/`, each run once on the real project before the merge that needs it: by Claude through the Supabase connector (only if it matches the file), or pasted into the SQL Editor. The CLI is never linked to the real project | Step-by-step runbooks in `deployment/` |
@@ -528,6 +624,10 @@ and you can sign in or add a friend by either. The rules are
 - Variables `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
   These are public by design, because they're baked into the JavaScript bundle.
   RLS is what protects the data.
+- Variable `EXPO_PUBLIC_VAPID_PUBLIC_KEY`: the public half of the push key pair
+  (`npm run vapid-keys`). The private half is only ever an Edge Function
+  secret (`VAPID_PRIVATE_KEY`, with `VAPID_PUBLIC_KEY`) on the Supabase
+  project. Without the variable, the app hides notifications.
 
 Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 
@@ -576,14 +676,34 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
       `deployment/0001-setup-and-launch.md`
 - [ ] Try it with friends, then tune prices, break length and the mix
 
+**M1.6: together (this branch)**
+- [x] Migration `0010_friend_requests_and_joining.sql`: asking to be friends,
+      friends' profiles, and joining a friend's session (68 scenario tests in
+      all). The noticeboard is called the Friends board.
+- [x] Migration `0011_desks_and_friends_of_friends.sql`: friends of friends
+      at work show see-through in the office and the car park, desks avoid
+      them, and you can move to an empty desk (71 scenario tests in all).
+- [x] Migration `0012_looks.sql`: choose your skin, favourite colour,
+      hairstyle and hair colour in the garden (73 scenario tests in all).
+- [x] Migration `0013_arranging_desks.sql`: drag your desk things where you
+      want them, or into the drawer; something new from the shed goes straight
+      onto your desk by dragging (76 scenario tests in all).
+- [x] Migration `0014_circles_and_last_active.sql`: friends of friends walk
+      about the garden see-through (chat moves to its own friends-only
+      channel), and profiles say how many friends someone has, how many you
+      share, and when they were last active. Friends are shown by their faces.
+- [x] Migration `0015_notifications.sql` and the `push` Edge Function:
+      notifications by web push, even with the app closed (81 scenario tests
+      in all).
+
 **M2: feel**
 - Illustrated art, recorded audio (layer by layer), a typeface, gentle
   character animation.
 - Walking animation (legs, a gentle bob), and people drawn in depth order as
   they pass each other.
 - Server-side weather, so rain waters everyone's plots.
-- "Session over" and "break over" notifications (web push on web).
-- Arranging your desk, and choosing which owned vehicle to arrive in.
+- (Notifications by web push came in 0015.)
+- Choosing which owned vehicle to arrive in. (Arranging your desk came in 0013.)
 
 **M3: native apps**
 - Development build (`eas build --profile development`), the native audio
@@ -601,8 +721,17 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 | How does a break end? | An earned break timer (1 min per 5 studied), then a bell and a choice of office or home. |
 | Perspective | Top-front for every place, with no sky: time of day only shows as the scene's changing hues. |
 | Web hosting | EAS Hosting with a static export; Supabase for the backend. |
-| Social model | Pairwise friendships, as in the MVP. |
-| Un-adding a friend | "Unpin" on the noticeboard, after a question. It ends the friendship both ways and calls off offers between you; nobody is told. |
+| Social model | Pairwise friendships, as in the MVP. Friends of friends at work show see-through, so you can ask them to be friends. |
+| Changing desks | Tap an empty desk between sessions. Your bay follows. |
+| Friends of friends | Shown see-through, as "Alice's friend" until you tap them, in the office, the car park and the garden. They never hear your chat. |
+| Notifications | Web push, turned on per device: a friend starting, your session or break ending, and friend requests. Sent within a minute, and only once. |
+| Looks | Chosen in the garden from a few skin tones, colours, hairstyles and hair colours. Until then, picked from your username. |
+| Arranging a desk | Drag things where you want them, between sessions. Something new from the shed starts in the drawer, and you drag it onto your desk there and then. |
+| Un-adding a friend | "Unpin" on the Friends board, after a question. It ends the friendship both ways and calls off offers between you; nobody is told. |
+| Adding a friend | Asks them first; they accept or say not now, and the asker isn't told which. Invites still make you friends at once. |
+| A friend's profile | Shows minutes, sessions and days studied, and what they're worth (chips plus the shed's price of what they own). Only friends see it. |
+| Studying together | Join a friend who's studying: your session ends when theirs does. |
+| The noticeboard | Is called the Friends board, which says what it's for. |
 | Usernames with accents | Allowed (Latin letters). The plain spelling is unique, so accents never tell two players apart. |
 | Eating | Just a munching sound. Nothing to see, no effect. |
 | Friends' plots | You can water them, but not plant or harvest. |
@@ -627,11 +756,11 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 
 ## 13. Open questions
 
-1. **Overlapping friend circles:** with pairwise friendships, two of your
-   friends who aren't friends with each other can hold the same desk number.
-   Each viewer then sees one of them moved along a desk, so people can sit in
-   slightly different places on different screens. Rare in a friend group;
-   shared "offices" (groups) would remove it.
+1. **Overlapping friend circles:** with pairwise friendships, two people three
+   steps apart can hold the same desk number. Each viewer then sees one of them
+   moved along a desk, so people can sit in slightly different places on
+   different screens. Since 0011 desks avoid friends of friends too, so it's
+   rare; shared "offices" (groups) would remove it.
 2. **Swaps by offer:** keep asynchronous offers alongside the face-to-face
    market, or make all trading face to face?
 3. **Thumbstick on computers:** keep it on screen when there's a keyboard, or
@@ -656,6 +785,10 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
   nothing to moderate after the fact, but also no history.
 - **Scale:** each open client polls every 10 s, which is fine for tens of
   players. Move to Realtime Postgres Changes if it grows.
+- **The push function is open:** anyone can call it (it runs without a
+  sign-in, as the cron job does), but it only ever sends what's due, once, so
+  calling it early changes nothing. Calling it very often would only use up
+  Edge Function invocations.
 - **Realtime volume:** a walking player sends about 5 position messages a
   second, and each is delivered to every friend listening. That's comfortable
   for a friend group on Supabase's free Realtime quotas, but worth watching if

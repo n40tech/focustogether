@@ -181,3 +181,50 @@ test('going home ends the break', async ({ page, fake }) => {
   expect(fake.called('go_home')).toHaveLength(1);
   expect(fake.me.status).toBe('absent');
 });
+
+test('choosing your look', async ({ page, fake }) => {
+  await enterGarden(page, fake);
+  await button(page, 'Your look').click();
+  await button(page, 'Skin: Olive').click();
+  await button(page, 'Favourite colour: Teal').click();
+  await button(page, 'Hairstyle: Curly').click();
+  await button(page, 'Hair colour: Grey').click();
+  await button(page, 'Save my look').click();
+
+  await expect(button(page, 'Save my look')).toBeHidden();
+  expect(fake.called('set_looks')).toEqual([
+    { p_looks: { skin: 4, colour: 5, hair: 'curly', hair_colour: 5 } },
+  ]);
+});
+
+test("a friend of a friend walks about, see-through, as Bob's friend until you tap them", async ({
+  page,
+  fake,
+}) => {
+  fake.friendsOfFriends = [
+    {
+      username: 'dave',
+      display_name: 'Dave',
+      status: 'on_break',
+      place: 'garden',
+      arrived_at: iso(-10),
+      vehicle: null,
+      desk_items: [],
+      desk: 2,
+      via: ['Bob'],
+    },
+  ];
+  // Dave's just inside the gate.
+  fake.inGarden = [{ username: 'dave', x: 578, y: 600 }];
+  await enterGarden(page, fake);
+  await button(page, "Bob's friend").click();
+  await expect(page.getByText('1 friend in common: Bob')).toBeVisible();
+  await button(page, 'Ask to be friends').click();
+  await button(page, 'Close').last().click();
+  await expect(button(page, 'Dave')).toBeVisible();
+
+  // You see where they are, but not what they say.
+  expect([...fake.joined]).toContain('garden:dave');
+  expect([...fake.joined]).not.toContain('garden-chat:dave');
+  expect([...fake.joined]).toContain('garden-chat:bob');
+});

@@ -2,6 +2,8 @@ import type { Page, Route, WebSocketRoute } from '@playwright/test';
 
 import type {
   Friend,
+  FriendOfFriend,
+  FriendRequests,
   Garden,
   Invite,
   Listing,
@@ -9,11 +11,13 @@ import type {
   Place,
   Plot,
   Post,
+  Profile,
   Shop,
   ShopItem,
   SignupCheck,
   Status,
 } from '@/lib/api';
+import type { Looks } from '@/lib/looks';
 import { isUsername, normalUsername } from '@/lib/username';
 
 /**
@@ -44,6 +48,7 @@ export const ALL_TIPS = [
   'post',
   'invite',
   'home_screen',
+  'arrange',
 ];
 
 const USER_ID = '00000000-0000-4000-8000-00000000000a';
@@ -127,6 +132,8 @@ export class FakeSupabase {
     sessions_studied: 3,
     ripe: [],
     letters: 0,
+    friend_requests: 0,
+    desk_items: [],
     tips: [...ALL_TIPS],
     inventory: { tomato_seeds: 2, tomato: 3, carrot: 2 },
     tester: false,
@@ -144,10 +151,28 @@ export class FakeSupabase {
       place: 'garden',
       arrived_at: iso(-30),
       vehicle: 'bike',
-      desk_items: ['mug'],
+      desk_items: [{ item: 'mug', x: -36, y: -24 }],
       activity: null,
     },
   ];
+  /** Looks people have chosen, by username. */
+  looks: Record<string, Looks> = {};
+  /** Friends of your friends who are at work. */
+  friendsOfFriends: FriendOfFriend[] = [];
+  /** Asking to be friends: who has asked you, and whom you've asked. */
+  requests: FriendRequests = { to_you: [], from_you: [] };
+  /** What a friend's profile says, whoever they are. */
+  profile: Omit<Profile, 'username' | 'display_name' | 'status' | 'ends_at' | 'break_ends_at'> = {
+    friends_since: '2026-09-01T09:00:00Z',
+    friends: 6,
+    in_common: 2,
+    last_active: iso(-45),
+    minutes_studied: 1250,
+    sessions_studied: 38,
+    days_studied: 14,
+    net_worth: 1420,
+    server_now: iso(0),
+  };
   /** Your plants, and your market stall. */
   plots: Plot[] = [];
   stall: Listing[] = [];
@@ -197,9 +222,12 @@ export class FakeSupabase {
   /** The Realtime channels the page has joined, such as "garden:bob". */
   readonly joined = new Set<string>();
 
-  /** A broadcast on `username`'s garden channel: a friend's, or yours from another device. */
+  /**
+   * A broadcast on `username`'s garden channel (what they say goes on their
+   * chat channel): a friend's, or yours from another device.
+   */
   broadcastAs(username: string, event: string, payload: object) {
-    const topic = `realtime:garden:${username}`;
+    const topic = `realtime:garden${event === 'say' ? '-chat' : ''}:${username}`;
     const message = [null, null, topic, 'broadcast', { type: 'broadcast', event, payload }];
     this.sockets.forEach((ws) => ws.send(JSON.stringify(message)));
   }
@@ -328,16 +356,20 @@ export class FakeSupabase {
       const you = this.elsewhere;
       if (event === 'phx_join' && you && topic === `realtime:garden:${this.me.username}`)
         setTimeout(() => this.broadcastAs(this.me.username, 'pos', you), 300);
-      const friend = this.inGarden.find((f) => topic === `realtime:garden:${f.username}`);
-      if (event !== 'phx_join' || !friend) return;
+      if (event !== 'phx_join') return;
       const broadcast = (event: string, payload: object) =>
         ws.send(
           JSON.stringify([null, null, topic, 'broadcast', { type: 'broadcast', event, payload }])
         );
-      setTimeout(() => {
-        broadcast('pos', { x: friend.x, y: friend.y, ...(friend.sit && { sit: 1 }) });
-        if (friend.say) broadcast('say', { text: friend.say });
-      }, 300);
+      // Where they are, on their garden channel; what they say, on their chat channel.
+      const walker = this.inGarden.find((f) => topic === `realtime:garden:${f.username}`);
+      if (walker)
+        setTimeout(
+          () => broadcast('pos', { x: walker.x, y: walker.y, ...(walker.sit && { sit: 1 }) }),
+          300
+        );
+      const talker = this.inGarden.find((f) => topic === `realtime:garden-chat:${f.username}`);
+      if (talker?.say) setTimeout(() => broadcast('say', { text: talker.say }), 400);
     });
   }
 
@@ -350,8 +382,26 @@ export class FakeSupabase {
         .filter((p) => p.ripe)
         .map((p) => ({ bed: p.bed, crop: p.crop, withers_at: p.withers_at })),
       letters: this.letters.filter((l) => !l.read_at).length,
+      friend_requests: this.requests.to_you.length,
       server_now: iso(0),
     };
+  }
+
+  /** Someone who's just become your friend, at home. */
+  private befriend(username: string, display_name: string) {
+    this.friends.push({
+      username,
+      display_name,
+      status: 'absent',
+      ends_at: null,
+      break_ends_at: null,
+      desk: null,
+      place: null,
+      arrived_at: null,
+      vehicle: null,
+      desk_items: [],
+      activity: null,
+    });
   }
 
   private garden(): Garden {
@@ -416,6 +466,70 @@ export class FakeSupabase {
     get_me: () => this.now(),
     get_friends_board: () => this.friends,
     get_invites: (): Invite[] => this.invites,
+    get_friend_requests: () => this.requests,
+    get_friends_of_friends: () => this.friendsOfFriends,
+    get_looks: () => this.looks,
+    save_push: () => null,
+    drop_push: () => null,
+    place_desk_item: ({ p_item, p_x, p_y }) => {
+      const item = String(p_item);
+      const x = Math.max(-42, Math.min(42, Number(p_x)));
+      const y = Math.max(-44, Math.min(-12, Number(p_y)));
+      this.me.desk_items = [...this.me.desk_items.filter((t) => t.item !== item), { item, x, y }];
+      return this.now();
+    },
+    store_desk_item: ({ p_item }) => {
+      this.me.desk_items = this.me.desk_items.filter((t) => t.item !== p_item);
+      return this.now();
+    },
+    set_looks: ({ p_looks }) => {
+      this.looks = { ...this.looks, [this.me.username]: p_looks as Looks };
+      return this.looks;
+    },
+    switch_desk: ({ p_desk }) => {
+      const desk = Number(p_desk);
+      if (this.me.status === 'focused')
+        throw new Error("You can't change desks while you're studying");
+      if ([...this.friends, ...this.friendsOfFriends].some((f) => f.desk === desk))
+        throw new Error("Someone's at that desk");
+      Object.assign(this.me, { desk, place: 'office' } satisfies Partial<Me>);
+      return this.now();
+    },
+    add_friend: ({ p_username }) => {
+      const username = normalUsername(String(p_username));
+      if (this.friends.some((f) => f.username === username))
+        throw new Error(`You're already friends with ${username}`);
+      const theirs = this.requests.to_you.find((r) => r.username === username);
+      if (theirs) {
+        this.requests.to_you = this.requests.to_you.filter((r) => r !== theirs);
+        this.befriend(theirs.username, theirs.display_name);
+        return { username, friends: true };
+      }
+      if (this.requests.from_you.some((r) => r.username === username))
+        throw new Error(`You've already asked ${username}`);
+      const display_name = username[0].toUpperCase() + username.slice(1);
+      this.requests.from_you.push({ username, display_name });
+      return { username, friends: false };
+    },
+    answer_friend_request: ({ p_username, p_accept }) => {
+      const request = this.requests.to_you.find((r) => r.username === p_username);
+      if (!request) throw new Error(`No request from ${String(p_username)}`);
+      this.requests.to_you = this.requests.to_you.filter((r) => r !== request);
+      if (p_accept) this.befriend(request.username, request.display_name);
+      return this.requests;
+    },
+    withdraw_friend_request: ({ p_username }) => {
+      const asked = this.requests.from_you.some((r) => r.username === p_username);
+      if (!asked) throw new Error(`You haven't asked ${String(p_username)}`);
+      this.requests.from_you = this.requests.from_you.filter((r) => r.username !== p_username);
+      return this.requests;
+    },
+    get_profile: ({ p_username }): Profile => {
+      const f = this.friends.find((f) => f.username === p_username);
+      if (!f) throw new Error(`You're not friends with ${String(p_username)}`);
+      const { username, display_name, status, ends_at, break_ends_at } = f;
+      return { username, display_name, status, ends_at, break_ends_at, ...this.profile };
+    },
     remove_friend: ({ p_username }) => {
       const friend = this.friends.find((f) => f.username === p_username);
       if (!friend) throw new Error(`You're not friends with ${String(p_username)}`);
@@ -471,6 +585,25 @@ export class FakeSupabase {
           started_at: iso(0),
           duration_min: minutes,
           ends_at: iso(minutes),
+          device: String(p_device),
+        },
+      } satisfies Partial<Me>);
+      return this.now();
+    },
+    join_session: ({ p_username, p_device }) => {
+      const f = this.friends.find((f) => f.username === p_username);
+      if (!f) throw new Error('You can only join friends');
+      if (f.status !== 'focused' || !f.ends_at) throw new Error(`${f.display_name} isn't studying`);
+      const minutes = Math.ceil((Date.parse(f.ends_at) - Date.now()) / 60_000);
+      Object.assign(this.me, {
+        status: 'focused',
+        place: 'office',
+        left_session: null,
+        active_session: {
+          id: 500 + this.calls.length,
+          started_at: iso(-minutes + (Date.parse(f.ends_at) - Date.now()) / 60_000),
+          duration_min: minutes,
+          ends_at: f.ends_at,
           device: String(p_device),
         },
       } satisfies Partial<Me>);
@@ -575,6 +708,7 @@ export class FakeSupabase {
       if (!item) throw new Error("The shed doesn't sell that");
       this.me.chips -= item.price;
       item.owned += item.pack_size;
+      this.give(item.slug, item.pack_size);
       if (item.kind === 'vehicle') this.me.vehicle = item.slug;
       return this.shopNow();
     },

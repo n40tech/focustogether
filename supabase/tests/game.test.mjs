@@ -64,6 +64,21 @@ async function asUser(user, text, params = [], topic = null) {
   }
 }
 
+/** Calls public.<fn>(...args) as the service role (an Edge Function), returning rows. */
+async function asService(fn, ...args) {
+  const ph = args.map((_, i) => `$${i + 1}`).join(', ');
+  await db.query('begin');
+  try {
+    await db.query('set local role service_role');
+    const { rows } = await db.query(`select * from public.${fn}(${ph})`, args);
+    await db.query('commit');
+    return rows;
+  } catch (e) {
+    await db.query('rollback');
+    throw e;
+  }
+}
+
 /** What Supabase Auth does on sign-up: insert the user with the form's metadata. */
 async function signUp(username, invite, { email, name } = {}) {
   const [u] = await q(
@@ -120,6 +135,12 @@ async function study(users, minutes) {
   return call(list[0], 'get_me');
 }
 
+/** Makes two players friends: one asks, and the other says yes. */
+async function befriend(a, b) {
+  await call(a, 'add_friend', b);
+  await call(b, 'answer_friend_request', a, true);
+}
+
 async function rejects(promise, pattern) {
   await assert.rejects(promise, (e) => {
     assert.match(e.message, pattern);
@@ -174,7 +195,7 @@ before(async () => {
 beforeEach(async () => {
   await q(
     `truncate public.sessions, public.inventory, public.plots, public.trades, public.listings,
-       public.letters`
+       public.letters, public.friend_requests, public.desk_layout, public.push_subscriptions`
   );
   await q(
     `update public.profiles set chips = 0, vehicle = null, went_home_at = null, activity = null,
@@ -1041,6 +1062,8 @@ describe('the friends board and garden', () => {
     await call('bob', 'buy', 'lamp');
     await call('bob', 'buy', 'mug');
     await call('bob', 'buy', 'bike');
+    await call('bob', 'place_desk_item', 'mug', 36, -26);
+    await call('bob', 'place_desk_item', 'lamp', -36, -24);
     await call('bob', 'start_session', 30);
 
     const board = await call('alice', 'get_friends_board');
@@ -1052,7 +1075,11 @@ describe('the friends board and garden', () => {
     assert.equal(bob.status, 'focused');
     assert.ok(bob.ends_at);
     assert.equal(bob.vehicle, 'bike');
-    assert.deepEqual(bob.desk_items, ['mug', 'lamp']);
+    // Back to front.
+    assert.deepEqual(bob.desk_items, [
+      { item: 'mug', x: 36, y: -26 },
+      { item: 'lamp', x: -36, y: -24 },
+    ]);
     assert.ok(bob.desk >= 0);
     assert.equal('chips' in bob, false);
     assert.equal('points' in bob, false);
@@ -1296,18 +1323,22 @@ describe('access', () => {
       'go_home',
       'arrive',
       'create_invite',
+      'get_friend_requests',
+      'get_friends_of_friends',
     ]) {
       await rejects(call('anon', fn), /permission denied/);
     }
     assert.equal((await call('anon', 'check_signup', 'X', 'y')).ok, false);
   });
 
-  test('garden chat: hear yourself and friends, speak only on your own channel', async () => {
-    for (const topic of ['garden:alice', 'garden:bob', 'garden:carol']) {
-      await q(
-        `insert into realtime.messages (topic, extension, event) values ($1, 'broadcast', 'say')`,
-        [topic]
-      );
+  test('the garden: friends and their friends hear you walk, but only friends hear you talk', async () => {
+    for (const name of ['alice', 'bob', 'carol', 'dave']) {
+      for (const kind of ['garden', 'garden-chat']) {
+        await q(
+          `insert into realtime.messages (topic, extension, event) values ($1, 'broadcast', 'x')`,
+          [`${kind}:${name}`]
+        );
+      }
     }
     await q(
       `insert into realtime.messages (topic, extension, event) values ('garden:bob', 'presence', 'x')`
@@ -1315,22 +1346,30 @@ describe('access', () => {
 
     const hears = async (user, topic) =>
       (await asUser(user, 'select count(*)::int as n from realtime.messages', [], topic))[0].n > 0;
+    // alice's friend is bob; carol is bob's friend; dave is carol's.
     assert.equal(await hears('alice', 'garden:alice'), true);
+    assert.equal(await hears('alice', 'garden-chat:alice'), true);
     assert.equal(await hears('alice', 'garden:bob'), true);
-    assert.equal(await hears('alice', 'garden:carol'), false, 'not friends');
-    assert.equal(await hears('carol', 'garden:bob'), true);
+    assert.equal(await hears('alice', 'garden-chat:bob'), true);
+    assert.equal(await hears('alice', 'garden:carol'), true, 'a friend of a friend walks');
+    assert.equal(await hears('alice', 'garden-chat:carol'), false, 'but talks to friends');
+    assert.equal(await hears('alice', 'garden:dave'), false, 'further off');
+    assert.equal(await hears('alice', 'garden-chat:dave'), false);
+    assert.equal(await hears('carol', 'garden-chat:bob'), true);
     assert.equal(await hears('alice', 'office:bob'), false);
 
     const speak = (user, topic) =>
       asUser(
         user,
-        `insert into realtime.messages (topic, extension, event) values ($1, 'broadcast', 'say')`,
+        `insert into realtime.messages (topic, extension, event) values ($1, 'broadcast', 'x')`,
         [topic],
         topic
       );
     await speak('alice', 'garden:alice');
-    await rejects(speak('alice', 'garden:bob'), /row-level security/);
-    await rejects(speak('alice', 'garden:carol'), /row-level security/);
+    await speak('alice', 'garden-chat:alice');
+    for (const topic of ['garden:bob', 'garden-chat:bob', 'garden:carol', 'garden-chat:carol']) {
+      await rejects(speak('alice', topic), /row-level security/, topic);
+    }
   });
 });
 
@@ -1377,8 +1416,13 @@ describe('usernames', () => {
   });
 
   test('friends can be added by either spelling', async () => {
-    const added = await call('carol', 'add_friend', ' JOSE ');
-    assert.deepEqual(added, { username: 'josé' });
+    const asked = await call('carol', 'add_friend', ' JOSE ');
+    assert.deepEqual(asked, { username: 'josé', friends: false });
+    await rejects(call('carol', 'add_friend', 'josé'), /already asked josé/);
+    assert.deepEqual(await call('josé', 'answer_friend_request', 'CAROL', true), {
+      to_you: [],
+      from_you: [],
+    });
     await rejects(call('carol', 'add_friend', 'josé'), /already friends with josé/);
     await rejects(call('carol', 'add_friend', 'nobody_here'), /No user called "nobody_here"/);
     await rejects(call('carol', 'add_friend', 'Carol'), /can't add yourself/);
@@ -1392,7 +1436,7 @@ describe('usernames', () => {
 
 describe('un-adding a friend', () => {
   test('ends the friendship both ways, and hands back anything on offer', async () => {
-    await call('carol', 'add_friend', 'josé');
+    await befriend('carol', 'josé');
     await give('carol', 'tomato', 3);
     await give('josé', 'carrot', 2);
     await study(['carol', 'josé'], 25);
@@ -1440,11 +1484,423 @@ describe('un-adding a friend', () => {
     // ...but letters already sent stay where they are, and they can be friends again.
     assert.equal((await call('josé', 'get_post')).letters.length, 1);
     await rejects(call('carol', 'remove_friend', 'josé'), /not friends with josé/);
-    await call('josé', 'add_friend', 'carol');
+    await befriend('josé', 'carol');
     assert.deepEqual((await call('carol', 'get_friends_board')).map((f) => f.username).sort(), [
       'bob',
       'dave',
       'josé',
     ]);
+  });
+});
+
+describe('asking to be friends', () => {
+  test("adding someone asks them, and you're friends once they say yes", async () => {
+    // alice and carol aren't friends, but both know bob and josé.
+    assert.deepEqual(await call('alice', 'add_friend', 'carol'), {
+      username: 'carol',
+      friends: false,
+    });
+    await rejects(call('alice', 'add_friend', 'Carol'), /already asked carol/);
+    const boardOf = async (user) =>
+      (await call(user, 'get_friends_board')).map((f) => f.username).sort();
+    assert.deepEqual(await boardOf('alice'), ['bob', 'josé']);
+
+    assert.equal((await call('carol', 'get_me')).friend_requests, 1);
+    assert.deepEqual(await call('carol', 'get_friend_requests'), {
+      to_you: [{ username: 'alice', display_name: 'Alice', via: ['Bob', 'José'] }],
+      from_you: [],
+    });
+    assert.deepEqual(await call('alice', 'get_friend_requests'), {
+      to_you: [],
+      from_you: [{ username: 'carol', display_name: 'Carol' }],
+    });
+    await rejects(call('alice', 'answer_friend_request', 'carol', true), /No request from carol/);
+
+    assert.deepEqual(await call('carol', 'answer_friend_request', 'alice', true), {
+      to_you: [],
+      from_you: [],
+    });
+    assert.deepEqual(await boardOf('alice'), ['bob', 'carol', 'josé']);
+    assert.deepEqual(await boardOf('carol'), ['alice', 'bob', 'dave', 'josé']);
+    assert.equal((await call('carol', 'get_me')).friend_requests, 0);
+    await call('alice', 'remove_friend', 'carol');
+  });
+
+  test('asking someone who has asked you makes you friends at once', async () => {
+    await call('dave', 'add_friend', 'alice');
+    assert.deepEqual(await call('alice', 'add_friend', 'dave'), {
+      username: 'dave',
+      friends: true,
+    });
+    assert.deepEqual(await call('dave', 'get_friend_requests'), { to_you: [], from_you: [] });
+    assert.ok((await call('dave', 'get_friends_board')).some((f) => f.username === 'alice'));
+    await call('alice', 'remove_friend', 'dave');
+  });
+
+  test("saying no or withdrawing takes the request away, and nobody's told", async () => {
+    await call('dave', 'add_friend', 'bob');
+    assert.deepEqual(await call('bob', 'answer_friend_request', 'dave', false), {
+      to_you: [],
+      from_you: [],
+    });
+    assert.deepEqual(await call('dave', 'get_friend_requests'), { to_you: [], from_you: [] });
+    assert.ok(!(await call('dave', 'get_friends_board')).some((f) => f.username === 'bob'));
+
+    // dave can ask again, then think better of it.
+    await call('dave', 'add_friend', 'bob');
+    assert.deepEqual(await call('dave', 'withdraw_friend_request', 'bob'), {
+      to_you: [],
+      from_you: [],
+    });
+    assert.equal((await call('bob', 'get_me')).friend_requests, 0);
+    await rejects(call('dave', 'withdraw_friend_request', 'bob'), /haven't asked bob/);
+  });
+
+  test('only the two players can see a request, and nobody can write one directly', async () => {
+    await call('dave', 'add_friend', 'alice');
+    const seen = async (user) =>
+      (await asUser(user, 'select count(*)::int as n from public.friend_requests'))[0].n;
+    assert.equal(await seen('dave'), 1);
+    assert.equal(await seen('alice'), 1);
+    assert.equal(await seen('bob'), 0);
+    await rejects(
+      asUser('bob', 'insert into public.friend_requests (from_id, to_id) values ($1, $2)', [
+        ids.bob,
+        ids.alice,
+      ]),
+      /row-level security/
+    );
+  });
+});
+
+describe("friends' profiles", () => {
+  test("show what a friend has studied and what they're worth, to friends only", async () => {
+    await study('bob', 30);
+    await travel(24 * 60);
+    await study('bob', 20);
+    await setChips('bob', 100);
+    await give('bob', 'mug', 1); // 10 chips in the shed
+    await give('bob', 'radish_seeds', 3); // a packet of 3 for 6
+    await give('bob', 'tomato', 4); // produce has no price
+    await call('bob', 'start_session', 25);
+
+    const bob = await call('alice', 'get_profile', 'BOB');
+    assert.equal(bob.username, 'bob');
+    assert.equal(bob.display_name, 'Bob');
+    assert.equal(bob.status, 'focused');
+    assert.ok(Date.parse(bob.ends_at) > Date.now());
+    assert.equal(bob.minutes_studied, 50);
+    assert.equal(bob.sessions_studied, 2);
+    assert.equal(bob.days_studied, 2);
+    assert.equal(bob.net_worth, 116);
+    assert.ok(Date.parse(bob.friends_since) < Date.now());
+    // bob knows alice and carol; alice and bob have nobody else in common.
+    assert.equal(bob.friends, 2);
+    assert.equal(bob.in_common, 0);
+    assert.ok(Math.abs(Date.parse(bob.last_active) - Date.now()) < 5 * MIN, 'about just now');
+
+    await rejects(call('alice', 'get_profile', 'carol'), /not friends with carol/);
+  });
+});
+
+describe('studying together', () => {
+  test("joining a friend's session ends yours when theirs ends", async () => {
+    await call('bob', 'start_session', 30);
+    await travel(10.5);
+    const alice = await call('alice', 'join_session', 'bob', 'page-a');
+    const bob = await call('bob', 'get_me');
+    assert.equal(alice.status, 'focused');
+    assert.equal(alice.active_session.ends_at, bob.active_session.ends_at);
+    assert.equal(alice.active_session.duration_min, 20);
+    assert.equal(alice.active_session.device, 'page-a');
+    assert.equal(alice.place, 'office');
+    assert.notEqual(alice.desk, null);
+    await rejects(call('alice', 'join_session', 'bob'), /already running/);
+
+    await travel(19.5);
+    const ended = [];
+    for (const user of ['alice', 'bob']) {
+      const me = await call(user, 'get_me');
+      assert.equal(me.status, 'on_break', user);
+      ended.push(Date.parse(me.last_completed.ended_at));
+    }
+    assert.equal(ended[0], ended[1]);
+  });
+
+  test('only friends who are studying, with a minute or more to go', async () => {
+    await rejects(call('alice', 'join_session', 'carol'), /only join friends/);
+    await rejects(call('alice', 'join_session', 'bob'), /Bob isn't studying/);
+    await call('bob', 'start_session', 5);
+    await travel(4.5);
+    await rejects(call('alice', 'join_session', 'bob'), /Bob is nearly done/);
+  });
+});
+
+describe('friends of friends, and changing desks', () => {
+  // By now: alice knows bob and josé; carol knows bob, dave and josé. So carol
+  // is a friend of alice's friends, and dave is further off.
+  const atDesk = (user, desk) =>
+    q(`update public.profiles set desk = $2, arrived_at = now(), seen_at = now() where id = $1`, [
+      ids[user],
+      desk,
+    ]);
+
+  test('friends of friends at work show, with which of your friends they know', async () => {
+    assert.deepEqual(await call('alice', 'get_friends_of_friends'), []);
+    await call('carol', 'set_place', 'office');
+    await call('bob', 'set_place', 'office');
+    await call('dave', 'set_place', 'office');
+
+    const [carol, ...others] = await call('alice', 'get_friends_of_friends');
+    assert.deepEqual(others, []);
+    assert.equal(carol.username, 'carol');
+    assert.equal(carol.display_name, 'Carol');
+    assert.equal(carol.status, 'idle');
+    assert.equal(carol.place, 'office');
+    assert.equal(carol.desk, (await call('carol', 'get_me')).desk);
+    assert.deepEqual(carol.desk_items, []);
+    assert.deepEqual(carol.via, ['Bob', 'José']);
+
+    // dave sees bob and josé the same way, through carol.
+    assert.deepEqual(
+      (await call('dave', 'get_friends_of_friends')).map((p) => [p.username, p.via]),
+      [['bob', ['Carol']]]
+    );
+    await call('carol', 'go_home');
+    assert.deepEqual(await call('alice', 'get_friends_of_friends'), []);
+  });
+
+  test("arriving avoids friends' and their friends' desks", async () => {
+    // Eight more of bob's friends, so alice's circle can fill every desk but one.
+    const mates = [];
+    for (let i = 1; i <= 8; i++) {
+      const [{ code }] = await q('select private.make_invite($1) as code', [ids.bob]);
+      await signUp(`mate${i}`, code);
+      mates.push(`mate${i}`);
+    }
+    const circle = ['bob', 'josé', 'carol', ...mates];
+    for (const [i, user] of circle.entries()) await atDesk(user, i < 7 ? i : i + 1);
+    // dave is at desk 7, but he's no friend of a friend of alice's.
+    await atDesk('dave', 7);
+
+    assert.equal((await call('alice', 'set_place', 'office')).desk, 7);
+
+    for (const mate of mates) await call('bob', 'remove_friend', mate);
+  });
+
+  test('you can move to a desk nobody in your circle is at, between sessions', async () => {
+    await rejects(call('alice', 'switch_desk', 2), /Walk into the office first/);
+    await atDesk('bob', 3); // a friend
+    await atDesk('carol', 4); // a friend of a friend
+    await atDesk('dave', 5); // neither
+    await call('alice', 'set_place', 'garden');
+    await call('alice', 'set_place', 'office');
+
+    await rejects(call('alice', 'switch_desk', 3), /Someone's at that desk/);
+    await rejects(call('alice', 'switch_desk', 4), /Someone's at that desk/);
+    await rejects(call('alice', 'switch_desk', 12), /no desk 12/);
+    await call('alice', 'set_place', 'garden');
+    const me = await call('alice', 'switch_desk', 5);
+    assert.equal(me.desk, 5);
+    assert.equal(me.place, 'office');
+    assert.equal(
+      (await call('bob', 'get_friends_board')).find((f) => f.username === 'alice').desk,
+      5
+    );
+
+    await call('alice', 'start_session', 25);
+    await rejects(call('alice', 'switch_desk', 6), /while you're studying/);
+  });
+});
+
+describe('looks', () => {
+  const look = { skin: 5, colour: 2, hair: 'bun', hair_colour: 4 };
+
+  test('you choose from the skin tones, colours and hairstyles on offer', async () => {
+    assert.deepEqual(await call('alice', 'set_looks', look), { alice: look });
+    for (const bad of [
+      { ...look, skin: 6 },
+      { ...look, colour: -1 },
+      { ...look, colour: 1.5 },
+      { ...look, hair_colour: '3' },
+      { ...look, hair: 'mohican' },
+      { ...look, hat: 'top' },
+      { skin: 1, colour: 1, hair: 'short' },
+      [look],
+      5,
+    ]) {
+      await rejects(call('alice', 'set_looks', JSON.stringify(bad)), /isn't one of the choices/);
+    }
+    await rejects(
+      q(`update public.profiles set looks = '{"skin": 9}' where id = $1`, [ids.alice]),
+      /check constraint/
+    );
+  });
+
+  test('friends and their friends see your looks; nobody else does', async () => {
+    await call('carol', 'set_looks', look);
+    // carol is bob's friend and a friend of alice's friends; mate1 is nobody's friend now.
+    const bobSees = await call('bob', 'get_looks');
+    assert.equal(bobSees.carol.hair, 'bun');
+    assert.equal('bob' in bobSees, false, "bob hasn't chosen, so the app picks for him");
+    assert.equal((await call('alice', 'get_looks')).carol.skin, 5);
+    assert.equal((await call('carol', 'get_looks')).carol.colour, 2);
+    assert.equal('carol' in (await call('mate1', 'get_looks')), false);
+  });
+});
+
+describe('arranging your desk', () => {
+  const things = async (user) =>
+    (await call(user, 'get_me')).desk_items.map(({ item, x, y }) => [item, x, y]);
+
+  test('new things start in the drawer, and go where you put them, kept to the desk top', async () => {
+    await give('alice', 'mug', 1);
+    await give('alice', 'lamp', 1);
+    assert.deepEqual(await things('alice'), []);
+
+    const me = await call('alice', 'place_desk_item', 'mug', 10.5, -20);
+    assert.deepEqual(me.desk_items, [{ item: 'mug', x: 10.5, y: -20 }]);
+    await call('alice', 'place_desk_item', 'lamp', 99, -99);
+    assert.deepEqual(await things('alice'), [
+      ['lamp', 42, -44],
+      ['mug', 10.5, -20],
+    ]);
+    // Friends see it as it is.
+    const board = await call('bob', 'get_friends_board');
+    assert.deepEqual(board.find((f) => f.username === 'alice').desk_items, [
+      { item: 'lamp', x: 42, y: -44 },
+      { item: 'mug', x: 10.5, y: -20 },
+    ]);
+  });
+
+  test('things put away go back in the drawer, and can come out again', async () => {
+    await give('alice', 'mug', 1);
+    await give('alice', 'duck', 1);
+    await call('alice', 'place_desk_item', 'mug', -36, -24);
+    await call('alice', 'place_desk_item', 'duck', 36, -26);
+    await call('alice', 'store_desk_item', 'mug');
+    assert.deepEqual(await things('alice'), [['duck', 36, -26]]);
+    assert.equal((await call('alice', 'get_me')).inventory.mug, 1, 'still yours, in the drawer');
+    await call('alice', 'place_desk_item', 'mug', 0, -40);
+    assert.deepEqual((await things('alice'))[0], ['mug', 0, -40]);
+  });
+
+  test('only between sessions, and only your own desk things', async () => {
+    await give('alice', 'mug', 1);
+    await give('alice', 'tomato', 2);
+    await rejects(call('alice', 'place_desk_item', 'lamp', 0, -20), /haven't got that/);
+    await rejects(call('alice', 'place_desk_item', 'tomato', 0, -20), /haven't got that/);
+    await rejects(call('alice', 'place_desk_item', 'mug', null, -20), /Somewhere on the desk/);
+    await call('alice', 'start_session', 25);
+    await rejects(call('alice', 'place_desk_item', 'mug', 0, -20), /Not while you're studying/);
+    await rejects(call('alice', 'store_desk_item', 'mug'), /Not while you're studying/);
+    await rejects(
+      asUser('alice', `insert into public.desk_layout values ($1, 'mug', 0, -20)`, [ids.alice]),
+      /row-level security/
+    );
+  });
+});
+
+describe('notifications', () => {
+  const device = (user, n = 1) =>
+    call(user, 'save_push', `https://push.example/${user}/${n}`, 'p256dh', 'auth');
+  const due = async () =>
+    (await asService('due_pushes')).map(({ endpoint, title, body, url }) => ({
+      to: endpoint.replace('https://push.example/', ''),
+      title,
+      body,
+      url,
+    }));
+
+  test('a device is saved for whoever is signed in on it, and can be dropped', async () => {
+    await device('alice');
+    const mine = (user) => asUser(user, 'select endpoint from public.push_subscriptions');
+    assert.equal((await mine('alice')).length, 1);
+    assert.equal((await mine('bob')).length, 0);
+    // bob signs in on alice's phone: it's his now.
+    await call('bob', 'save_push', 'https://push.example/alice/1', 'p256dh', 'auth');
+    assert.equal((await mine('alice')).length, 0);
+    await call('alice', 'drop_push', 'https://push.example/alice/1');
+    assert.equal((await mine('bob')).length, 1, "alice can't drop bob's device");
+    await call('bob', 'drop_push', 'https://push.example/alice/1');
+    assert.equal((await mine('bob')).length, 0);
+
+    await rejects(call('alice', 'save_push', 'http://insecure.example', 'p', 'a'), /check/);
+    await rejects(call('anon', 'save_push', 'https://push.example/x', 'p', 'a'), /permission/);
+    await rejects(call('alice', 'due_pushes'), /permission denied/);
+  });
+
+  test('friends hear when you start studying, unless they are studying too', async () => {
+    for (const user of ['alice', 'bob', 'carol']) await device(user);
+    await call('carol', 'start_session', 25);
+    assert.deepEqual(await due(), [
+      {
+        to: 'bob/1',
+        title: 'Carol is studying right now',
+        body: '25 minutes. Join them in the office?',
+        url: '/office',
+      },
+    ]);
+    assert.deepEqual(await due(), [], 'once');
+
+    // bob starts too: alice hears, but carol's busy studying.
+    await call('bob', 'start_session', 50);
+    assert.deepEqual(
+      (await due()).map((p) => [p.to, p.title]),
+      [['alice/1', 'Bob is studying right now']]
+    );
+  });
+
+  test("you hear when your session's done and when your break's over", async () => {
+    await device('alice');
+    await call('alice', 'start_session', 5);
+    await due();
+    await travel(5);
+    const [done, ...rest] = await due();
+    assert.deepEqual(rest, []);
+    assert.equal(done.to, 'alice/1');
+    assert.equal(done.title, "Your session's done");
+    assert.match(done.body, /^\d+ chips, and a 1-minute break\.$/);
+    assert.equal(done.url, '/payout');
+
+    await travel(1);
+    assert.deepEqual(await due(), [
+      { to: 'alice/1', title: "Your break's over", body: 'Back to the office, or home?', url: '/' },
+    ]);
+    assert.deepEqual(await due(), []);
+
+    // Going home (or starting again) first: no word that the break is over.
+    await call('alice', 'start_session', 25);
+    await travel(25);
+    await due();
+    await call('alice', 'go_home');
+    await travel(6);
+    assert.deepEqual(await due(), []);
+  });
+
+  test('you hear when someone asks to be friends, unless they think better of it', async () => {
+    await device('alice');
+    await device('bob');
+    await call('dave', 'add_friend', 'alice');
+    await call('dave', 'add_friend', 'bob');
+    await call('dave', 'withdraw_friend_request', 'bob');
+    assert.deepEqual(await due(), [
+      {
+        to: 'alice/1',
+        title: 'Dave would like to be friends',
+        body: 'Answer on the Friends board.',
+        url: '/friends',
+      },
+    ]);
+  });
+
+  test('nothing old is sent after a gap, and a giving-up sends nothing', async () => {
+    await device('alice');
+    await device('bob');
+    await call('bob', 'start_session', 30);
+    await travel(11);
+    assert.deepEqual(await due(), [], 'too long ago to say');
+    await call('bob', 'cancel_session');
+    assert.deepEqual(await due(), []);
   });
 });

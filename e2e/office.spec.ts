@@ -1,6 +1,6 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
-import { ALL_TIPS } from './fake-supabase';
+import { ALL_TIPS, iso } from './fake-supabase';
 import { button, expect, pathOf, test } from './test';
 
 /** Hides or shows the page, as switching tabs or locking a phone does. */
@@ -183,3 +183,135 @@ test('on a computer, other tabs are fine, but leaving the page stops a session',
   ).toBeVisible();
   expect(fake.called('back_to_page')[1].p_away_s).toBeGreaterThanOrEqual(40);
 });
+
+test('joining a friend: your session ends when theirs does', async ({ page, fake }) => {
+  fake.atDesk();
+  Object.assign(fake.friends[0], {
+    status: 'focused',
+    ends_at: iso(20),
+    break_ends_at: null,
+    place: 'office',
+  });
+  await fake.open('/office');
+  await button(page, "Bob's desk").click();
+  await expect(page.getByText('Studying: 20m left.')).toBeVisible();
+
+  await button(page, 'Join Bob').click();
+  await expect(page.getByText(/^Studying · 20 min/)).toBeVisible();
+  const [joined] = fake.called('join_session');
+  expect(joined.p_username).toBe('bob');
+  expect(joined.p_device).toMatch(/^[a-z0-9]{10,}$/);
+  expect(fake.me.active_session?.ends_at).toBe(fake.friends[0].ends_at);
+});
+
+test('a friend of a friend sits greyed out, and you can ask them to be friends', async ({
+  page,
+  fake,
+}) => {
+  fake.atDesk();
+  fake.friendsOfFriends = [
+    {
+      username: 'dave',
+      display_name: 'Dave',
+      status: 'focused',
+      place: 'office',
+      arrived_at: iso(-10),
+      vehicle: 'hatchback',
+      desk_items: [{ item: 'duck', x: 36, y: -26 }],
+      desk: 2,
+      via: ['Bob'],
+    },
+  ];
+  await fake.open('/office');
+  await button(page, "Bob's friend's desk").click();
+  await expect(page.getByText('1 friend in common: Bob')).toBeVisible();
+  await button(page, 'Ask to be friends').click();
+  await expect(
+    page.getByText('Asked. Dave will be on your Friends board once they say yes.')
+  ).toBeVisible();
+  expect(fake.called('add_friend')).toEqual([{ p_username: 'dave' }]);
+});
+
+test('moving to an empty desk, between sessions', async ({ page, fake }) => {
+  fake.atDesk();
+  await fake.open('/office');
+  await button(page, 'Empty desk 6').click();
+  await button(page, 'Sit here').click();
+  await expect(button(page, 'Sit here')).toBeHidden();
+  expect(fake.called('switch_desk')).toEqual([{ p_desk: 5 }]);
+  expect(fake.me.desk).toBe(5);
+});
+
+test("while you study, empty desks can't be taken", async ({ page, fake }) => {
+  fake.studying(50);
+  await fake.open('/office');
+  await expect(page.getByText('Studying · 50 min')).toBeVisible();
+  await expect(button(page, 'Empty desk 6')).toHaveCount(0);
+});
+
+test('arranging your desk by dragging things about', async ({ page, fake }) => {
+  fake.atDesk();
+  fake.me.tips = fake.me.tips.filter((t) => t !== 'arrange');
+  fake.me.inventory = { ...fake.me.inventory, mug: 1, duck: 1 };
+  fake.me.desk_items = [
+    { item: 'duck', x: 36, y: -26 },
+    { item: 'mug', x: -36, y: -24 },
+  ];
+  await fake.open('/office');
+  await button(page, 'Arrange your desk').click();
+  await expect(
+    page.getByText(/^Your drawer is open. Drag things from it onto your desk/)
+  ).toBeVisible();
+  const drag = dragOn(page, page.getByLabel('Your desk', { exact: true }));
+
+  // The duck, down into the drawer.
+  await drag([36, -31], [36, 15]);
+  await expect.poll(() => fake.called('store_desk_item')).toEqual([{ p_item: 'duck' }]);
+
+  // The mug, across the desk.
+  await drag([-36, -29], [21, -33]);
+  await expect
+    .poll(() => fake.called('place_desk_item'))
+    .toEqual([{ p_item: 'mug', p_x: 21, p_y: -28 }]);
+
+  // The duck again, out of the drawer (it's first in it) onto the desk.
+  await drag([-38, 16], [0, -25]);
+  await expect.poll(() => fake.me.desk_items).toContainEqual({ item: 'duck', x: 0, y: -20 });
+});
+
+test('something new for your desk goes on it straight from the shed', async ({ page, fake }) => {
+  fake.shop.push({
+    slug: 'mug',
+    kind: 'desk',
+    name: 'Mug',
+    price: 10,
+    pack_size: 1,
+    owned: 0,
+    grow_hours: null,
+    yield: null,
+  });
+  await fake.open('/shop?from=garden');
+  await button(page, 'Buy Mug for 10 chips').click();
+  await expect(
+    page.getByText('Your new mug is in the drawer. Drag it onto your desk.')
+  ).toBeVisible();
+  await dragOn(page, page.getByLabel('Your desk', { exact: true }))([-38, 16], [10, -30]);
+  await expect.poll(() => fake.me.desk_items).toEqual([{ item: 'mug', x: 10, y: -25 }]);
+});
+
+/**
+ * Drags on the desk close-up from one point to another, in desk units (as in
+ * src/components/ArrangeSheet: S = 2.4, front-centre at (130, 176)).
+ */
+function dragOn(page: Page, stage: Locator) {
+  return async (from: [number, number], to: [number, number]) => {
+    const box = (await stage.boundingBox())!;
+    const px = ([x, y]: [number, number]) => [box.x + 130 + x * 2.4, box.y + 176 + y * 2.4];
+    const [x0, y0] = px(from);
+    const [x1, y1] = px(to);
+    await page.mouse.move(x0, y0);
+    await page.mouse.down();
+    await page.mouse.move(x1, y1, { steps: 10 });
+    await page.mouse.up();
+  };
+}

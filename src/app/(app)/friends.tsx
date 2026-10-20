@@ -49,7 +49,7 @@ export default function NoticeboardScreen() {
 
   return (
     <Scene conditions={conditions} ground={C.wall} art={art} reserve={{ top: 56, bottom: 0 }}>
-      <SceneHeader place="Noticeboard" chips={me.chips} />
+      <SceneHeader place="Friends" chips={me.chips} />
       <Panel style={styles.board}>
         <Noticeboard
           footer={

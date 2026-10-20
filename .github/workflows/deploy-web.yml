@@ -2,6 +2,7 @@ name: Deploy web
 
 # main -> production (https://<your-subdomain>.expo.app); pull requests -> a preview URL.
 # Needs the EXPO_TOKEN secret and the EXPO_PUBLIC_SUPABASE_* variables (see README).
+# EXPO_PUBLIC_VAPID_PUBLIC_KEY turns notifications on; without it the app hides them.
 on:
   push:
     branches: [main]
@@ -41,6 +42,7 @@ jobs:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
       EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+      EXPO_PUBLIC_VAPID_PUBLIC_KEY: ${{ vars.EXPO_PUBLIC_VAPID_PUBLIC_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

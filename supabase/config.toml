@@ -379,8 +379,8 @@ authorization_url_path = "/oauth/consent"
 allow_dynamic_registration = false
 
 [edge_runtime]
-# Focus has no Edge Functions.
-enabled = false
+# For "push", which sends notifications (supabase/functions/push).
+enabled = true
 # Supported request policies: `oneshot`, `per_worker`.
 # `per_worker` (default) — enables hot reload during local development.
 # `oneshot` — fallback mode if hot reload causes issues (e.g. in large repos or with symlinks).
@@ -392,6 +392,10 @@ deno_version = 2
 
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
+
+# Anyone may call it: it only sends what's due, once (see 0015_notifications.sql).
+[functions.push]
+verify_jwt = false
 
 [analytics]
 # Studio's log explorer; off to keep `supabase start` light.

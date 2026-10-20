@@ -1,11 +1,11 @@
 import { Animated } from 'react-native';
 
-import { DESKS } from '@/lib/api';
+import { DESKS, type DeskThing } from '@/lib/api';
 import { palette } from '@/lib/theme';
 import type { Seat } from '@/world/seats';
 import { rand, useLoop } from './motion';
 import { Person } from './People';
-import { Box, Dot, Glow, Shadow } from './primitives';
+import { Box, Dot, Faint, Glow, Shadow } from './primitives';
 import { BLEED } from './Scene';
 
 const P = palette.office;
@@ -56,6 +56,7 @@ export function OfficeFloor({
             leanBack={i === closeUp ? 16 : 0}
             screenOn={i === closeUp || !!sitting}
             items={seat?.deskItems ?? []}
+            faint={!!seat?.via}
           />
         );
       })}
@@ -126,18 +127,6 @@ function Surroundings() {
   );
 }
 
-/** Where things sit on a desk top, relative to the desk's front-centre. */
-const SLOTS: [number, number][] = [
-  [-36, -24],
-  [36, -26],
-  [-40, -38],
-  [40, -38],
-  [-24, -16],
-  [24, -16],
-  [-30, -44],
-  [30, -44],
-];
-
 /**
  * A desk seen from above and in front, facing away from us. `x` is its centre
  * and `y` the bottom of its front edge. Someone sitting at it has their back to
@@ -151,6 +140,8 @@ export function Desk({
   leanBack = 0,
   items = [],
   scale = 1,
+  faint = false,
+  chair = true,
 }: {
   x: number;
   y: number;
@@ -160,8 +151,13 @@ export function Desk({
   leanBack?: number;
   /** Whether the monitor is on; by default, whenever someone's sitting here. */
   screenOn?: boolean;
-  items?: string[];
+  /** What's on it, where (see public.desk_layout). */
+  items?: DeskThing[];
   scale?: number;
+  /** A friend of a friend's: they and their things are drawn see-through. */
+  faint?: boolean;
+  /** An empty chair, when nobody's sitting here (not when its drawer is open). */
+  chair?: boolean;
 }) {
   const s = scale;
   const on = screenOn;
@@ -184,18 +180,13 @@ export function Desk({
       />
       {/* keyboard */}
       <Box x={x - 15 * s} y={y - 30 * s} w={30 * s} h={7 * s} c="#d8d2c6" r={2 * s} />
-      {items.slice(0, SLOTS.length).map((item, i) => (
-        <DeskItem
-          key={item}
-          item={item}
-          x={x + SLOTS[i][0] * s}
-          y={y + SLOTS[i][1] * s}
-          scale={s}
-        />
-      ))}
-      {occupant ? (
-        <Person username={occupant} x={x} y={y + (12 + leanBack) * s} pose="sit" />
-      ) : (
+      <Faint on={faint}>
+        {items.map((t) => (
+          <DeskItem key={t.item} item={t.item} x={x + t.x * s} y={y + t.y * s} scale={s} />
+        ))}
+        {occupant && <Person username={occupant} x={x} y={y + (12 + leanBack) * s} pose="sit" />}
+      </Faint>
+      {!occupant && chair && (
         // An empty chair, pushed in.
         <>
           <Box x={x - 13 * s} y={y - 8 * s} w={26 * s} h={14 * s} c={P.chair} r={6 * s} />
@@ -217,7 +208,7 @@ export function DeskGlow({
   x: number;
   y: number;
   on: boolean;
-  items?: string[];
+  items?: DeskThing[];
   scale?: number;
 }) {
   const s = scale;
@@ -229,8 +220,7 @@ export function DeskGlow({
           <Box x={x - 17 * s} y={y - 67 * s} w={34 * s} h={22 * s} c="#d4ecf8" r={2 * s} />
         </>
       )}
-      {items.slice(0, SLOTS.length).map((item, i) => {
-        const [dx, dy] = SLOTS[i];
+      {items.map(({ item, x: dx, y: dy }) => {
         if (item === 'lamp')
           return (
             <Glow

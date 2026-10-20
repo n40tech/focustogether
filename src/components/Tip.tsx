@@ -28,7 +28,7 @@ export function useTips() {
 
 /** After your first studied session, in the car park and the garden (one tip, put away in either). */
 export const INVITE_TIP =
-  'Studying is better with company. Make an invite on the noticeboard and send a friend the link: whoever joins starts out as your friend.';
+  'Studying is better with company. Make an invite on the Friends board and send a friend the link: whoever joins starts out as your friend.';
 
 /** Tips put away on this page, so a reply that was already on its way can't bring one back. */
 const doneHere = new Set<string>();

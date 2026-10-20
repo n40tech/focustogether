@@ -2,24 +2,26 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { Box, Dot, Glow, Hotspot, Shadow, Tag } from '@/art/primitives';
+import { Box, Dot, Faint, Glow, Hotspot, Shadow, Tag } from '@/art/primitives';
 import { BLEED, Scene, useTone } from '@/art/Scene';
 import { Bike, Car, CarLights } from '@/art/Vehicles';
 import { useAmbience } from '@/audio/sound';
 import { Button } from '@/components/Button';
 import { Body, HeaderDetail, Muted, Panel, SceneHeader, Toast } from '@/components/Chrome';
 import { Countdown } from '@/components/Countdown';
+import { FriendOfFriendSheet } from '@/components/FriendOfFriendSheet';
 import { RipeNote } from '@/components/RipeNote';
 import { HomeScreenTip, useHomeScreenTip } from '@/components/HomeScreenTip';
 import { INVITE_TIP, Tip } from '@/components/Tip';
 import { api, DESKS, type Me } from '@/lib/api';
 import { itemInfo } from '@/lib/catalog';
 import { cancelSessionEnd } from '@/lib/notifications';
+import { turnOff } from '@/lib/push';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import { useConditions } from '@/weather/useConditions';
-import { seatsOf } from '@/world/seats';
-import { useGo, useWorld } from '@/world/World';
+import { seatsOf, type Seat } from '@/world/seats';
+import { nameFor, useGo, useWorld } from '@/world/World';
 
 const C = palette.carpark;
 
@@ -44,13 +46,15 @@ const WINDOW_XS = Array.from({ length: 94 }, (_, i) => -1956 + i * 46).filter(
 
 export default function CarPark() {
   useAmbience('carpark');
-  const { me, setMe, friends } = useWorld();
+  const { me, setMe, friends, friendsOfFriends, revealed } = useWorld();
   const conditions = useConditions();
   const go = useGo();
   const onBreak = me.status === 'on_break';
   const atWork = me.status !== 'absent';
   const [leaving, setLeaving] = useState(false);
   const [notice, setNotice] = useState<{ id: number; text: string } | null>(null);
+  // A friend of a friend's car you tapped.
+  const [stranger, setStranger] = useState<Seat | null>(null);
   const clearNotice = useCallback(() => setNotice(null), []);
   const { rift } = useLocalSearchParams<{ rift?: string }>();
   const router = useRouter();
@@ -61,7 +65,8 @@ export default function CarPark() {
 
   // People at work park in the bay (or rack slot) that matches their desk.
   // Anyone without a vehicle walked, so the car park doesn't show them.
-  const seats = seatsOf(me, friends);
+  // Friends of friends' are see-through.
+  const seats = seatsOf(me, friends, friendsOfFriends);
   const cars = seats.flatMap((seat, i) =>
     seat?.vehicle && seat.vehicle !== 'bike' ? [{ seat, model: seat.vehicle, bay: BAYS[i] }] : []
   );
@@ -87,6 +92,8 @@ export default function CarPark() {
     try {
       if (atWork) await api.goHome();
       await cancelSessionEnd();
+      // No notifications for you on this device once you've gone.
+      await turnOff().catch(() => {});
       await supabase.auth.signOut();
     } catch (e) {
       say(e);
@@ -113,7 +120,7 @@ export default function CarPark() {
       <Box x={181} y={88} w={31} h={64} c={C.glass} r={1} />
       <Box x={174} y={114} w={3} h={12} c="#d9d4ca" r={1} />
       <Box x={183} y={114} w={3} h={12} c="#d9d4ca" r={1} />
-      {/* noticeboard */}
+      {/* the Friends board */}
       <Box x={238} y={94} w={54} h={36} c="#a4825e" r={2} />
       <Box x={242} y={98} w={46} h={28} c="#c49a6c" r={1} />
       {[
@@ -141,7 +148,9 @@ export default function CarPark() {
         />
       ))}
       {bikes.map(({ seat, slot }) => (
-        <Bike key={seat.username} x={slot.x} y={slot.y} />
+        <Faint key={seat.username} on={!!seat.via}>
+          <Bike x={slot.x} y={slot.y} />
+        </Faint>
       ))}
       <Box x={300} y={152} w={2100} h={80} c={C.hedge} />
       {[300, 324, 348, 372].map((x) => (
@@ -160,7 +169,9 @@ export default function CarPark() {
         <Tree key={x} x={x} y={300 + (i % 2) * 210} />
       ))}
       {cars.map(({ seat, model, bay }) => (
-        <Car key={seat.username} model={model} x={bay.x} y={bay.y} />
+        <Faint key={seat.username} on={!!seat.via}>
+          <Car model={model} x={bay.x} y={bay.y} />
+        </Faint>
       ))}
 
       <LampPost x={14} y={470} />
@@ -206,7 +217,7 @@ export default function CarPark() {
         y={90}
         w={62}
         h={44}
-        label="Noticeboard: friends"
+        label="Friends board"
         onPress={() => go('/friends', null)}
       />
       <Hotspot
@@ -224,15 +235,29 @@ export default function CarPark() {
           key={seat.username}
           x={bay.x}
           y={bay.y + 2}
-          text={seat.isMe ? 'You' : seat.display_name}
+          text={seat.isMe ? 'You' : nameFor(seat, revealed)}
+          dim={!!seat.via}
         />
       ))}
+      {cars
+        .filter(({ seat }) => seat.via)
+        .map(({ seat, bay }) => (
+          <Hotspot
+            key={`tap-${seat.username}`}
+            x={bay.x - 24}
+            y={bay.y - 78}
+            w={48}
+            h={80}
+            label={`${nameFor(seat, revealed)}'s car`}
+            onPress={() => setStranger(seat)}
+          />
+        ))}
       {bikes.map(({ seat, slot }, i) => (
         <Tag
           key={seat.username}
           x={slot.x}
           y={slot.y + 4 + (i % 2) * 12}
-          text={seat.isMe ? 'You' : seat.display_name}
+          text={seat.isMe ? 'You' : nameFor(seat, revealed)}
           dim
         />
       ))}
@@ -269,7 +294,7 @@ export default function CarPark() {
         <Button title="Walk in" onPress={() => go('/office')} />
         <View style={styles.row}>
           <Button
-            title="Noticeboard"
+            title="Friends"
             variant="quiet"
             small
             onPress={() => go('/friends', null)}
@@ -297,6 +322,12 @@ export default function CarPark() {
         </View>
         <Button title="Log out" variant="ghost" small onPress={logOut} disabled={leaving} />
       </Panel>
+      {stranger?.via && (
+        <FriendOfFriendSheet
+          person={{ ...stranger, via: stranger.via }}
+          onClose={() => setStranger(null)}
+        />
+      )}
       {notice && <Toast key={notice.id} text={notice.text} onDone={clearNotice} />}
       {rift === '1' && (
         <Toast key="rift" text={RIFT_NOTE} onDone={() => router.setParams({ rift: undefined })} />
@@ -321,6 +352,7 @@ function Greeting({ me, inCount }: { me: Me; inCount: number }) {
         </Body>
         <RipeNote ripe={me.ripe} />
         <PostNote letters={me.letters} />
+        <RequestNote requests={me.friend_requests} />
       </View>
     );
   }
@@ -340,6 +372,7 @@ function Greeting({ me, inCount }: { me: Me; inCount: number }) {
       </Muted>
       <RipeNote ripe={me.ripe} />
       <PostNote letters={me.letters} />
+      <RequestNote requests={me.friend_requests} />
     </View>
   );
 }
@@ -352,6 +385,18 @@ function PostNote({ letters }: { letters: number }) {
       {letters === 1
         ? "There's a letter for you in the garden's post box."
         : `There are ${letters} letters for you in the garden's post box.`}
+    </Muted>
+  );
+}
+
+/** Players waiting for you to say whether you'll be friends. */
+function RequestNote({ requests }: { requests: number }) {
+  if (!requests) return null;
+  return (
+    <Muted>
+      {requests === 1
+        ? 'Someone would like to be friends. Answer on the Friends board.'
+        : `${requests} people would like to be friends. Answer on the Friends board.`}
     </Muted>
   );
 }

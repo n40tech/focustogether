@@ -179,10 +179,10 @@ the old values stick.
   and/or `?hour=0-23` to the address, e.g. `?hour=22&weather=rain` to check the
   night colours. This changes only what you see and hear.
 - **A first day:** join as a new player with the invite `TESTJOIN`
-  (**Got an invite? Join**), or with an invite made on the noticeboard. You'll
+  (**Got an invite? Join**), or with an invite made on the Friends board. You'll
   see the welcome, the tips, and skipping the first session. The tip about
   invites waits for a session you studied, not the skipped one (the Test
-  panel's **Finish my session** counts as studied). The noticeboard's
+  panel's **Finish my session** counts as studied). The Friends board's
   **Show the tips for new players again** brings the tips back for anyone.
 - **Adding to the home screen:** the tip only shows on a phone's browser, for
   a player with no sessions yet. In Chrome's device mode, pick an iPhone or an
@@ -234,18 +234,36 @@ bigger change), do the whole round:
 - [ ] **Join and sign in:** join with an invite, log out, sign in again.
       Logging out on a break counts as going home. A username with accents
       (say `zoë`) can sign in as `zoe` too.
-- [ ] **Noticeboard:** add a friend by username (with or without its
-      accents), then unpin them: it asks first, and they drop off both
-      players' boards.
-- [ ] **Car park:** friends at work show as their car or bike, the
-      noticeboard opens, and the garden gate only works on a break.
+- [ ] **Friends board:** ask someone to be friends by username (with or
+      without its accents). The other player's car park says someone has
+      asked, and their board shows who you both know: **Accept** puts you on
+      each other's boards, **Not now** just takes the request away. Ask
+      again, then **Withdraw** it. Tap a friend's name for their profile
+      (minutes and days studied, sessions, what they're worth, friends
+      since, friends, friends in common and last active). Friends show as
+      their characters' faces. Unpin them: it asks first, and they drop off
+      both boards.
+- [ ] **Car park:** friends at work show as their car or bike, the Friends
+      board opens, and the garden gate only works on a break.
 - [ ] **Office:** you get a desk and the other player sees you at it. Start a
       session and watch the countdown. Give up. Start another and switch to
       another tab for over 10 seconds: on a computer it carries on. Then try
       the same in the browser's device mode, or on a phone: it stops, and the
       office says so. On a computer, closing the tab stops a session (open
       Focus Together again to see the office say so), but a reload doesn't.
-      **Test → Finish my session** pays out.
+      **Test → Finish my session** pays out. Tap the other player's desk
+      while they study: it says how long they've got left, and **Join**
+      starts a session that ends when theirs does (the two countdowns
+      match). Tap an empty desk and **Sit here**: you move, and the other
+      player sees you there (and your car in the matching bay). A third
+      player who's a friend of only one of you (locally, `dave` is only
+      `alice`'s, so try `bob` and `dave`) shows see-through at their desk
+      and in their bay, as "Alice's friend" until you tap them. Tapping them
+      shows their name, how many friends you have in common, and **Ask to be
+      friends**. **Arrange your desk**: drag things about, drag one
+      into the open drawer to put it away, and drag it back out; the other
+      player sees your desk change. Buy something for your desk in the shed:
+      your desk opens with it in the drawer, to drag on.
 - [ ] **Payout:** chips are counted onto your desk and the break is shown.
       Take a break, go home, and spend chips all work.
 - [ ] **Garden:** walk with the thumbstick and the arrow keys; the other
@@ -255,8 +273,14 @@ bigger change), do the whole round:
       your stall and buy from theirs. Use the basket (eat, save seeds, offer a
       swap), post a letter and pick it up in the other window, sit on a bench
       (the other player sees you sitting), throw something in a bin, and open
-      the noticeboard. Walking out through the gate goes to the office, and
-      when the break runs out a bell rings.
+      the Friends board. Walking up to the other player shows their profile
+      above their stall. A friend of a friend on a break (`bob` and `dave`
+      again) walks about see-through as "Alice's friend", and what they say
+      doesn't show. **Your look**: change everything, save, and the
+      other player sees it (within a minute, or at once if they open the
+      app afresh), and your face on their Friends board changes too.
+      Walking out through the gate goes to the office, and when the break
+      runs out a bell rings.
 - [ ] **Two devices, one player:** sign in as the same player in a second
       window (a private one, or another browser) and go into the garden on
       both. The second arrives where the first has you. Walk on either: the
@@ -269,6 +293,16 @@ bigger change), do the whole round:
       each place sounds different, and muting works.
 - [ ] **Looks:** at phone width nothing is cut off or overlapping and button
       labels fit, and the night colours (`?hour=22`) are readable.
+- [ ] **Notifications:** the local Supabase runs the `push` function, with
+      the key pair in `supabase/functions/.env` (make one with `npm run
+      vapid-keys -- supabase/functions/.env`, and put its public key in
+      `.env` as `EXPO_PUBLIC_VAPID_PUBLIC_KEY`). In Chrome at
+      `http://localhost:8081` (push needs `localhost` or https), turn
+      notifications on on the Friends board and allow them. Then, as the
+      other player, start a session, and call the function as the cron job
+      would: `curl -X POST http://127.0.0.1:54321/functions/v1/push`. A
+      notification says they're studying, and tapping it opens the office.
+      Turning them off, or logging out, stops them.
 - [ ] **No errors** in the browser's console (developer tools → Console).
 
 ## 6. Before you open the pull request
