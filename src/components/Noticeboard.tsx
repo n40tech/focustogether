@@ -17,6 +17,7 @@ import { Muted } from '@/components/Chrome';
 import { Countdown } from '@/components/Countdown';
 import { Face } from '@/components/Face';
 import { FriendProfile } from '@/components/FriendProfile';
+import { Notifications } from '@/components/Notifications';
 import { forgetTips } from '@/components/Tip';
 import { api, type Friend, type FriendRequests, type Invite } from '@/lib/api';
 import { formatInvite } from '@/lib/invites';
@@ -67,6 +68,7 @@ export function Noticeboard({ footer }: { footer?: ReactNode }) {
           <FriendCard key={f.username} friend={f} onRemoved={removed} />
         ))}
         <InviteList invites={invites.list} onSend={invites.send} />
+        <Notifications />
         <Button
           title="Show the tips for new players again"
           variant="ghost"

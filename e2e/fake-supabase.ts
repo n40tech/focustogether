@@ -469,6 +469,8 @@ export class FakeSupabase {
     get_friend_requests: () => this.requests,
     get_friends_of_friends: () => this.friendsOfFriends,
     get_looks: () => this.looks,
+    save_push: () => null,
+    drop_push: () => null,
     place_desk_item: ({ p_item, p_x, p_y }) => {
       const item = String(p_item);
       const x = Math.max(-42, Math.min(42, Number(p_x)));

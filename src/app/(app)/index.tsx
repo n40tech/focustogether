@@ -16,6 +16,7 @@ import { INVITE_TIP, Tip } from '@/components/Tip';
 import { api, DESKS, type Me } from '@/lib/api';
 import { itemInfo } from '@/lib/catalog';
 import { cancelSessionEnd } from '@/lib/notifications';
+import { turnOff } from '@/lib/push';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import { useConditions } from '@/weather/useConditions';
@@ -91,6 +92,8 @@ export default function CarPark() {
     try {
       if (atWork) await api.goHome();
       await cancelSessionEnd();
+      // No notifications for you on this device once you've gone.
+      await turnOff().catch(() => {});
       await supabase.auth.signOut();
     } catch (e) {
       say(e);

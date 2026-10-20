@@ -341,6 +341,22 @@ flick and a quiet crackle.
   slot. Sent letters say whether they've been picked up.
 - Letters are only readable by whoever wrote them and whoever they're for.
 
+### Notifications
+Turned on per device on the Friends board, they arrive even with Focus
+Together closed (web push):
+- "Bob is studying right now", to his friends who aren't studying, with the
+  office a tap away to join him;
+- "Your session's done", with its chips and break;
+- "Your break's over", if it ran out on its own (not if you went home or
+  started another session first);
+- "Carol would like to be friends", to whoever she asked (not if she
+  withdrew first).
+
+Each goes once, within about a minute, and nothing more than 10 minutes old
+is sent. On an iPhone, web push only works in the home-screen app, so the
+Friends board says to add it there first. Logging out turns them off for that
+device.
+
 ### Bins
 Two wheelie bins in the garden take produce, seeds and cigarettes you don't
 want. Nothing comes back out.
@@ -467,7 +483,9 @@ src/
                           vehicles, desks, people, beds
   components/             UI pieces: buttons, header, toast, timer, thumbstick, sheets
   lib/                    Supabase client, typed RPC wrappers, catalogue art, time,
-                          leaving the page mid-session (away)
+                          leaving the page mid-session (away), notifications (push)
+public/sw.js              the service worker: shows notifications, opens the right place
+supabase/functions/push/  sends due notifications (Deno, web-push), every minute by Supabase Cron
 supabase/migrations/      0001 init (MVP), 0002 game, 0003 community, 0004 withering,
                           0005 testing tools, 0006 real-time growth and desks,
                           0007 staying on the page, a first day, post and bins
@@ -532,6 +550,8 @@ deployment/               numbered runbooks for setting up and shipping each upd
 | `profiles` | + `looks`: skin, colour, hair and hair colour you chose, or null (0012) |
 | `desk_layout` | (player, desk thing) → where it sits on their desk; no row means it's in the drawer (0013) |
 | `profiles` | + `active_at`: when their app last checked in, to within a minute (0014) |
+| `push_subscriptions` | endpoint → player and keys: a device to notify (0015) |
+| `sessions`, `friend_requests` | + `start_pushed_at`, `end_pushed_at`, `break_pushed_at` / `pushed_at`: told once (0015) |
 
 | RPC | Allowed when | Returns |
 |---|---|---|
@@ -540,6 +560,8 @@ deployment/               numbered runbooks for setting up and shipping each upd
 | `get_friend_requests()`, `answer_friend_request(username, accept)`, `withdraw_friend_request(username)` | signed in (0010) | requests to you and from you |
 | `get_profile(username)` | a friend (0010; + friends, in common and last active from 0014) | their profile |
 | `may_listen(topic)` | signed in (0014; for the realtime policies) | whether you may hear that garden topic |
+| `save_push(endpoint, p256dh, auth)`, `drop_push(endpoint)` | signed in (0015) | – |
+| `due_pushes()`, `forget_pushes(endpoints)` | the service role only: the push function (0015) | what to send now / – |
 | `join_session(username, device)` | not studying; they're a friend who is, with a minute or more to go (0010) | me |
 | `get_friends_of_friends()` | signed in (0011) | friends of friends at work, with `via` |
 | `switch_desk(desk)` | at work, not studying; nobody in your circle at it (0011) | me |
@@ -591,6 +613,7 @@ and you can sign in or add a friend by either. The rules are
 | Web build | `npx expo export -p web` with `web.output: "static"` | Every route gets its own HTML file, so refreshing `/garden` works on any static host |
 | Hosting | **EAS Hosting** (`eas deploy`), served at `https://<name>.expo.app` | The project is already linked to EAS; free tier; a preview URL per deploy; custom domain later |
 | Backend | **Supabase**: Postgres, Auth, Realtime | Already in use. RLS and RPCs keep the rules server-side, and Realtime Broadcast carries chat |
+| Notifications | Web push from a Supabase Edge Function (`push`), called every minute by Supabase Cron (`pg_cron` and `pg_net`) | Reaches players with the app closed; the database decides what's due, so the function stays small |
 | CI | GitHub Actions: lint, typecheck, web export, the database tests and the browser tests, on pull requests and pushes to `main` | Catches a broken build, rule or screen before it ships |
 | CD | GitHub Actions: `eas deploy --prod` on push to `main`, a preview deploy for each PR | |
 | DB migrations | SQL files in `supabase/migrations/`, each run once on the real project before the merge that needs it: by Claude through the Supabase connector (only if it matches the file), or pasted into the SQL Editor. The CLI is never linked to the real project | Step-by-step runbooks in `deployment/` |
@@ -601,6 +624,10 @@ and you can sign in or add a friend by either. The rules are
 - Variables `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
   These are public by design, because they're baked into the JavaScript bundle.
   RLS is what protects the data.
+- Variable `EXPO_PUBLIC_VAPID_PUBLIC_KEY`: the public half of the push key pair
+  (`npm run vapid-keys`). The private half is only ever an Edge Function
+  secret (`VAPID_PRIVATE_KEY`, with `VAPID_PUBLIC_KEY`) on the Supabase
+  project. Without the variable, the app hides notifications.
 
 Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 
@@ -665,6 +692,9 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
       about the garden see-through (chat moves to its own friends-only
       channel), and profiles say how many friends someone has, how many you
       share, and when they were last active. Friends are shown by their faces.
+- [x] Migration `0015_notifications.sql` and the `push` Edge Function:
+      notifications by web push, even with the app closed (81 scenario tests
+      in all).
 
 **M2: feel**
 - Illustrated art, recorded audio (layer by layer), a typeface, gentle
@@ -672,7 +702,7 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 - Walking animation (legs, a gentle bob), and people drawn in depth order as
   they pass each other.
 - Server-side weather, so rain waters everyone's plots.
-- "Session over" and "break over" notifications (web push on web).
+- (Notifications by web push came in 0015.)
 - Choosing which owned vehicle to arrive in. (Arranging your desk came in 0013.)
 
 **M3: native apps**
@@ -694,6 +724,7 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 | Social model | Pairwise friendships, as in the MVP. Friends of friends at work show see-through, so you can ask them to be friends. |
 | Changing desks | Tap an empty desk between sessions. Your bay follows. |
 | Friends of friends | Shown see-through, as "Alice's friend" until you tap them, in the office, the car park and the garden. They never hear your chat. |
+| Notifications | Web push, turned on per device: a friend starting, your session or break ending, and friend requests. Sent within a minute, and only once. |
 | Looks | Chosen in the garden from a few skin tones, colours, hairstyles and hair colours. Until then, picked from your username. |
 | Arranging a desk | Drag things where you want them, between sessions. Something new from the shed starts in the drawer, and you drag it onto your desk there and then. |
 | Un-adding a friend | "Unpin" on the Friends board, after a question. It ends the friendship both ways and calls off offers between you; nobody is told. |
@@ -754,6 +785,10 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
   nothing to moderate after the fact, but also no history.
 - **Scale:** each open client polls every 10 s, which is fine for tens of
   players. Move to Realtime Postgres Changes if it grows.
+- **The push function is open:** anyone can call it (it runs without a
+  sign-in, as the cron job does), but it only ever sends what's due, once, so
+  calling it early changes nothing. Calling it very often would only use up
+  Edge Function invocations.
 - **Realtime volume:** a walking player sends about 5 position messages a
   second, and each is delivered to every friend listening. That's comfortable
   for a friend group on Supabase's free Realtime quotas, but worth watching if

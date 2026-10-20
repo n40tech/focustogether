@@ -10,7 +10,9 @@ session so you finish together, and move to an empty desk. Friends of your
 friends at work show see-through, so you can ask them to be friends. In
 the garden, everyone can choose how they look, and in the office everyone
 can arrange their desk. Friends of friends walk about the garden too, and
-profiles say when someone was last active.
+profiles say when someone was last active. And notifications: when a
+friend starts studying, when your session or break is over, and when
+someone asks to be friends, even with the app closed.
 
 ---
 
@@ -113,7 +115,51 @@ select policyname from pg_policies where schemaname = 'realtime' and tablename =
 Chat between a page still on the old app and one on the new one doesn't get
 through until both have reloaded, as they now use different channels.
 
-## 6. Merge
+## 6. Run migration 0015, and set up notifications
+
+The new app calls `save_push` and `drop_push`. Check:
+
+```sql
+select to_regclass('public.push_subscriptions') is not null as done;
+```
+
+If `false`, run `supabase/migrations/0015_notifications.sql` the same way.
+Everything that's already happened counts as told, so nothing old is sent.
+
+Then, in this order, so the app only offers notifications once they work:
+
+1. **A key pair.** `npm run vapid-keys -- .env.vapid.local` writes one to a
+   file git ignores, and prints the public key.
+2. **The function's secrets** (you, in the dashboard: *Edge Functions →
+   Secrets*): add `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`, copied from
+   `.env.vapid.local`. The private key stays there and in the dashboard,
+   nowhere else.
+3. **The function.** Claude deploys `supabase/functions/push` through the
+   Supabase connector (with your OK), with JWT checks off, as
+   `supabase/config.toml` has it. Calling it (`curl -X POST
+   https://<project-ref>.supabase.co/functions/v1/push`) answers
+   `{"sent":0,"gone":0}`.
+4. **Every minute** (Claude, through the connector, with your OK): switch on
+   `pg_cron` and `pg_net` (*Database → Extensions*), then
+
+   ```sql
+   select cron.schedule(
+     'focus-push',
+     '* * * * *',
+     $$ select net.http_post(
+          url := 'https://<project-ref>.supabase.co/functions/v1/push',
+          headers := '{"Content-Type": "application/json"}'::jsonb
+        ) $$
+   );
+   ```
+
+   A minute later, `select status_code from net._http_response order by
+   created desc limit 1;` says 200.
+5. **The app's variable** (you, on GitHub: *Settings → Secrets and variables →
+   Actions → Variables*): `EXPO_PUBLIC_VAPID_PUBLIC_KEY`, the public key from
+   step 1. The next deploy shows the Notifications switch.
+
+## 7. Merge
 
 Merging deploys the app (GitHub Actions). Then, with a friend:
 
@@ -131,3 +177,6 @@ Merging deploys the app (GitHub Actions). Then, with a friend:
 - [ ] Chat in the garden with a friend: you see each other's words.
 - [ ] A friend's profile on the Friends board says when they were last
       active.
+- [ ] Turn notifications on (on an iPhone, from the home-screen app). Close
+      Focus Together, and have a friend start a session: within a minute, a
+      notification says so, and tapping it opens the office.

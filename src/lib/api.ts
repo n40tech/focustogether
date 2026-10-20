@@ -250,6 +250,10 @@ export const api = {
   withdrawFriendRequest: (username: string) =>
     rpc<FriendRequests>('withdraw_friend_request', { p_username: username }),
   getProfile: (username: string) => rpc<Profile>('get_profile', { p_username: username }),
+  /** This device can get notifications for you (see src/lib/push), or no longer wants them. */
+  savePush: (endpoint: string, p256dh: string, auth: string) =>
+    rpc<void>('save_push', { p_endpoint: endpoint, p_p256dh: p256dh, p_auth: auth }),
+  dropPush: (endpoint: string) => rpc<void>('drop_push', { p_endpoint: endpoint }),
   /** How you, your friends and theirs look, by username (only those who've chosen). */
   getLooks: () => rpc<Record<string, Looks>>('get_looks'),
   setLooks: (looks: Looks) => rpc<Record<string, Looks>>('set_looks', { p_looks: looks }),

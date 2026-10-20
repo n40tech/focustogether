@@ -100,3 +100,48 @@ test("a friend of a friend's car is in their bay, and tapping it asks", async ({
   await expect(page.getByText('1 friend in common: Bob')).toBeVisible();
   await expect(button(page, 'Ask to be friends')).toBeVisible();
 });
+
+test('turning notifications on, and off again', async ({ page, fake }) => {
+  // The browser's push service, as far as the app can tell.
+  await page.addInitScript(() => {
+    const sub = {
+      endpoint: 'https://push.example/nate',
+      toJSON: () => ({ endpoint: 'https://push.example/nate', keys: { p256dh: 'p', auth: 'a' } }),
+      unsubscribe: async () => {
+        mine = null;
+        return true;
+      },
+    };
+    let mine: typeof sub | null = null;
+    const registration = {
+      pushManager: { getSubscription: async () => mine, subscribe: async () => (mine = sub) },
+    };
+    Object.defineProperty(navigator, 'serviceWorker', {
+      value: {
+        register: async () => registration,
+        getRegistration: async () => registration,
+        ready: Promise.resolve(registration),
+      },
+    });
+    let permission = 'default';
+    Object.assign(window, {
+      PushManager: function PushManager() {},
+      Notification: {
+        get permission() {
+          return permission;
+        },
+        requestPermission: async () => (permission = 'granted'),
+      },
+    });
+  });
+  await fake.open('/friends');
+  await button(page, 'Turn on').click();
+  await expect(page.getByText(/^On for this device/)).toBeVisible();
+  expect(fake.called('save_push')).toEqual([
+    { p_endpoint: 'https://push.example/nate', p_p256dh: 'p', p_auth: 'a' },
+  ]);
+
+  await button(page, 'Turn off').click();
+  await expect(button(page, 'Turn on')).toBeVisible();
+  expect(fake.called('drop_push')).toEqual([{ p_endpoint: 'https://push.example/nate' }]);
+});

@@ -20,6 +20,9 @@ const env = {
   EXPO_NO_DOTENV: '1',
   EXPO_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
   EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'browser-tests',
+  // Any P-256 public key: the tests stand in for the browser's push service.
+  EXPO_PUBLIC_VAPID_PUBLIC_KEY:
+    'BJ6Wj0YtH8Oa4zZ0kC5d3u8rM3pW8bY2xjv6Q2l7gXl2b2kz0qfJ6p8m8n2c9oP6n9sH3b2a1c0d9e8f7g6h5i4',
 };
 delete env.EXPO_PUBLIC_TESTING;
 

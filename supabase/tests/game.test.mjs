@@ -64,6 +64,21 @@ async function asUser(user, text, params = [], topic = null) {
   }
 }
 
+/** Calls public.<fn>(...args) as the service role (an Edge Function), returning rows. */
+async function asService(fn, ...args) {
+  const ph = args.map((_, i) => `$${i + 1}`).join(', ');
+  await db.query('begin');
+  try {
+    await db.query('set local role service_role');
+    const { rows } = await db.query(`select * from public.${fn}(${ph})`, args);
+    await db.query('commit');
+    return rows;
+  } catch (e) {
+    await db.query('rollback');
+    throw e;
+  }
+}
+
 /** What Supabase Auth does on sign-up: insert the user with the form's metadata. */
 async function signUp(username, invite, { email, name } = {}) {
   const [u] = await q(
@@ -180,7 +195,7 @@ before(async () => {
 beforeEach(async () => {
   await q(
     `truncate public.sessions, public.inventory, public.plots, public.trades, public.listings,
-       public.letters, public.friend_requests, public.desk_layout`
+       public.letters, public.friend_requests, public.desk_layout, public.push_subscriptions`
   );
   await q(
     `update public.profiles set chips = 0, vehicle = null, went_home_at = null, activity = null,
@@ -1783,5 +1798,109 @@ describe('arranging your desk', () => {
       asUser('alice', `insert into public.desk_layout values ($1, 'mug', 0, -20)`, [ids.alice]),
       /row-level security/
     );
+  });
+});
+
+describe('notifications', () => {
+  const device = (user, n = 1) =>
+    call(user, 'save_push', `https://push.example/${user}/${n}`, 'p256dh', 'auth');
+  const due = async () =>
+    (await asService('due_pushes')).map(({ endpoint, title, body, url }) => ({
+      to: endpoint.replace('https://push.example/', ''),
+      title,
+      body,
+      url,
+    }));
+
+  test('a device is saved for whoever is signed in on it, and can be dropped', async () => {
+    await device('alice');
+    const mine = (user) => asUser(user, 'select endpoint from public.push_subscriptions');
+    assert.equal((await mine('alice')).length, 1);
+    assert.equal((await mine('bob')).length, 0);
+    // bob signs in on alice's phone: it's his now.
+    await call('bob', 'save_push', 'https://push.example/alice/1', 'p256dh', 'auth');
+    assert.equal((await mine('alice')).length, 0);
+    await call('alice', 'drop_push', 'https://push.example/alice/1');
+    assert.equal((await mine('bob')).length, 1, "alice can't drop bob's device");
+    await call('bob', 'drop_push', 'https://push.example/alice/1');
+    assert.equal((await mine('bob')).length, 0);
+
+    await rejects(call('alice', 'save_push', 'http://insecure.example', 'p', 'a'), /check/);
+    await rejects(call('anon', 'save_push', 'https://push.example/x', 'p', 'a'), /permission/);
+    await rejects(call('alice', 'due_pushes'), /permission denied/);
+  });
+
+  test('friends hear when you start studying, unless they are studying too', async () => {
+    for (const user of ['alice', 'bob', 'carol']) await device(user);
+    await call('carol', 'start_session', 25);
+    assert.deepEqual(await due(), [
+      {
+        to: 'bob/1',
+        title: 'Carol is studying right now',
+        body: '25 minutes. Join them in the office?',
+        url: '/office',
+      },
+    ]);
+    assert.deepEqual(await due(), [], 'once');
+
+    // bob starts too: alice hears, but carol's busy studying.
+    await call('bob', 'start_session', 50);
+    assert.deepEqual(
+      (await due()).map((p) => [p.to, p.title]),
+      [['alice/1', 'Bob is studying right now']]
+    );
+  });
+
+  test("you hear when your session's done and when your break's over", async () => {
+    await device('alice');
+    await call('alice', 'start_session', 5);
+    await due();
+    await travel(5);
+    const [done, ...rest] = await due();
+    assert.deepEqual(rest, []);
+    assert.equal(done.to, 'alice/1');
+    assert.equal(done.title, "Your session's done");
+    assert.match(done.body, /^\d+ chips, and a 1-minute break\.$/);
+    assert.equal(done.url, '/payout');
+
+    await travel(1);
+    assert.deepEqual(await due(), [
+      { to: 'alice/1', title: "Your break's over", body: 'Back to the office, or home?', url: '/' },
+    ]);
+    assert.deepEqual(await due(), []);
+
+    // Going home (or starting again) first: no word that the break is over.
+    await call('alice', 'start_session', 25);
+    await travel(25);
+    await due();
+    await call('alice', 'go_home');
+    await travel(6);
+    assert.deepEqual(await due(), []);
+  });
+
+  test('you hear when someone asks to be friends, unless they think better of it', async () => {
+    await device('alice');
+    await device('bob');
+    await call('dave', 'add_friend', 'alice');
+    await call('dave', 'add_friend', 'bob');
+    await call('dave', 'withdraw_friend_request', 'bob');
+    assert.deepEqual(await due(), [
+      {
+        to: 'alice/1',
+        title: 'Dave would like to be friends',
+        body: 'Answer on the Friends board.',
+        url: '/friends',
+      },
+    ]);
+  });
+
+  test('nothing old is sent after a gap, and a giving-up sends nothing', async () => {
+    await device('alice');
+    await device('bob');
+    await call('bob', 'start_session', 30);
+    await travel(11);
+    assert.deepEqual(await due(), [], 'too long ago to say');
+    await call('bob', 'cancel_session');
+    assert.deepEqual(await due(), []);
   });
 });

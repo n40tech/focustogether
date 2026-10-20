@@ -278,8 +278,9 @@ bigger change), do the whole round:
       again) walks about see-through as "Alice's friend", and what they say
       doesn't show. **Your look**: change everything, save, and the
       other player sees it (within a minute, or at once if they open the
-      app afresh), and their Friends board dot takes your colour. Walking out through the gate goes to the office, and
-      when the break runs out a bell rings.
+      app afresh), and your face on their Friends board changes too.
+      Walking out through the gate goes to the office, and when the break
+      runs out a bell rings.
 - [ ] **Two devices, one player:** sign in as the same player in a second
       window (a private one, or another browser) and go into the garden on
       both. The second arrives where the first has you. Walk on either: the
@@ -292,6 +293,16 @@ bigger change), do the whole round:
       each place sounds different, and muting works.
 - [ ] **Looks:** at phone width nothing is cut off or overlapping and button
       labels fit, and the night colours (`?hour=22`) are readable.
+- [ ] **Notifications:** the local Supabase runs the `push` function, with
+      the key pair in `supabase/functions/.env` (make one with `npm run
+      vapid-keys -- supabase/functions/.env`, and put its public key in
+      `.env` as `EXPO_PUBLIC_VAPID_PUBLIC_KEY`). In Chrome at
+      `http://localhost:8081` (push needs `localhost` or https), turn
+      notifications on on the Friends board and allow them. Then, as the
+      other player, start a session, and call the function as the cron job
+      would: `curl -X POST http://127.0.0.1:54321/functions/v1/push`. A
+      notification says they're studying, and tapping it opens the office.
+      Turning them off, or logging out, stops them.
 - [ ] **No errors** in the browser's console (developer tools → Console).
 
 ## 6. Before you open the pull request

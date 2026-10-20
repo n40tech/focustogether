@@ -17,6 +17,7 @@ import { usePolled } from '@/hooks/usePolled';
 import { api, type Friend, type FriendOfFriend, type Me } from '@/lib/api';
 import { fetchMe, startAwayWatch, watchSession } from '@/lib/away';
 import { defaultLooks, paint, type Looks } from '@/lib/looks';
+import { keepPushFresh } from '@/lib/push';
 import { supabase } from '@/lib/supabase';
 import { tones } from '@/lib/theme';
 
@@ -57,6 +58,10 @@ export function WorldProvider({ children }: { children: ReactNode }) {
 
   // Leaving the page mid-session stops the session (see src/lib/away).
   useEffect(startAwayWatch, []);
+  // Notifications on this device go to whoever is signed in now.
+  useEffect(() => {
+    keepPushFresh().catch(() => {});
+  }, []);
   const session = me.data?.active_session ?? null;
   useEffect(() => watchSession(session), [session]);
 

@@ -95,6 +95,8 @@ variables → Actions* and add:
 - Variables `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
   These are public by design: they end up in the JavaScript bundle, and RLS
   protects the data.
+- Variable `EXPO_PUBLIC_VAPID_PUBLIC_KEY`, for notifications: see
+  `deployment/0005-friends-and-looks.md`.
 
 Pushes to `main` then deploy to production, and every pull request gets its own
 preview URL (`.github/workflows/deploy-web.yml`). Until those settings exist,
