@@ -164,6 +164,9 @@ export class FakeSupabase {
   /** What a friend's profile says, whoever they are. */
   profile: Omit<Profile, 'username' | 'display_name' | 'status' | 'ends_at' | 'break_ends_at'> = {
     friends_since: '2026-09-01T09:00:00Z',
+    friends: 6,
+    in_common: 2,
+    last_active: iso(-45),
     minutes_studied: 1250,
     sessions_studied: 38,
     days_studied: 14,
@@ -219,9 +222,12 @@ export class FakeSupabase {
   /** The Realtime channels the page has joined, such as "garden:bob". */
   readonly joined = new Set<string>();
 
-  /** A broadcast on `username`'s garden channel: a friend's, or yours from another device. */
+  /**
+   * A broadcast on `username`'s garden channel (what they say goes on their
+   * chat channel): a friend's, or yours from another device.
+   */
   broadcastAs(username: string, event: string, payload: object) {
-    const topic = `realtime:garden:${username}`;
+    const topic = `realtime:garden${event === 'say' ? '-chat' : ''}:${username}`;
     const message = [null, null, topic, 'broadcast', { type: 'broadcast', event, payload }];
     this.sockets.forEach((ws) => ws.send(JSON.stringify(message)));
   }
@@ -350,16 +356,20 @@ export class FakeSupabase {
       const you = this.elsewhere;
       if (event === 'phx_join' && you && topic === `realtime:garden:${this.me.username}`)
         setTimeout(() => this.broadcastAs(this.me.username, 'pos', you), 300);
-      const friend = this.inGarden.find((f) => topic === `realtime:garden:${f.username}`);
-      if (event !== 'phx_join' || !friend) return;
+      if (event !== 'phx_join') return;
       const broadcast = (event: string, payload: object) =>
         ws.send(
           JSON.stringify([null, null, topic, 'broadcast', { type: 'broadcast', event, payload }])
         );
-      setTimeout(() => {
-        broadcast('pos', { x: friend.x, y: friend.y, ...(friend.sit && { sit: 1 }) });
-        if (friend.say) broadcast('say', { text: friend.say });
-      }, 300);
+      // Where they are, on their garden channel; what they say, on their chat channel.
+      const walker = this.inGarden.find((f) => topic === `realtime:garden:${f.username}`);
+      if (walker)
+        setTimeout(
+          () => broadcast('pos', { x: walker.x, y: walker.y, ...(walker.sit && { sit: 1 }) }),
+          300
+        );
+      const talker = this.inGarden.find((f) => topic === `realtime:garden-chat:${f.username}`);
+      if (talker?.say) setTimeout(() => broadcast('say', { text: talker.say }), 400);
     });
   }
 

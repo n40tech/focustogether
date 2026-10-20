@@ -240,7 +240,9 @@ bigger change), do the whole round:
       each other's boards, **Not now** just takes the request away. Ask
       again, then **Withdraw** it. Tap a friend's name for their profile
       (minutes and days studied, sessions, what they're worth, friends
-      since). Unpin them: it asks first, and they drop off both boards.
+      since, friends, friends in common and last active). Friends show as
+      their characters' faces. Unpin them: it asks first, and they drop off
+      both boards.
 - [ ] **Car park:** friends at work show as their car or bike, the Friends
       board opens, and the garden gate only works on a break.
 - [ ] **Office:** you get a desk and the other player sees you at it. Start a
@@ -256,8 +258,9 @@ bigger change), do the whole round:
       player sees you there (and your car in the matching bay). A third
       player who's a friend of only one of you (locally, `dave` is only
       `alice`'s, so try `bob` and `dave`) shows see-through at their desk
-      and in their bay. Tapping them says who you both know and asks them
-      to be friends. **Arrange your desk**: drag things about, drag one
+      and in their bay, as "Alice's friend" until you tap them. Tapping them
+      shows their name, how many friends you have in common, and **Ask to be
+      friends**. **Arrange your desk**: drag things about, drag one
       into the open drawer to put it away, and drag it back out; the other
       player sees your desk change. Buy something for your desk in the shed:
       your desk opens with it in the drawer, to drag on.
@@ -271,7 +274,9 @@ bigger change), do the whole round:
       swap), post a letter and pick it up in the other window, sit on a bench
       (the other player sees you sitting), throw something in a bin, and open
       the Friends board. Walking up to the other player shows their profile
-      above their stall. **Your look**: change everything, save, and the
+      above their stall. A friend of a friend on a break (`bob` and `dave`
+      again) walks about see-through as "Alice's friend", and what they say
+      doesn't show. **Your look**: change everything, save, and the
       other player sees it (within a minute, or at once if they open the
       app afresh), and their Friends board dot takes your colour. Walking out through the gate goes to the office, and
       when the break runs out a bell rings.

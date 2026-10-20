@@ -62,7 +62,8 @@ agreed; **Open questions** lists what hasn't.
   bay 5 (or rack slot 5). Friends who are *at work* (arrived, studying, on a
   break, or between the two) appear as their **car** or **bike**; friends with
   neither aren't shown. Friends of your friends' cars and bikes are there
-  too, see-through; tap a car to ask its owner to be friends. Nobody's bay is
+  too, see-through and labelled as a friend's friend ("Alice's friend"); tap
+  a car to see who it is and ask them to be friends. Nobody's bay is
   reserved, yours included.
 - **Do:** walk in (office) · the Friends board (friends, requests and invites) · the garden
   gate (only while you're on a break) · go home (while you're at work) · log out.
@@ -77,7 +78,7 @@ agreed; **Open questions** lists what hasn't.
   they study, an empty chair otherwise. You sit at yours while you're in the
   office, among them rather than in front. Everyone's desk shows what they've
   bought for it. Friends of your friends at work sit there too, see-through,
-  with their names dimmed. Frosted windows with blinds let the light in, and rain runs
+  labelled "Alice's friend" until you tap them. Frosted windows with blinds let the light in, and rain runs
   down the glass, but they show no sky.
 - **Do, before a session:** choose a length (1–120 min) and start, or walk out.
   Tap a friend's desk to see how long they've got left; while they study,
@@ -115,7 +116,9 @@ agreed; **Open questions** lists what hasn't.
   tables, two benches, two wheelie bins, the Friends board, a post box and the
   gate. Friends in the garden walk about too, with
   Club Penguin-style chat bubbles over their heads, smoke if they're having a
-  cigarette and a basket if they've something on their stall. A quiet break
+  cigarette and a basket if they've something on their stall. Friends of
+  friends on a break walk about see-through, labelled "Alice's friend" until
+  you walk up and tap them, and you don't see what they say. A quiet break
   timer.
 - **Do:** walk with the thumbstick (on the right, under your thumb; or the
   arrow keys / WASD) · say something. What else you can do depends on where
@@ -156,7 +159,10 @@ still make you friends straight away.
 see their profile: minutes and sessions studied (a skipped first session
 doesn't count), the days they've studied on (UK dates), what they're worth
 (their chips, plus the shed's price of everything they own; produce has no
-price), and how long you've been friends.
+price), how many friends they have and how many you share, and how long
+you've been friends. On the Friends board it also says when they were last
+active ("Just now", "3 hours ago"): when their app last checked in. Friends
+are shown by their faces, as their characters look.
 
 Unpinning asks first, then ends the friendship both ways (as adding makes
 it): you stop seeing each other, and any offers between you are called off,
@@ -310,9 +316,10 @@ touching code.
   characters) that last 14 days; you can hold 5 unused ones at a time.
 - Whoever joins with your invite starts out as your friend. Friendships stay
   pairwise, but friends of your friends who are at work show see-through at
-  their desks and in their bays, with which of your friends they know. They
-  see you the same way. Their profile, garden and chat stay private until
-  you're friends.
+  their desks, in their bays and walking about the garden, as "Alice's
+  friend" until you tap them; then you see their name and how many friends
+  you have in common. They see you the same way. Their profile, plot and chat
+  stay private until you're friends.
 
 ### Looks
 Everyone chooses how they look, in the garden (*Your look*): a skin tone (6),
@@ -341,12 +348,13 @@ want. Nothing comes back out.
 ### Chat
 Messages of up to 80 characters appear as a bubble over your head for a few
 seconds, Club Penguin style. Only friends who are in the garden at that moment
-see them, and nothing is stored.
+see them (friends of friends see you walk, but not what you say), and nothing
+is stored.
 
 ### Walking about
 Positions aren't stored either. While you walk, your position goes out on
-your garden channel about 5 times a second, and friends' screens ease between
-updates. You say hello when you arrive (friends reply with where they are),
+your garden channel about 5 times a second, and friends' (and friends of
+friends') screens ease between updates. You say hello when you arrive (friends reply with where they are),
 bye when you leave, and where you are every 20 seconds while you stand still;
 a friend not heard from for 50 seconds has gone.
 
@@ -479,10 +487,12 @@ deployment/               numbered runbooks for setting up and shipping each upd
   `back_to_page` instead). The garden polls `get_garden` every 5 s. A poll that
   comes back after an action's own answer (going home, say) is dropped, so it
   can't undo the action.
-- **Garden channel:** Supabase Realtime Broadcast on private channels named
-  `garden:<username>`, carrying chat, positions and rifts. RLS on
-  `realtime.messages` lets you listen to your own and your friends' channels,
-  and speak only on your own. Your own channel is how your devices keep
+- **Garden channels:** Supabase Realtime Broadcast on private channels:
+  `garden:<username>` carries positions, hellos and rifts, and
+  `garden-chat:<username>` carries chat (0014). RLS on `realtime.messages`
+  (through `may_listen`) lets you hear your own, your friends' and your
+  friends' friends' `garden:` channels, but only your own and your friends'
+  chat; you speak only on your own two. Your own channel is how your devices keep
   together.
 - **Seats:** the server hands out desks so nobody shares one with a friend, or
   a friend of a friend, at work; moving desks keeps to the same rule. People
@@ -521,13 +531,15 @@ deployment/               numbered runbooks for setting up and shipping each upd
 | `friend_requests` | from, to, asked at: waiting to be answered (0010) |
 | `profiles` | + `looks`: skin, colour, hair and hair colour you chose, or null (0012) |
 | `desk_layout` | (player, desk thing) → where it sits on their desk; no row means it's in the drawer (0013) |
+| `profiles` | + `active_at`: when their app last checked in, to within a minute (0014) |
 
 | RPC | Allowed when | Returns |
 |---|---|---|
 | `get_me`, `get_friends_board` | signed in | me / friends |
 | `add_friend(username)` | signed in; asks them, or makes you friends if they'd asked you (0010) | username, friends |
 | `get_friend_requests()`, `answer_friend_request(username, accept)`, `withdraw_friend_request(username)` | signed in (0010) | requests to you and from you |
-| `get_profile(username)` | a friend (0010) | their profile |
+| `get_profile(username)` | a friend (0010; + friends, in common and last active from 0014) | their profile |
+| `may_listen(topic)` | signed in (0014; for the realtime policies) | whether you may hear that garden topic |
 | `join_session(username, device)` | not studying; they're a friend who is, with a minute or more to go (0010) | me |
 | `get_friends_of_friends()` | signed in (0011) | friends of friends at work, with `via` |
 | `switch_desk(desk)` | at work, not studying; nobody in your circle at it (0011) | me |
@@ -649,6 +661,10 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 - [x] Migration `0013_arranging_desks.sql`: drag your desk things where you
       want them, or into the drawer; something new from the shed goes straight
       onto your desk by dragging (76 scenario tests in all).
+- [x] Migration `0014_circles_and_last_active.sql`: friends of friends walk
+      about the garden see-through (chat moves to its own friends-only
+      channel), and profiles say how many friends someone has, how many you
+      share, and when they were last active. Friends are shown by their faces.
 
 **M2: feel**
 - Illustrated art, recorded audio (layer by layer), a typeface, gentle
@@ -677,6 +693,7 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 | Web hosting | EAS Hosting with a static export; Supabase for the backend. |
 | Social model | Pairwise friendships, as in the MVP. Friends of friends at work show see-through, so you can ask them to be friends. |
 | Changing desks | Tap an empty desk between sessions. Your bay follows. |
+| Friends of friends | Shown see-through, as "Alice's friend" until you tap them, in the office, the car park and the garden. They never hear your chat. |
 | Looks | Chosen in the garden from a few skin tones, colours, hairstyles and hair colours. Until then, picked from your username. |
 | Arranging a desk | Drag things where you want them, between sessions. Something new from the shed starts in the drawer, and you drag it onto your desk there and then. |
 | Un-adding a friend | "Unpin" on the Friends board, after a question. It ends the friendship both ways and calls off offers between you; nobody is told. |

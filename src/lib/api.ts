@@ -108,6 +108,11 @@ export type Profile = {
   ends_at: string | null;
   break_ends_at: string | null;
   friends_since: string;
+  /** How many friends they have, and how many of them are yours too. */
+  friends: number;
+  in_common: number;
+  /** When their app last checked in (to within a minute), if ever. */
+  last_active: string | null;
   /** Completed sessions they studied (a skipped first one doesn't count). */
   minutes_studied: number;
   sessions_studied: number;

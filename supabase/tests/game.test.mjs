@@ -1316,12 +1316,14 @@ describe('access', () => {
     assert.equal((await call('anon', 'check_signup', 'X', 'y')).ok, false);
   });
 
-  test('garden chat: hear yourself and friends, speak only on your own channel', async () => {
-    for (const topic of ['garden:alice', 'garden:bob', 'garden:carol']) {
-      await q(
-        `insert into realtime.messages (topic, extension, event) values ($1, 'broadcast', 'say')`,
-        [topic]
-      );
+  test('the garden: friends and their friends hear you walk, but only friends hear you talk', async () => {
+    for (const name of ['alice', 'bob', 'carol', 'dave']) {
+      for (const kind of ['garden', 'garden-chat']) {
+        await q(
+          `insert into realtime.messages (topic, extension, event) values ($1, 'broadcast', 'x')`,
+          [`${kind}:${name}`]
+        );
+      }
     }
     await q(
       `insert into realtime.messages (topic, extension, event) values ('garden:bob', 'presence', 'x')`
@@ -1329,22 +1331,30 @@ describe('access', () => {
 
     const hears = async (user, topic) =>
       (await asUser(user, 'select count(*)::int as n from realtime.messages', [], topic))[0].n > 0;
+    // alice's friend is bob; carol is bob's friend; dave is carol's.
     assert.equal(await hears('alice', 'garden:alice'), true);
+    assert.equal(await hears('alice', 'garden-chat:alice'), true);
     assert.equal(await hears('alice', 'garden:bob'), true);
-    assert.equal(await hears('alice', 'garden:carol'), false, 'not friends');
-    assert.equal(await hears('carol', 'garden:bob'), true);
+    assert.equal(await hears('alice', 'garden-chat:bob'), true);
+    assert.equal(await hears('alice', 'garden:carol'), true, 'a friend of a friend walks');
+    assert.equal(await hears('alice', 'garden-chat:carol'), false, 'but talks to friends');
+    assert.equal(await hears('alice', 'garden:dave'), false, 'further off');
+    assert.equal(await hears('alice', 'garden-chat:dave'), false);
+    assert.equal(await hears('carol', 'garden-chat:bob'), true);
     assert.equal(await hears('alice', 'office:bob'), false);
 
     const speak = (user, topic) =>
       asUser(
         user,
-        `insert into realtime.messages (topic, extension, event) values ($1, 'broadcast', 'say')`,
+        `insert into realtime.messages (topic, extension, event) values ($1, 'broadcast', 'x')`,
         [topic],
         topic
       );
     await speak('alice', 'garden:alice');
-    await rejects(speak('alice', 'garden:bob'), /row-level security/);
-    await rejects(speak('alice', 'garden:carol'), /row-level security/);
+    await speak('alice', 'garden-chat:alice');
+    for (const topic of ['garden:bob', 'garden-chat:bob', 'garden:carol', 'garden-chat:carol']) {
+      await rejects(speak('alice', topic), /row-level security/, topic);
+    }
   });
 });
 
@@ -1569,6 +1579,10 @@ describe("friends' profiles", () => {
     assert.equal(bob.days_studied, 2);
     assert.equal(bob.net_worth, 116);
     assert.ok(Date.parse(bob.friends_since) < Date.now());
+    // bob knows alice and carol; alice and bob have nobody else in common.
+    assert.equal(bob.friends, 2);
+    assert.equal(bob.in_common, 0);
+    assert.ok(Math.abs(Date.parse(bob.last_active) - Date.now()) < 5 * MIN, 'about just now');
 
     await rejects(call('alice', 'get_profile', 'carol'), /not friends with carol/);
   });

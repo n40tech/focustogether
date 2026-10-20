@@ -1,6 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, type Href } from 'expo-router';
-import { createContext, use, useCallback, useEffect, useMemo, type ReactNode } from 'react';
+import {
+  createContext,
+  use,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { playSound, type Sfx } from '@/audio/sound';
@@ -24,6 +32,9 @@ type World = {
   /** Looks chosen by you, your friends and theirs, by username. */
   looks: Record<string, Looks>;
   setLooks: (looks: Record<string, Looks>) => void;
+  /** Friends of friends you've tapped on, so you know their names (on this page). */
+  revealed: string[];
+  reveal: (username: string) => void;
   setMe: (me: Me) => void;
   /** Re-fetches you and your friends. */
   refresh: () => Promise<void>;
@@ -56,6 +67,12 @@ export function WorldProvider({ children }: { children: ReactNode }) {
     await Promise.all([refreshMe(), refreshBoard(), refreshOthers()]);
   }, [refreshMe, refreshBoard, refreshOthers]);
 
+  const [revealed, setRevealed] = useState<string[]>([]);
+  const reveal = useCallback(
+    (username: string) => setRevealed((r) => (r.includes(username) ? r : [...r, username])),
+    []
+  );
+
   const value = useMemo(
     () =>
       me.data
@@ -65,11 +82,23 @@ export function WorldProvider({ children }: { children: ReactNode }) {
             friendsOfFriends: others.data ?? [],
             looks: looks.data ?? {},
             setLooks: looks.setData,
+            revealed,
+            reveal,
             setMe: me.setData,
             refresh,
           }
         : null,
-    [me.data, me.setData, board.data, others.data, looks.data, looks.setData, refresh]
+    [
+      me.data,
+      me.setData,
+      board.data,
+      others.data,
+      looks.data,
+      looks.setData,
+      revealed,
+      reveal,
+      refresh,
+    ]
   );
 
   if (!value) return <Arriving error={me.error} retry={refreshMe} />;
@@ -94,6 +123,19 @@ function Arriving({ error, retry }: { error: string | null; retry: () => void })
       )}
     </View>
   );
+}
+
+/**
+ * What to call someone: their name, or, for a friend of a friend you haven't
+ * tapped on yet, "Alice's friend".
+ */
+export function nameFor(
+  person: { username: string; display_name: string; via?: string[] },
+  revealed: string[]
+) {
+  return person.via && !revealed.includes(person.username)
+    ? `${person.via[0] ?? 'A friend'}'s friend`
+    : person.display_name;
 }
 
 /** How someone looks: as they chose, or picked from their username. */

@@ -18,11 +18,11 @@ import { scheduleSessionEnd } from '@/lib/notifications';
 import { palette } from '@/lib/theme';
 import { useConditions } from '@/weather/useConditions';
 import { seatsOf } from '@/world/seats';
-import { useGo, useWorld } from '@/world/World';
+import { nameFor, useGo, useWorld } from '@/world/World';
 
 export default function Office() {
   useAmbience('office');
-  const { me, friends, friendsOfFriends, setMe, refresh } = useWorld();
+  const { me, friends, friendsOfFriends, revealed, setMe, refresh } = useWorld();
   const conditions = useConditions();
   const go = useGo();
   const studying = me.status === 'focused';
@@ -65,7 +65,7 @@ export default function Office() {
             key={i}
             x={x}
             y={y + 14}
-            text={seat.isMe ? 'You' : seat.display_name}
+            text={seat.isMe ? 'You' : nameFor(seat, revealed)}
             dim={!seat.studying || !!seat.via}
           />
         );
@@ -80,7 +80,7 @@ export default function Office() {
             y={y - 72}
             w={96}
             h={96}
-            label={seat ? `${seat.display_name}'s desk` : `Empty desk ${i + 1}`}
+            label={seat ? `${nameFor(seat, revealed)}'s desk` : `Empty desk ${i + 1}`}
             onPress={() => setTapped(i)}
           />
         );

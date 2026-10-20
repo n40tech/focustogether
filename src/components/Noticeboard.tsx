@@ -15,12 +15,13 @@ import { playSound } from '@/audio/sound';
 import { Button } from '@/components/Button';
 import { Muted } from '@/components/Chrome';
 import { Countdown } from '@/components/Countdown';
+import { Face } from '@/components/Face';
 import { FriendProfile } from '@/components/FriendProfile';
 import { forgetTips } from '@/components/Tip';
 import { api, type Friend, type FriendRequests, type Invite } from '@/lib/api';
 import { formatInvite } from '@/lib/invites';
 import { font } from '@/lib/theme';
-import { usePaintOf, useWorld } from '@/world/World';
+import { useWorld } from '@/world/World';
 
 const WHERE: Record<Friend['status'], string> = {
   focused: 'Studying',
@@ -137,7 +138,7 @@ function FriendCard({ friend: f, onRemoved }: { friend: Friend; onRemoved: () =>
           accessibilityState={{ expanded: open }}
           style={[styles.row, styles.flex]}
         >
-          <Avatar username={f.username} />
+          <Face username={f.username} />
           <View style={styles.flex}>
             <Text style={{ color: tone.text, fontSize: 15, fontWeight: '600' }}>
               {f.display_name}
@@ -165,7 +166,7 @@ function FriendCard({ friend: f, onRemoved }: { friend: Friend; onRemoved: () =>
           />
         )}
       </View>
-      {open && <FriendProfile username={f.username} />}
+      {open && <FriendProfile username={f.username} lastActive />}
       {asking && (
         <View style={{ gap: 6 }}>
           <Muted>
@@ -246,11 +247,6 @@ function AddFriend({ onAdded }: { onAdded: () => void }) {
   );
 }
 
-/** Someone's dot, in their favourite colour. */
-function Avatar({ username }: { username: string }) {
-  return <View style={[styles.avatar, { backgroundColor: usePaintOf(username).shirt }]} />;
-}
-
 /** Who has asked to be friends, and whom you've asked. Fetched again when the count in `me` changes. */
 function useFriendRequests(count: number) {
   const [list, setList] = useState<FriendRequests>({ to_you: [], from_you: [] });
@@ -296,7 +292,7 @@ function Requests({
           style={[styles.friend, { borderColor: tone.line, backgroundColor: tone.raised }]}
         >
           <View style={styles.row}>
-            <Avatar username={r.username} />
+            <Face username={r.username} />
             <View style={styles.flex}>
               <Text style={{ color: tone.text, fontSize: 15, fontWeight: '600' }}>
                 {r.display_name}
@@ -447,7 +443,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   friend: { gap: 8, padding: 10, borderRadius: 12, borderWidth: 1 },
-  avatar: { width: 26, height: 26, borderRadius: 13 },
   flex: { flex: 1 },
   row: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   input: {

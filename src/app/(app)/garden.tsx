@@ -15,13 +15,14 @@ import {
   Sign,
 } from '@/art/Garden';
 import { ChatBubble, Person } from '@/art/People';
-import { Box, Dot, Glow, Shadow, Tag } from '@/art/primitives';
+import { Box, Dot, Faint, Glow, Shadow, Tag } from '@/art/primitives';
 import { Rift } from '@/art/Rift';
 import { BLEED, Scene, STAGE, useTone } from '@/art/Scene';
 import { playSound, setSmoking, useAmbience } from '@/audio/sound';
 import { Button } from '@/components/Button';
 import { Body, Muted, Panel, SceneHeader, Sheet, Toast } from '@/components/Chrome';
 import { Countdown } from '@/components/Countdown';
+import { FriendOfFriendSheet } from '@/components/FriendOfFriendSheet';
 import {
   BasketSheet,
   BedSheet,
@@ -42,7 +43,7 @@ import { INVITE_TIP, Tip, useTips } from '@/components/Tip';
 import { useNow } from '@/hooks/useNow';
 import { usePolled } from '@/hooks/usePolled';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { api, BEDS, PLANTS_PER_BED, type Garden, type Gardener } from '@/lib/api';
+import { api, BEDS, PLANTS_PER_BED, type Garden } from '@/lib/api';
 import { itemInfo } from '@/lib/catalog';
 import { serverNow } from '@/lib/clock';
 import { onTimeSkipped } from '@/lib/testing';
@@ -79,7 +80,7 @@ import {
 import { type Bubble, MAX_SAY, POS_EVERY_MS, useGardenChannel } from '@/world/useGardenChannel';
 import { useWalker } from '@/world/useWalker';
 import { Whereabouts } from '@/world/whereabouts';
-import { useGo, useWorld } from '@/world/World';
+import { nameFor, useGo, useWorld } from '@/world/World';
 
 const G = palette.garden;
 
@@ -146,6 +147,7 @@ type SheetState =
   | { kind: 'board' }
   | { kind: 'bins' }
   | { kind: 'looks' }
+  | { kind: 'stranger'; username: string }
   | null;
 
 /** True until a cigarette lit until `until` burns out. */
@@ -349,7 +351,13 @@ export default function GardenScene() {
   );
 
   const friendNames = useMemo(() => neighbours.map((n) => n.username), [neighbours]);
-  const chat = useGardenChannel(me.username, friendNames, onBreak && !!garden, {
+  // Friends of friends on a break: you see them walk about, see-through, but don't hear them.
+  const strangers = useMemo(
+    () => world.friendsOfFriends.filter((f) => f.status === 'on_break'),
+    [world.friendsOfFriends]
+  );
+  const strangerNames = useMemo(() => strangers.map((s) => s.username), [strangers]);
+  const chat = useGardenChannel(me.username, friendNames, strangerNames, onBreak && !!garden, {
     onMove: friendMoved,
     onSelf: selfMoved,
     onRift: riftSeen,
@@ -378,18 +386,23 @@ export default function GardenScene() {
     () => neighbours.filter((n) => n.status === 'on_break' && chat.present.includes(n.username)),
     [neighbours, chat.present]
   );
+  const strangersAround = useMemo(
+    () => strangers.filter((s) => chat.present.includes(s.username)),
+    [strangers, chat.present]
+  );
+  const everyoneAround = useMemo(() => [...around, ...strangersAround], [around, strangersAround]);
 
   // What you're standing next to, checked a few times a second.
   useEffect(() => {
     if (!onBreak || !garden) return;
     const check = () => {
-      const next = nearest(where(), me.username, garden, spots, around, whereabouts);
+      const next = nearest(where(), me.username, garden, spots, everyoneAround, whereabouts);
       setNear((prev) => (sameNear(prev, next) ? prev : next));
     };
     check();
     const id = setInterval(check, 200);
     return () => clearInterval(id);
-  }, [onBreak, garden, spots, around, whereabouts, where, me.username]);
+  }, [onBreak, garden, spots, everyoneAround, whereabouts, where, me.username]);
 
   // --- garden actions ------------------------------------------------------
 
@@ -547,6 +560,18 @@ export default function GardenScene() {
           />
         </Follow>
       ))}
+      {strangersAround.map((s) => (
+        <Follow key={s.username} whereabouts={whereabouts} who={s.username} home={GATE}>
+          <Faint>
+            <Person
+              username={s.username}
+              x={0}
+              y={0}
+              pose={sitting.includes(s.username) ? 'bench' : 'stand'}
+            />
+          </Faint>
+        </Follow>
+      ))}
       {onBreak && !rift && (
         <Animated.View
           pointerEvents="none"
@@ -610,6 +635,11 @@ export default function GardenScene() {
           home={homeOf(n.username)}
         >
           <Label name={n.display_name} bubble={chat.bubbles[n.username]} />
+        </Follow>
+      ))}
+      {strangersAround.map((s) => (
+        <Follow key={s.username} whereabouts={whereabouts} who={s.username} home={GATE}>
+          <Tag x={0} y={5} text={nameFor(s, world.revealed)} dim />
         </Follow>
       ))}
       {onBreak && !rift && (
@@ -710,6 +740,16 @@ export default function GardenScene() {
   }
   const friend =
     garden && near.friend ? neighbours.find((n) => n.username === near.friend) : undefined;
+  const stranger =
+    garden && near.friend ? strangers.find((s) => s.username === near.friend) : undefined;
+  if (stranger) {
+    actions.splice(1);
+    actions.push({
+      title: nameFor(stranger, world.revealed),
+      quiet: actions.some((a) => !a.quiet),
+      onPress: () => setSheet({ kind: 'stranger', username: stranger.username }),
+    });
+  }
   if (friend) {
     // Room for the place's main thing and the friend; only one stands out.
     actions.splice(1);
@@ -880,7 +920,7 @@ function nearest(
   me: string,
   garden: Garden,
   spots: Map<string, Point>,
-  around: Gardener[],
+  around: { username: string }[],
   whereabouts: Whereabouts
 ): Near {
   let friend: string | null = null;
@@ -1014,6 +1054,7 @@ function GardenSheet({
   onPosted: (to: string) => void;
 }) {
   const close = () => setSheet(null);
+  const { friendsOfFriends } = useWorld();
   switch (sheet.kind) {
     case 'seed':
       return (
@@ -1088,6 +1129,10 @@ function GardenSheet({
       return <BinSheet garden={garden} act={act} onClose={close} />;
     case 'looks':
       return <LooksSheet onClose={close} />;
+    case 'stranger': {
+      const person = friendsOfFriends.find((f) => f.username === sheet.username);
+      return person ? <FriendOfFriendSheet person={person} onClose={close} /> : null;
+    }
   }
 }
 

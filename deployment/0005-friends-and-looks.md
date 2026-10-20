@@ -9,7 +9,8 @@ studied and what they're worth. In the office, you can join a friend's
 session so you finish together, and move to an empty desk. Friends of your
 friends at work show see-through, so you can ask them to be friends. In
 the garden, everyone can choose how they look, and in the office everyone
-can arrange their desk.
+can arrange their desk. Friends of friends walk about the garden too, and
+profiles say when someone was last active.
 
 ---
 
@@ -88,7 +89,31 @@ where it.kind = 'desk' and not exists (
 
 That should say 0.
 
-## 5. Merge
+## 5. Run migration 0014
+
+The new app speaks in the garden on `garden-chat:<username>` and listens to
+friends of friends' `garden:` channels, which needs 0014's realtime policies.
+It also reads `last_active`, `friends` and `in_common` from `get_profile`.
+Check:
+
+```sql
+select to_regprocedure('public.may_listen(text)') is not null as done;
+```
+
+If `false`, run `supabase/migrations/0014_circles_and_last_active.sql` the
+same way. It adds `profiles.active_at` (filled in from what's known), swaps
+the two garden policies on `realtime.messages` for new ones, and replaces
+`get_me` and `get_profile`. Afterwards the query says `true`, and this lists
+the two new policies:
+
+```sql
+select policyname from pg_policies where schemaname = 'realtime' and tablename = 'messages';
+```
+
+Chat between a page still on the old app and one on the new one doesn't get
+through until both have reloaded, as they now use different channels.
+
+## 6. Merge
 
 Merging deploys the app (GitHub Actions). Then, with a friend:
 
@@ -103,3 +128,6 @@ Merging deploys the app (GitHub Actions). Then, with a friend:
 - [ ] In the garden, **Your look**: save a new look, and a friend sees it.
 - [ ] **Arrange your desk**: drag something to a new place, and a friend
       sees it there.
+- [ ] Chat in the garden with a friend: you see each other's words.
+- [ ] A friend's profile on the Friends board says when they were last
+      active.

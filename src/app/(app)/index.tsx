@@ -20,7 +20,7 @@ import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import { useConditions } from '@/weather/useConditions';
 import { seatsOf, type Seat } from '@/world/seats';
-import { useGo, useWorld } from '@/world/World';
+import { nameFor, useGo, useWorld } from '@/world/World';
 
 const C = palette.carpark;
 
@@ -45,7 +45,7 @@ const WINDOW_XS = Array.from({ length: 94 }, (_, i) => -1956 + i * 46).filter(
 
 export default function CarPark() {
   useAmbience('carpark');
-  const { me, setMe, friends, friendsOfFriends } = useWorld();
+  const { me, setMe, friends, friendsOfFriends, revealed } = useWorld();
   const conditions = useConditions();
   const go = useGo();
   const onBreak = me.status === 'on_break';
@@ -232,7 +232,7 @@ export default function CarPark() {
           key={seat.username}
           x={bay.x}
           y={bay.y + 2}
-          text={seat.isMe ? 'You' : seat.display_name}
+          text={seat.isMe ? 'You' : nameFor(seat, revealed)}
           dim={!!seat.via}
         />
       ))}
@@ -245,7 +245,7 @@ export default function CarPark() {
             y={bay.y - 78}
             w={48}
             h={80}
-            label={`${seat.display_name}'s car`}
+            label={`${nameFor(seat, revealed)}'s car`}
             onPress={() => setStranger(seat)}
           />
         ))}
@@ -254,7 +254,7 @@ export default function CarPark() {
           key={seat.username}
           x={slot.x}
           y={slot.y + 4 + (i % 2) * 12}
-          text={seat.isMe ? 'You' : seat.display_name}
+          text={seat.isMe ? 'You' : nameFor(seat, revealed)}
           dim
         />
       ))}

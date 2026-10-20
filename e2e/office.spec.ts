@@ -223,8 +223,8 @@ test('a friend of a friend sits greyed out, and you can ask them to be friends',
     },
   ];
   await fake.open('/office');
-  await button(page, "Dave's desk").click();
-  await expect(page.getByText('@dave · friends with Bob')).toBeVisible();
+  await button(page, "Bob's friend's desk").click();
+  await expect(page.getByText('1 friend in common: Bob')).toBeVisible();
   await button(page, 'Ask to be friends').click();
   await expect(
     page.getByText('Asked. Dave will be on your Friends board once they say yes.')

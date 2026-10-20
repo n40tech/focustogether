@@ -5,6 +5,7 @@ import { useTone } from '@/art/Scene';
 import { playSound } from '@/audio/sound';
 import { Button } from '@/components/Button';
 import { Body, Muted, Sheet } from '@/components/Chrome';
+import { Face } from '@/components/Face';
 import { listOf } from '@/components/Noticeboard';
 import { api } from '@/lib/api';
 import { useWorld } from '@/world/World';
@@ -20,10 +21,13 @@ export function FriendOfFriendSheet({
   onClose: () => void;
 }) {
   const tone = useTone();
-  const { refresh } = useWorld();
+  const { refresh, reveal } = useWorld();
   const [state, setState] = useState<State>('loading');
   const [error, setError] = useState<string | null>(null);
   const name = person.display_name;
+
+  // Tapped on: from now on they're called by their name, not "Alice's friend".
+  useEffect(() => reveal(person.username), [reveal, person.username]);
 
   useEffect(() => {
     api.getFriendRequests().then(
@@ -54,7 +58,15 @@ export function FriendOfFriendSheet({
   return (
     <Sheet title={name} onClose={onClose}>
       <View style={{ gap: 10 }}>
-        <Body>{`@${person.username} · friends with ${listOf(person.via)}`}</Body>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Face username={person.username} size={40} />
+          <View style={{ flex: 1 }}>
+            <Body>{`@${person.username}`}</Body>
+            <Muted>
+              {`${person.via.length} friend${person.via.length === 1 ? '' : 's'} in common: ${listOf(person.via)}`}
+            </Muted>
+          </View>
+        </View>
         {state === 'not asked' && <Button title="Ask to be friends" onPress={ask} />}
         {state === 'they asked' && (
           <>

@@ -4,12 +4,29 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useTone } from '@/art/Scene';
 import { ChipIcon, Muted } from '@/components/Chrome';
 import { api, type Profile } from '@/lib/api';
+import { formatSpan } from '@/lib/time';
+
+/** "Just now", "45 minutes ago", "3 days ago". */
+const ago = (iso: string) => {
+  const ms = Date.now() - Date.parse(iso);
+  return ms < 2 * 60_000 ? 'Just now' : `${formatSpan(ms)} ago`;
+};
 
 const since = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
-/** A friend's profile: what they've studied, what they're worth, and how long you've been friends. */
-export function FriendProfile({ username }: { username: string }) {
+/**
+ * A friend's profile: what they've studied, what they're worth, their friends,
+ * and how long you've been friends. `lastActive` adds when they were last
+ * about (on the Friends board).
+ */
+export function FriendProfile({
+  username,
+  lastActive,
+}: {
+  username: string;
+  lastActive?: boolean;
+}) {
   const tone = useTone();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +50,7 @@ export function FriendProfile({ username }: { username: string }) {
     ['Days studied', profile.days_studied.toLocaleString()],
     ['Sessions', profile.sessions_studied.toLocaleString()],
     [
-      'Worth',
+      'Net worth',
       <View key="worth" style={styles.worth}>
         <ChipIcon size={12} />
         <Text style={[styles.value, { color: tone.text }]}>
@@ -41,8 +58,12 @@ export function FriendProfile({ username }: { username: string }) {
         </Text>
       </View>,
     ],
+    ['Friends', profile.friends.toLocaleString()],
+    ['Friends in common', profile.in_common.toLocaleString()],
     ['Friends since', since(profile.friends_since)],
   ];
+  if (lastActive)
+    rows.push(['Last active', profile.last_active ? ago(profile.last_active) : 'Not yet']);
   return (
     <View style={styles.rows} accessibilityLabel={`${profile.display_name}'s profile`}>
       {rows.map(([label, value]) => (
