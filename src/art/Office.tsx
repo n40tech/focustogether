@@ -141,6 +141,7 @@ export function Desk({
   items = [],
   scale = 1,
   faint = false,
+  chair = true,
 }: {
   x: number;
   y: number;
@@ -155,6 +156,8 @@ export function Desk({
   scale?: number;
   /** A friend of a friend's: they and their things are drawn see-through. */
   faint?: boolean;
+  /** An empty chair, when nobody's sitting here (not when its drawer is open). */
+  chair?: boolean;
 }) {
   const s = scale;
   const on = screenOn;
@@ -183,7 +186,7 @@ export function Desk({
         ))}
         {occupant && <Person username={occupant} x={x} y={y + (12 + leanBack) * s} pose="sit" />}
       </Faint>
-      {!occupant && (
+      {!occupant && chair && (
         // An empty chair, pushed in.
         <>
           <Box x={x - 13 * s} y={y - 8 * s} w={26 * s} h={14 * s} c={P.chair} r={6 * s} />

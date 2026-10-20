@@ -260,12 +260,12 @@ test('arranging your desk by dragging things about', async ({ page, fake }) => {
   await fake.open('/office');
   await button(page, 'Arrange your desk').click();
   await expect(
-    page.getByText(/^Drag things from the top onto your desk, and drag them/)
+    page.getByText(/^Your drawer is open. Drag things from it onto your desk/)
   ).toBeVisible();
   const drag = dragOn(page, page.getByLabel('Your desk', { exact: true }));
 
-  // The duck, up to the top: back in the drawer.
-  await drag([36, -31], [36, -90]);
+  // The duck, down into the drawer.
+  await drag([36, -31], [36, 15]);
   await expect.poll(() => fake.called('store_desk_item')).toEqual([{ p_item: 'duck' }]);
 
   // The mug, across the desk.
@@ -274,8 +274,8 @@ test('arranging your desk by dragging things about', async ({ page, fake }) => {
     .poll(() => fake.called('place_desk_item'))
     .toEqual([{ p_item: 'mug', p_x: 21, p_y: -28 }]);
 
-  // The duck again, from the top (first in the drawer) onto the desk.
-  await drag([-42, -89], [0, -25]);
+  // The duck again, out of the drawer (it's first in it) onto the desk.
+  await drag([-38, 16], [0, -25]);
   await expect.poll(() => fake.me.desk_items).toContainEqual({ item: 'duck', x: 0, y: -20 });
 });
 
@@ -292,19 +292,21 @@ test('something new for your desk goes on it straight from the shed', async ({ p
   });
   await fake.open('/shop?from=garden');
   await button(page, 'Buy Mug for 10 chips').click();
-  await expect(page.getByText('Your new mug is at the top. Drag it onto your desk.')).toBeVisible();
-  await dragOn(page, page.getByLabel('Your desk', { exact: true }))([-42, -89], [10, -30]);
+  await expect(
+    page.getByText('Your new mug is in the drawer. Drag it onto your desk.')
+  ).toBeVisible();
+  await dragOn(page, page.getByLabel('Your desk', { exact: true }))([-38, 16], [10, -30]);
   await expect.poll(() => fake.me.desk_items).toEqual([{ item: 'mug', x: 10, y: -25 }]);
 });
 
 /**
  * Drags on the desk close-up from one point to another, in desk units (as in
- * src/components/ArrangeSheet: S = 2.4, front-centre at (130, 234)).
+ * src/components/ArrangeSheet: S = 2.4, front-centre at (130, 176)).
  */
 function dragOn(page: Page, stage: Locator) {
   return async (from: [number, number], to: [number, number]) => {
     const box = (await stage.boundingBox())!;
-    const px = ([x, y]: [number, number]) => [box.x + 130 + x * 2.4, box.y + 234 + y * 2.4];
+    const px = ([x, y]: [number, number]) => [box.x + 130 + x * 2.4, box.y + 176 + y * 2.4];
     const [x0, y0] = px(from);
     const [x1, y1] = px(to);
     await page.mouse.move(x0, y0);

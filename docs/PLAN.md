@@ -84,9 +84,9 @@ agreed; **Open questions** lists what hasn't.
   **Join** them (see *Studying together*). Tap a friend of a friend to see
   which of your friends they know, and ask them to be friends. Tap an empty
   desk to move to it (**Sit here**); your bay and rack slot move with you.
-  **Arrange your desk** opens a close-up of it: drag things from the drawer
-  (along the top) onto the desk, drag them about, or drag them back up to put
-  them away. A tip says so the first time, and for a keyboard you can pick a
+  **Arrange your desk** opens a close-up of it with its drawer pulled open:
+  drag things from the drawer onto the desk, drag them about, or drag them
+  back into the drawer to put them away. A tip says so the first time, and for a keyboard you can pick a
   thing by name and move it with arrow buttons. Not while you study.
 - **Do, during a session:** nothing else. There's the countdown and a small
   *give up* link, which forfeits the session. The chip balance, shop and all
@@ -251,7 +251,7 @@ they're nearly done instead.
 
 Vehicles and desk items are one-offs. Buying a vehicle makes it the one you
 arrive in. Buying something for your desk opens your desk there and then,
-with the new thing waiting at the top for you to drag onto it. The catalogue is one table (`items`), so prices are tuned without
+with the new thing in its open drawer for you to drag onto it. The catalogue is one table (`items`), so prices are tuned without
 touching code.
 
 ### Allotment

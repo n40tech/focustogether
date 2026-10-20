@@ -257,10 +257,10 @@ bigger change), do the whole round:
       player who's a friend of only one of you (locally, `dave` is only
       `alice`'s, so try `bob` and `dave`) shows see-through at their desk
       and in their bay. Tapping them says who you both know and asks them
-      to be friends. **Arrange your desk**: drag things about, drag one up
-      to the top to put it away, and drag it back down; the other player
-      sees your desk change. Buy something for your desk in the shed: your
-      desk opens with it at the top, to drag on.
+      to be friends. **Arrange your desk**: drag things about, drag one
+      into the open drawer to put it away, and drag it back out; the other
+      player sees your desk change. Buy something for your desk in the shed:
+      your desk opens with it in the drawer, to drag on.
 - [ ] **Payout:** chips are counted onto your desk and the break is shown.
       Take a break, go home, and spend chips all work.
 - [ ] **Garden:** walk with the thumbstick and the arrow keys; the other

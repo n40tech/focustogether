@@ -10,22 +10,25 @@ import { Muted, Sheet } from '@/components/Chrome';
 import { Tip } from '@/components/Tip';
 import { api, type Me } from '@/lib/api';
 import { inTheDrawer, itemInfo } from '@/lib/catalog';
-import { font } from '@/lib/theme';
+import { font, palette } from '@/lib/theme';
 
 // Your desk, drawn S times bigger than in the office, its front-centre at
-// (W / 2, Y0), with the drawer's things laid out along the top.
+// (W / 2, Y0), with its drawer pulled open in front of it.
 const S = 2.4;
 const W = 260;
-const Y0 = 234;
-const TRAY_H = 46;
+const Y0 = 176;
 // The desk top, in desk units (mirrors the check on public.desk_layout).
 const TOP = { left: -42, right: 42, back: -44, front: -12 };
-/** Where the drawer's things wait, in desk units: in a row above the desk. */
-const TRAY_Y = -84;
-const trayX = (i: number) => -42 + i * 12;
-/** Dropped higher than this, a thing goes back in the drawer. */
-const PUT_AWAY_Y = TOP.back - 8;
+/** The open drawer, in desk units: its inside, then its front. */
+const DRAWER = { left: -44, right: 44, top: 0, bottom: 26, front: 6 };
+/** Where things sit in the drawer, in a row. */
+const DRAWER_Y = 21;
+/** The i-th of n things in the drawer: spread out, closer together as it fills. */
+const drawerX = (i: number, n: number) => -38 + i * Math.min(22, 76 / Math.max(1, n - 1));
+/** Dropped lower than this (off the desk top, into the drawer), a thing is put away. */
+const PUT_AWAY_Y = -6;
 const NUDGE = 4;
+const P = palette.office;
 
 const nameOf = (slug: string) => itemInfo(slug).name.toLowerCase();
 const clamp = (v: number, lo: number, hi: number) => Math.round(Math.max(lo, Math.min(hi, v)));
@@ -33,9 +36,9 @@ const clamp = (v: number, lo: number, hi: number) => Math.round(Math.max(lo, Mat
 type Drag = { item: string; x: number; y: number; dx: number; dy: number; moved: boolean };
 
 /**
- * Arranging your desk, between sessions. Drag things from the top onto the
- * desk, about the desk, or back up to the top to put them away. For a
- * keyboard: pick a thing by name, then move it with the arrows.
+ * Arranging your desk, between sessions. Its drawer is open: drag things
+ * from it onto the desk, about the desk, or back into it to put them away.
+ * For a keyboard: pick a thing by name, then move it with the arrows.
  */
 export function ArrangeSheet({
   me,
@@ -61,7 +64,7 @@ export function ArrangeSheet({
   const heldThing = onDesk.find((t) => t.item === held);
   const spots = [
     ...onDesk.map((t) => ({ item: t.item, x: t.x, y: t.y })),
-    ...drawer.map((item, i) => ({ item, x: trayX(i), y: TRAY_Y })),
+    ...drawer.map((item, i) => ({ item, x: drawerX(i, drawer.length), y: DRAWER_Y })),
   ];
 
   const run = async (action: () => Promise<Me>) => {
@@ -107,7 +110,7 @@ export function ArrangeSheet({
         dy: hit.y - p.y,
         moved: false,
       });
-    } else if (held && p.y > PUT_AWAY_Y) {
+    } else if (held && p.y < PUT_AWAY_Y) {
       place(held, p.x, p.y);
     }
   };
@@ -123,7 +126,7 @@ export function ArrangeSheet({
     setDrag(null);
     if (!drag.moved) return;
     const wasOnDesk = onDesk.some((t) => t.item === drag.item);
-    if (drag.y < PUT_AWAY_Y) {
+    if (drag.y > PUT_AWAY_Y) {
       if (wasOnDesk) putAway(drag.item);
     } else {
       place(drag.item, drag.x, drag.y);
@@ -132,16 +135,23 @@ export function ArrangeSheet({
 
   // What's drawn where: the thing being dragged follows your finger.
   const deskShown = onDesk.filter((t) => t.item !== drag?.item);
-  const trayShown = drawer
-    .map((item, i) => ({ item, x: trayX(i) }))
+  const drawerShown = drawer
+    .map((item, i) => ({ item, x: drawerX(i, drawer.length) }))
     .filter((t) => t.item !== drag?.item);
+  /** A box given in desk units. */
+  const box = (left: number, top: number, right: number, bottom: number) => ({
+    x: W / 2 + left * S,
+    y: Y0 + top * S,
+    w: (right - left) * S,
+    h: (bottom - top) * S,
+  });
 
   return (
     <Sheet title="Your desk" onClose={onClose}>
       <View style={styles.list}>
         <Tip id="arrange">
-          Drag things from the top onto your desk, and drag them about to move them. Drag one back
-          up to the top to put it away in the drawer.
+          Your drawer is open. Drag things from it onto your desk, and drag them about to move them.
+          Drag one back into the drawer to put it away.
         </Tip>
         <View
           accessibilityLabel="Your desk"
@@ -154,27 +164,45 @@ export function ArrangeSheet({
           onResponderTerminate={() => setDrag(null)}
           style={[styles.stage, Platform.OS === 'web' && ({ touchAction: 'none' } as object)]}
         >
-          <Box x={0} y={0} w={W} h={TRAY_H} c={tone.raised} r={10} />
-          {trayShown.map((t) => (
+          <Desk x={W / 2} y={Y0} items={deskShown} scale={S} chair={false} />
+          {/* The gap in the desk's front where the drawer slid out, then the
+              drawer, pulled open towards you: its sides and inside, then its front. */}
+          <Box {...box(DRAWER.left, -9, DRAWER.right, -1)} c="#4a3a2b" r={1} />
+          <Box
+            {...box(DRAWER.left, DRAWER.top - 3, DRAWER.right, DRAWER.bottom)}
+            c={P.desk}
+            r={4}
+          />
+          <Box
+            {...box(DRAWER.left + 3, DRAWER.top, DRAWER.right - 3, DRAWER.bottom - 1)}
+            c="#8c6d4f"
+            r={2}
+          />
+          {drawerShown.map((t) => (
             <DeskItem
               key={t.item}
               item={t.item}
               x={W / 2 + t.x * S}
-              y={Y0 + TRAY_Y * S}
+              y={Y0 + DRAWER_Y * S}
               scale={S}
             />
           ))}
-          <Desk x={W / 2} y={Y0} items={deskShown} scale={S} />
+          <Box
+            {...box(DRAWER.left, DRAWER.bottom, DRAWER.right, DRAWER.bottom + DRAWER.front)}
+            c={P.deskTop}
+            r={3}
+          />
+          <Box {...box(-8, DRAWER.bottom + 2, 8, DRAWER.bottom + 4)} c="#e4ddd0" r={2} />
           {drag && (
             <DeskItem item={drag.item} x={W / 2 + drag.x * S} y={Y0 + drag.y * S} scale={S} />
           )}
         </View>
         <Muted style={styles.center}>
           {fresh && drawer.includes(fresh)
-            ? `Your new ${nameOf(fresh)} is at the top. Drag it onto your desk.`
+            ? `Your new ${nameOf(fresh)} is in the drawer. Drag it onto your desk.`
             : drawer.length
-              ? 'Drag things from the top onto your desk.'
-              : 'Drag things about, or up to the top to put them away.'}
+              ? 'Drag things from the drawer onto your desk.'
+              : 'Drag things about, or into the drawer to put them away.'}
         </Muted>
         <Text style={[font.label, { color: tone.muted }]}>Or pick one and move it</Text>
         <View style={styles.row}>
@@ -235,7 +263,12 @@ export function ArrangeSheet({
 
 const styles = StyleSheet.create({
   list: { gap: 8 },
-  stage: { width: W, height: Y0 + 4, alignSelf: 'center', overflow: 'hidden' },
+  stage: {
+    width: W,
+    height: Y0 + (DRAWER.bottom + DRAWER.front + 2) * S,
+    alignSelf: 'center',
+    overflow: 'hidden',
+  },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   center: { textAlign: 'center' },
 });
