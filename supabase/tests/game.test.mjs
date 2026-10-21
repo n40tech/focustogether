@@ -1904,3 +1904,35 @@ describe('notifications', () => {
     assert.deepEqual(await due(), []);
   });
 });
+
+describe('streaks', () => {
+  /** Sessions alice started a minute after midnight in London, `days` days ago each. */
+  async function studiedDaysAgo(days, { status = 'completed', skipped = false } = {}) {
+    await q('delete from public.sessions');
+    for (const d of days) {
+      await q(
+        `insert into public.sessions (user_id, started_at, ended_at, duration_min, status, chips, skipped)
+         select $1, t, t + interval '25 minutes', 25, $3, 25, $4
+         from (select ((now() at time zone 'Europe/London')::date - $2::integer + time '00:01')
+                      at time zone 'Europe/London' as t) s`,
+        [ids.alice, d, status, skipped]
+      );
+    }
+    return (await call('alice', 'get_me')).streak;
+  }
+
+  test('count the days in a row you studied, as days go in London', async () => {
+    assert.equal((await call('alice', 'get_me')).streak, 0);
+    assert.equal((await study('alice', 25)).streak, 1);
+
+    assert.equal(await studiedDaysAgo([0, 1, 1, 2]), 3, 'two sessions in a day count once');
+    assert.equal(await studiedDaysAgo([1, 2]), 2, 'it holds until today is over');
+    assert.equal(await studiedDaysAgo([0, 2, 3]), 1, 'a day off starts it again');
+    assert.equal(await studiedDaysAgo([2, 3]), 0, 'and so does missing yesterday and today');
+  });
+
+  test("skipped sessions and giving up don't count", async () => {
+    assert.equal(await studiedDaysAgo([0], { skipped: true }), 0);
+    assert.equal(await studiedDaysAgo([0], { status: 'cancelled' }), 0);
+  });
+});

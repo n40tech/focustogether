@@ -50,6 +50,8 @@ export type Me = {
   sessions_done: number;
   /** Of those, the ones you studied: all but your first, if you skipped it. */
   sessions_studied: number;
+  /** Days in a row you've studied, up to today or yesterday (in London). */
+  streak: number;
   /** Your crops that are ready to pick, soonest to wither first. */
   ripe: { bed: number; crop: string; withers_at: string | null }[];
   /** Letters waiting for you in the garden's post box. */

@@ -130,6 +130,7 @@ export class FakeSupabase {
     left_session: null,
     sessions_done: 3,
     sessions_studied: 3,
+    streak: 1,
     ripe: [],
     letters: 0,
     friend_requests: 0,

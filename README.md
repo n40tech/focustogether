@@ -132,8 +132,10 @@ a pull request is in **[docs/TESTING.md](docs/TESTING.md)**.
   audio files yet.
 - Scenes are placeholder art built from shapes (`src/art`), seen from above and
   in front.
-- The icon, a clock at nine on sage, is drawn by `scripts/icons.mjs`: change it
-  there and run `npm run icons` to write every size. `public/manifest.json` and
-  `src/app/+html.tsx` give it, and the name, to browsers and phones.
+- The icon, two of the game's people in front of a timer on sage, is drawn by
+  `scripts/icons.mjs`: change it there and run `npm run icons` to write every
+  size. `public/manifest.json` and `src/app/+html.tsx` give it, and the name, to
+  browsers and phones. Raise the `?v=` in both when the icon changes, or they
+  keep showing the old one.
 - While it's in beta, a banner across the top of every place but the office
   links testers to the WhatsApp group (`src/components/BetaBanner.tsx`).
