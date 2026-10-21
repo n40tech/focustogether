@@ -156,7 +156,7 @@ export default function Payout() {
     >
       <SceneHeader place="Session complete" chips={me.chips} />
       <Panel>
-        <Earned earned={earned} minutes={session.duration_min} />
+        <Earned earned={earned} minutes={session.duration_min} streak={me.streak} />
         {me.break_ends_at && <BreakEarned minutes={session.break_min} until={me.break_ends_at} />}
         <RipeNote ripe={me.ripe} style={styles.centerText} />
         <Button title="Take a break" onPress={() => go('/garden')} />
@@ -192,7 +192,7 @@ function ScreenDone() {
   );
 }
 
-function Earned({ earned, minutes }: { earned: number; minutes: number }) {
+function Earned({ earned, minutes, streak }: { earned: number; minutes: number; streak: number }) {
   const tone = useTone();
   const luck = earned - minutes;
   const note =
@@ -205,6 +205,7 @@ function Earned({ earned, minutes }: { earned: number; minutes: number }) {
     <View style={styles.center}>
       <Text style={[styles.earned, { color: tone.chip }]}>+{earned} chips</Text>
       <Muted>{`${minutes} minutes studied${note}`}</Muted>
+      {streak > 1 && <Muted>{`${streak} days in a row`}</Muted>}
     </View>
   );
 }

@@ -34,8 +34,10 @@ export default function Root({ children }: PropsWithChildren) {
         {/* The browser's bar matches the beta banner across the top. */}
         <meta name="theme-color" content={tones.night.raised} />
         <meta name="apple-mobile-web-app-title" content="Focus Together" />
-        <link rel="manifest" href="/manifest.json" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        {/* ?v= changes with the icon, so browsers and phones fetch the new
+            one instead of keeping theirs (see scripts/icons.mjs). */}
+        <link rel="manifest" href="/manifest.json?v=3" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3" />
         <ScrollViewStyleReset />
         <style dangerouslySetInnerHTML={{ __html: PAGE_BACKGROUND }} />
       </head>

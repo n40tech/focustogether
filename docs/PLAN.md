@@ -105,6 +105,7 @@ agreed; **Open questions** lists what hasn't.
 - **See:** a closer look at your own desk (the same desk as in the office, monitor
   and all, at the same proportions), with chips counted out onto it, and the
   break you've earned. Neighbouring desks show at the edges on wide screens.
+  From two days on, a quiet line says how many days in a row you've studied.
 - **Do:** *Take a break* (garden) · *Go home* (car park) · *Spend chips* (shed).
 - **Hear:** a soft chime, then chips clinking.
 
@@ -729,6 +730,7 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 | Un-adding a friend | "Unpin" on the Friends board, after a question. It ends the friendship both ways and calls off offers between you; nobody is told. |
 | Adding a friend | Asks them first; they accept or say not now, and the asker isn't told which. Invites still make you friends at once. |
 | A friend's profile | Shows minutes, sessions and days studied, and what they're worth (chips plus the shed's price of what they own). Only friends see it. |
+| Streaks | Days in a row with a studied session, by London days, shown only to you on the payout. It holds until today is over, and nothing tells you off for missing a day. |
 | Studying together | Join a friend who's studying: your session ends when theirs does. |
 | The noticeboard | Is called the Friends board, which says what it's for. |
 | Usernames with accents | Allowed (Latin letters). The plain spelling is unique, so accents never tell two players apart. |

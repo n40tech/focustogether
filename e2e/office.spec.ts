@@ -72,12 +72,13 @@ test('walking out gets you up from your desk', async ({ page, fake }) => {
 test('a finished session pays out once, then you take a break', async ({ page, fake }) => {
   fake.onBreak();
   fake.payoutSeen = null;
-  Object.assign(fake.me, { chips: 147, place: 'office' });
+  Object.assign(fake.me, { chips: 147, place: 'office', streak: 3 });
   await fake.open('/');
 
   await expect(page).toHaveURL(/\/payout$/);
   await expect(page.getByText('+27 chips')).toBeVisible();
   await expect(page.getByText('25 minutes studied · 2 lucky chips')).toBeVisible();
+  await expect(page.getByText('3 days in a row')).toBeVisible();
   // Still at your desk while the payout shows.
   expect(fake.called('set_place')).not.toContainEqual({ p_place: 'garden' });
 
