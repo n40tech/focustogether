@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Animated, Easing, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 
 import {
   AllotmentPlot,
@@ -14,7 +14,7 @@ import {
   Shed,
   Sign,
 } from '@/art/Garden';
-import { ChatBubble, Person } from '@/art/People';
+import { Person } from '@/art/People';
 import { Box, Dot, Faint, Glow, Shadow, Tag } from '@/art/primitives';
 import { Rift } from '@/art/Rift';
 import { BLEED, Scene, STAGE, useTone } from '@/art/Scene';
@@ -40,12 +40,12 @@ import { Joystick } from '@/components/Joystick';
 import { LooksSheet } from '@/components/LooksSheet';
 import { Noticeboard } from '@/components/Noticeboard';
 import { INVITE_TIP, Tip, useTips } from '@/components/Tip';
+import { ChatBar, Follow, Label, Pan, useLit, walkabout } from '@/components/Walkabout';
 import { useNow } from '@/hooks/useNow';
 import { usePolled } from '@/hooks/usePolled';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { api, BEDS, PLANTS_PER_BED, type Garden } from '@/lib/api';
 import { itemInfo } from '@/lib/catalog';
-import { serverNow } from '@/lib/clock';
 import { onTimeSkipped } from '@/lib/testing';
 import { palette } from '@/lib/theme';
 import { useConditions } from '@/weather/useConditions';
@@ -77,7 +77,7 @@ import {
   WORLD,
   type Point,
 } from '@/world/gardenMap';
-import { type Bubble, MAX_SAY, POS_EVERY_MS, useGardenChannel } from '@/world/useGardenChannel';
+import { POS_EVERY_MS, useGardenChannel } from '@/world/useGardenChannel';
 import { useWalker } from '@/world/useWalker';
 import { Whereabouts } from '@/world/whereabouts';
 import { nameFor, useGo, useWorld } from '@/world/World';
@@ -149,17 +149,6 @@ type SheetState =
   | { kind: 'looks' }
   | { kind: 'stranger'; username: string }
   | null;
-
-/** True until a cigarette lit until `until` burns out. */
-function useLit(until: string | null | undefined) {
-  const [out, setOut] = useState<string | null>(null);
-  useEffect(() => {
-    if (!until) return;
-    const id = setTimeout(() => setOut(until), Math.max(0, Date.parse(until) - serverNow()));
-    return () => clearTimeout(id);
-  }, [until]);
-  return !!until && out !== until;
-}
 
 export default function GardenScene() {
   useAmbience('garden');
@@ -513,7 +502,7 @@ export default function GardenScene() {
       : (neighbours.find((n) => n.username === username)?.plots ?? []);
 
   const art = (
-    <Pan by={walker.pan}>
+    <Pan by={walker.pan} width={WORLD.w}>
       <Hedge y={-400} h={FENCE_Y + 404} />
       <Box x={BLEED.x} y={FENCE_Y} w={BLEED.w} h={8} c={G.fence} />
       <Box x={PATH.x} y={PATH.y} w={PATH.w} h={PATH.h} c={G.path} />
@@ -598,7 +587,7 @@ export default function GardenScene() {
   );
 
   const glow = (
-    <Pan by={walker.pan}>
+    <Pan by={walker.pan} width={WORLD.w}>
       <Box x={SHED.x + 8} y={SHED.y + 46} w={16} h={14} c="#f3d9a6" />
       <Glow x={SHED.x + 16} y={SHED.y + 62} w={140} h={50} c="#f6dca0" o={0.45} />
     </Pan>
@@ -606,7 +595,7 @@ export default function GardenScene() {
 
   const myBubble = chat.bubbles[me.username];
   const overlay = (
-    <Pan by={walker.pan}>
+    <Pan by={walker.pan} width={WORLD.w}>
       {[...spots.entries()].map(([username, at]) => {
         const friend = neighbours.find((n) => n.username === username);
         return (
@@ -976,64 +965,6 @@ function nearest(
   return { place: best, friend };
 }
 
-/** Moves the garden under the stage as the camera pans. */
-function Pan({ by, children }: { by: Animated.Value; children: ReactNode }) {
-  return (
-    <Animated.View
-      pointerEvents="box-none"
-      style={[styles.world, { transform: [{ translateX: by }] }]}
-    >
-      {children}
-    </Animated.View>
-  );
-}
-
-/** Draws its children at a friend's position, easing between the positions they send. */
-function Follow({
-  whereabouts,
-  who,
-  home,
-  children,
-}: {
-  whereabouts: Whereabouts;
-  who: string;
-  /** Where to stand them until we hear where they are. */
-  home: Point;
-  children: ReactNode;
-}) {
-  const [at] = useState(() => new Animated.ValueXY(whereabouts.get(who) ?? home));
-  useEffect(
-    () =>
-      whereabouts.watch(who, (to) => {
-        Animated.timing(at, {
-          toValue: to,
-          duration: POS_EVERY_MS + 60,
-          easing: Easing.linear,
-          useNativeDriver: false,
-        }).start();
-      }),
-    [whereabouts, who, at]
-  );
-  return (
-    <Animated.View
-      pointerEvents="none"
-      style={[styles.figure, { transform: at.getTranslateTransform() }]}
-    >
-      {children}
-    </Animated.View>
-  );
-}
-
-/** A name under someone's feet, and what they're saying over their head. */
-function Label({ name, bubble }: { name: string; bubble?: Bubble }) {
-  return (
-    <>
-      <Tag x={0} y={5} text={name} />
-      {bubble && <ChatBubble key={bubble.id} x={0} y={-44} text={bubble.text} ttl={bubble.ttl} />}
-    </>
-  );
-}
-
 function GardenSheet({
   sheet,
   garden,
@@ -1190,36 +1121,8 @@ function BreakLeft({ until, onDone }: { until: string; onDone: () => void }) {
   );
 }
 
-function ChatBar({ onSay }: { onSay: (text: string) => boolean }) {
-  const tone = useTone();
-  const [text, setText] = useState('');
-  const send = () => {
-    if (onSay(text)) setText('');
-  };
-  return (
-    <View style={styles.row}>
-      <TextInput
-        value={text}
-        onChangeText={setText}
-        placeholder="Say something…"
-        placeholderTextColor={tone.muted}
-        maxLength={MAX_SAY}
-        onSubmitEditing={send}
-        returnKeyType="send"
-        blurOnSubmit={false}
-        style={[
-          styles.input,
-          { color: tone.text, borderColor: tone.line, backgroundColor: tone.raised },
-        ]}
-      />
-      <Button title="Say" small onPress={send} disabled={!text.trim()} />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  world: { position: 'absolute', left: 0, top: 0, width: WORLD.w, height: STAGE.height },
-  figure: { position: 'absolute', left: 0, top: 0, width: STAGE.width, height: STAGE.height },
+  figure: walkabout.figure,
   row: { flexDirection: 'row', gap: 6, alignItems: 'center' },
   controls: { flexDirection: 'row', gap: 12, alignItems: 'center' },
   side: { flex: 1, gap: 8 },
@@ -1230,12 +1133,4 @@ const styles = StyleSheet.create({
   /** Side by side, each as wide as its words, sharing what's left. */
   fit: { flexGrow: 1, flexShrink: 1, flexBasis: 'auto' },
   center: { textAlign: 'center' },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    fontSize: 15,
-  },
 });

@@ -14,6 +14,7 @@ async function join(page: Page, fake: FakeSupabase) {
   Object.assign(fake.me, { sessions_done: 0, sessions_studied: 0, tips: [] });
   await fake.open(`/login?invite=${INVITE}`);
   await page.getByPlaceholder('Username (how friends find you)').fill('nate');
+  await page.getByPlaceholder('Email (for news; never shown)').fill('nate@studymail.co.uk');
   await page.getByPlaceholder('Password').fill('hunter22');
   await button(page, 'Join').click();
   await expect(button(page, 'Walk in')).toBeVisible();

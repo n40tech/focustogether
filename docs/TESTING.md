@@ -244,12 +244,22 @@ bigger change), do the whole round:
       their characters' faces. Unpin them: it asks first, and they drop off
       both boards.
 - [ ] **Car park:** friends at work show as their car or bike, the Friends
-      board opens, and the garden gate only works on a break.
+      board opens, and the garden gate only works on a break. With a vehicle
+      (buy one in the shed, or **Test → items**), go home and come back: you
+      start on the road in it. Drive in with the stick or the arrow keys,
+      stop, and **Get out**: the other player sees it parked there. Drive
+      into the other player's parked car: both lose health (tap a car to
+      see it), and they can **Claim** (you pay) or **Let it go**. Insure it
+      in the shed and crash again: the insurance pays. Repair it in the
+      shed. Walk about and smoke; the other player out there sees you.
 - [ ] **Office:** you get a desk and the other player sees you at it. Start a
       session and watch the countdown. Give up. Start another and switch to
-      another tab for over 10 seconds: on a computer it carries on. Then try
-      the same in the browser's device mode, or on a phone: it stops, and the
-      office says so. On a computer, closing the tab stops a session (open
+      another tab for a minute, on a phone too: it carries on. Turn on
+      **Hard mode** and start another: on a computer, other tabs are still
+      fine; in the browser's device mode, or on a phone, it stops, and the
+      office says so. Mid-session, **Invite someone to study with you**, and
+      open the link signed in as the other player (or in a private window,
+      to sign up): they land in the office, studying with you. On a computer, closing the tab stops a session (open
       Focus Together again to see the office say so), but a reload doesn't.
       **Test → Finish my session** pays out. Tap the other player's desk
       while they study: it says how long they've got left, and **Join**

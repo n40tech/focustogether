@@ -209,6 +209,8 @@ test("a friend of a friend walks about, see-through, as Bob's friend until you t
       place: 'garden',
       arrived_at: iso(-10),
       vehicle: null,
+      vehicle_health: 100,
+      parked: null,
       desk_items: [],
       desk: 2,
       via: ['Bob'],

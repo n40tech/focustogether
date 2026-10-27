@@ -41,7 +41,8 @@ begin
       jsonb_build_object(
         'invite', private.make_invite(v_alice),
         'username', v_player.username,
-        'display_name', v_player.display_name
+        'display_name', v_player.display_name,
+        'contact_email', v_player.username || '@studymail.co.uk'
       ),
       now(), now(), '', '', '', ''
     );

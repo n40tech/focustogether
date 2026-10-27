@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { useTone } from '@/art/Scene';
 import { playSound } from '@/audio/sound';
@@ -10,6 +10,7 @@ import { Tip } from '@/components/Tip';
 import { api, AWAY_GRACE_S, breakMinutes, MAX_SESSION_MIN, type Me } from '@/lib/api';
 import { otherTabsAllowed, pageId } from '@/lib/away';
 import { confirm } from '@/lib/confirm';
+import { sendInvite } from '@/lib/invites';
 import { cancelSessionEnd, scheduleSessionEnd } from '@/lib/notifications';
 
 const PRESETS = [25, 50, 90, 120];
@@ -79,23 +80,34 @@ export function StudyPanel({ me, setMe, refresh, onWalkOut, onArrange }: Props) 
     const here = session.device === pageId;
     // On a computer, other tabs are fine; on a phone, Focus has to stay in front.
     const tabsOk = otherTabsAllowed();
+    const strict = session.hard && here;
     return (
       <Panel style={styles.center}>
-        <Tip id="stay">
-          {tabsOk
-            ? 'Keep this tab open while you study. Other tabs and windows are fine, for notes or reading. Close this one and the session stops, with no chips.'
-            : `Keep Focus Together open while you study: the screen stays on. Switch apps or tabs, or lock your phone, for more than ${AWAY_GRACE_S} seconds and the session stops, with no chips.`}
-        </Tip>
+        {session.hard ? (
+          <Tip id="stay">
+            {tabsOk
+              ? 'Hard mode: keep this tab open while you study. Other tabs and windows are fine, for notes or reading. Close this one and the session stops, with no chips.'
+              : `Hard mode: keep Focus Together open while you study. Switch apps or tabs, or lock your phone, for more than ${AWAY_GRACE_S} seconds and the session stops, with no chips.`}
+          </Tip>
+        ) : (
+          <Tip id="away">
+            You can leave the page while you study: the session carries on, and pays when it ends.
+            For the strict rules, turn on hard mode before you start.
+          </Tip>
+        )}
         <Countdown
           until={session.ends_at}
           onDone={refresh}
           style={[styles.countdown, { color: tone.text }]}
         />
         <Muted style={styles.centerText}>
-          {here
-            ? `Studying · ${session.duration_min} min · ${tabsOk ? 'keep this tab open' : 'stay on this page'}`
-            : `Studying · ${session.duration_min} min · started on another page`}
+          {!here
+            ? `Studying · ${session.duration_min} min · started on another page`
+            : strict
+              ? `Studying · ${session.duration_min} min · hard mode · ${tabsOk ? 'keep this tab open' : 'stay on this page'}`
+              : `Studying · ${session.duration_min} min`}
         </Muted>
+        <StudyInvite />
         {firstTime && <Button title="Skip my first session" small onPress={skip} disabled={busy} />}
         <Button title="Give up" variant="ghost" small onPress={giveUp} disabled={busy} />
         {error && <Text style={{ color: tone.danger }}>{error}</Text>}
@@ -160,6 +172,7 @@ export function StudyPanel({ me, setMe, refresh, onWalkOut, onArrange }: Props) 
       <Muted style={styles.centerText}>
         {`Earns about ${minutes} chip${minutes === 1 ? '' : 's'} and a ${breakMinutes(minutes)} min break.`}
       </Muted>
+      <HardMode me={me} setMe={setMe} />
       <Button title={`Start ${minutes} min`} onPress={start} disabled={busy} />
       <View style={styles.presets}>
         <Button
@@ -173,6 +186,83 @@ export function StudyPanel({ me, setMe, refresh, onWalkOut, onArrange }: Props) 
       </View>
       {error && <Text style={{ color: tone.danger, textAlign: 'center' }}>{error}</Text>}
     </Panel>
+  );
+}
+
+/**
+ * Hard mode, for the strict rules: leaving the page stops the session. Kept
+ * for your account, and each session keeps the mode it started in.
+ */
+function HardMode({ me, setMe }: { me: Me; setMe: (me: Me) => void }) {
+  const tone = useTone();
+  const [on, setOn] = useState(me.hard_mode);
+  const flip = (value: boolean) => {
+    setOn(value);
+    api.setHardMode(value).then(setMe, () => setOn(!value));
+  };
+  return (
+    <View style={styles.hard}>
+      <View style={styles.flex}>
+        <Text style={{ color: tone.text, fontSize: 14, fontWeight: '600' }}>Hard mode</Text>
+        <Muted>
+          {otherTabsAllowed()
+            ? 'Close this tab mid-session and it stops, with no chips.'
+            : `Leave the page for more than ${AWAY_GRACE_S} seconds mid-session and it stops, with no chips.`}
+        </Muted>
+      </View>
+      <Switch
+        value={on}
+        onValueChange={flip}
+        accessibilityLabel="Hard mode"
+        trackColor={{ false: tone.line, true: tone.accent }}
+      />
+    </View>
+  );
+}
+
+/** While you study: a link that has someone study with you, signing up first if they need to. */
+function StudyInvite() {
+  const tone = useTone();
+  const [busy, setBusy] = useState(false);
+  const [said, setSaid] = useState<{ text: string; ok: boolean } | null>(null);
+  const invite = async () => {
+    setBusy(true);
+    setSaid(null);
+    try {
+      const { code, ends_at } = await api.inviteToSession();
+      const until = new Date(ends_at).toLocaleTimeString(undefined, {
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+      const text = await sendInvite(
+        code,
+        `Come and study with me on Focus Together, until ${until}.`,
+        `Link copied. Whoever opens it studies with you until ${until}, and joins as your friend.`
+      );
+      if (text) setSaid({ text, ok: true });
+    } catch (e) {
+      setSaid({ text: e instanceof Error ? e.message : String(e), ok: false });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <>
+      <Button
+        title="Invite someone to study with you"
+        variant="quiet"
+        small
+        onPress={invite}
+        disabled={busy}
+      />
+      {said && (
+        <Text
+          style={[styles.centerText, { color: said.ok ? tone.accent : tone.danger, fontSize: 13 }]}
+        >
+          {said.text}
+        </Text>
+      )}
+    </>
   );
 }
 
@@ -205,5 +295,7 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   presets: { flexDirection: 'row', gap: 8 },
+  hard: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  flex: { flex: 1 },
   preset: { flex: 1 },
 });

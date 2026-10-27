@@ -5,7 +5,8 @@ import { serverNow } from './clock';
 import { rpcKeepalive } from './supabase';
 
 /**
- * Focus means staying on the page: a session stops if the page it was
+ * A session runs whatever you do, unless you started it in hard mode. Then
+ * focus means staying on the page: it stops if the page it was
  * started on is left for more than AWAY_GRACE_S. On a phone or tablet, hiding
  * the page counts (another app, another tab, the phone locked). On a computer,
  * other tabs and windows are fine, for notes and reading: only leaving the
@@ -63,8 +64,8 @@ export const pageId = (() => {
 
 type Away = { session: number; at: number };
 
-/** The session started on this page, while it runs. */
-let watching: { session: number; endsAt: number } | null = null;
+/** The session started on this page, while it runs (and whether leaving stops it). */
+let watching: { session: number; endsAt: number; hard: boolean } | null = null;
 /** When this page was hidden mid-session, until the server's been told we're back. */
 let away: Away | null = (() => {
   try {
@@ -78,7 +79,7 @@ let away: Away | null = (() => {
 let leaving: Promise<unknown> | null = null;
 
 function hidden() {
-  if (!watching || serverNow() >= watching.endsAt || away) return;
+  if (!watching?.hard || serverNow() >= watching.endsAt || away) return;
   away = { session: watching.session, at: Date.now() };
   store(AWAY_KEY, JSON.stringify(away));
   const args = { p_session: watching.session, p_device: pageId };
@@ -163,7 +164,7 @@ export function startAwayWatch() {
 export function watchSession(session: Me['active_session']) {
   watching =
     session && session.device === pageId
-      ? { session: session.id, endsAt: Date.parse(session.ends_at) }
+      ? { session: session.id, endsAt: Date.parse(session.ends_at), hard: session.hard }
       : null;
   holdScreen();
 }

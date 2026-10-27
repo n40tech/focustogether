@@ -23,10 +23,10 @@ test('walking in hands you a desk, and a session can start', async ({ page, fake
   await button(page, '50m').click();
   await expect(page.getByText('Earns about 50 chips and a 10 min break.')).toBeVisible();
   await button(page, 'Start 50 min').click();
-  await expect(page.getByText('Studying · 50 min · keep this tab open')).toBeVisible();
+  await expect(page.getByText('Studying · 50 min', { exact: true })).toBeVisible();
   const [started] = fake.called('start_session');
   expect(started.p_minutes).toBe(50);
-  // This page's id: leaving this page stops the session.
+  // This page's id: in hard mode, leaving this page stops the session.
   expect(started.p_device).toMatch(/^[a-z0-9]{10,}$/);
   // Chips are out of sight while you study.
   await expect(page.getByLabel('120 chips')).toHaveCount(0);
@@ -104,8 +104,10 @@ test.describe('on a phone', () => {
     fake.atDesk();
     fake.me.tips = ALL_TIPS.filter((tip) => tip !== 'stay');
     await fake.open('/office');
+    await page.getByRole('switch', { name: 'Hard mode' }).click();
+    await expect.poll(() => fake.called('set_hard_mode')).toEqual([{ p_on: true }]);
     await button(page, 'Start 25 min').click();
-    const studying = page.getByText('Studying · 25 min · stay on this page');
+    const studying = page.getByText('Studying · 25 min · hard mode · stay on this page');
     await expect(studying).toBeVisible();
     await expect(page.getByText(/Switch apps or tabs, or lock your phone/)).toBeVisible();
     const session = fake.me.active_session!.id;
@@ -144,9 +146,10 @@ test('on a computer, other tabs are fine, but leaving the page stops a session',
 }) => {
   fake.atDesk();
   fake.me.tips = ALL_TIPS.filter((tip) => tip !== 'stay');
+  fake.me.hard_mode = true;
   await fake.open('/office');
   await button(page, 'Start 25 min').click();
-  const studying = page.getByText('Studying · 25 min · keep this tab open');
+  const studying = page.getByText('Studying · 25 min · hard mode · keep this tab open');
   await expect(studying).toBeVisible();
   await expect(page.getByText(/Other tabs and windows are fine/)).toBeVisible();
   const session = fake.me.active_session!.id;
@@ -218,6 +221,8 @@ test('a friend of a friend sits greyed out, and you can ask them to be friends',
       place: 'office',
       arrived_at: iso(-10),
       vehicle: 'hatchback',
+      vehicle_health: 100,
+      parked: null,
       desk_items: [{ item: 'duck', x: 36, y: -26 }],
       desk: 2,
       via: ['Bob'],

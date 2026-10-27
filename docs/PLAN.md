@@ -57,17 +57,35 @@ agreed; **Open questions** lists what hasn't.
 ## 3. Places
 
 ### Car park (where the app opens)
-- **See:** the office building and its door, three even rows of four bays and
-  a bike rack. Bays and rack slots follow desks: whoever has desk 5 parks in
-  bay 5 (or rack slot 5). Friends who are *at work* (arrived, studying, on a
-  break, or between the two) appear as their **car** or **bike**; friends with
-  neither aren't shown. Friends of your friends' cars and bikes are there
-  too, see-through and labelled as a friend's friend ("Alice's friend"); tap
-  a car to see who it is and ask them to be friends. Nobody's bay is
-  reserved, yours included.
-- **Do:** walk in (office) · the Friends board (friends, requests and invites) · the garden
-  gate (only while you're on a break) · go home (while you're at work) · log out.
-- **Hear:** open-air weather, distant traffic.
+- **See:** two phones wide: the office building and its door, the pavement
+  with a bike rack and the hedge with the garden gate, two rows of eight
+  bays with an aisle between, a verge, and the road along the bottom.
+  Friends who are *at work* (arrived, studying, on a break, or between the
+  two) appear as their **car** or **bike**, where they parked it; friends
+  who came before parking was a thing are in the bay (or rack slot) that
+  goes with their desk. Friends with neither aren't shown. Friends of your
+  friends' cars and bikes are there too, see-through and labelled as a
+  friend's friend ("Alice's friend"); tap one to see who it is and ask them
+  to be friends. Friends out in the car park walk about (and drive about),
+  as in the garden, with chat bubbles and cigarettes.
+- **Arriving:** with a vehicle, you start in it on the road at the
+  entrance. Steer it in with the thumbstick (point where you want to go; it
+  backs up if you point behind it) or the arrow keys, and park wherever
+  there's room: **Get out** once you've stopped. Parking is arriving. On
+  foot (or if your vehicle's a wreck), you walk in from the road, and
+  walking about is arriving. **Walk in** while you're still driving parks
+  you where you are, or in a free bay if you're still on the road.
+- **Driving into things:** the kerb, the verge and lamp posts just stop you.
+  Driving into a friend's parked vehicle faster than a nudge damages both
+  (see *Vehicles*). Friends of friends' vehicles are see-through: you drive
+  through them.
+- **Do:** walk in (office) · the Friends board (friends, requests and
+  invites) · the garden gate (only while you're on a break) · get in or out
+  of your vehicle · tap any vehicle for its health · smoke · say something,
+  when friends are out here · claim damages for a bump, or let it go · go
+  home (while you're at work) · log out.
+- **Hear:** open-air weather, distant traffic, car doors, and a crunch when
+  someone drives into something.
 
 ### Office
 - **See:** twelve identical desks in four rows of three. When you walk in you
@@ -89,12 +107,12 @@ agreed; **Open questions** lists what hasn't.
   drag things from the drawer onto the desk, drag them about, or drag them
   back into the drawer to put them away. Dragging is the only way to arrange
   it. A tip says so the first time. Not while you study.
-- **Do, during a session:** nothing else. There's the countdown and a small
+- **Do, during a session:** nothing else, bar **Invite someone to study
+  with you** (see *Studying together*). There's the countdown and a small
   *give up* link, which forfeits the session. The chip balance, shop and all
-  navigation are hidden. **Stay on the page**: on a phone, switch apps or
-  tabs, or lock it, for more than 10 seconds and the session stops with
-  nothing paid. On a computer, other tabs and windows are fine, but closing
-  the page stops it (see *Staying on the page*). The screen is kept awake
+  navigation are hidden. You can leave the page: the session carries on and
+  pays when it ends. In **hard mode** (a switch before you start), you have
+  to stay on the page (see *Staying on the page*). The screen is kept awake
   meanwhile.
   A new player can **skip their first session**, to see the payout and the
   garden before they've studied.
@@ -206,9 +224,22 @@ they study and you don't, **Join** starts a session that ends when theirs
 does: their time left, rounded up to a whole minute and started up to 59
 seconds ago, so both countdowns reach zero together. It pays and earns a
 break like any session of that length. With under a minute left, it says
-they're nearly done instead.
+they're nearly done instead. Each of you keeps your own mode: joining a
+friend in hard mode doesn't put you in it.
+
+While you study, **Invite someone to study with you** makes an invite to
+your session and copies its link. Whoever opens it, signed in or signing up
+first, becomes your friend and joins your session, as with **Join**. If it's
+over by then, they're still friends. It's one of your 5 invites, and lasts
+14 days for signing up, like any other.
 
 ### Staying on the page
+- By default, a session runs whatever you do: switch apps, lock your phone,
+  close the tab. It pays when it ends.
+- **Hard mode** brings back the strict rules below. It's a switch in the
+  office before you start, kept for your account; each session keeps the
+  mode it started in (`sessions.hard`). The rest of this section is hard
+  mode.
 - A session belongs to the page (browser tab) it was started on. On a phone
   or tablet, if that page is hidden (another app, another tab, the phone
   locked) for **more than 10 seconds**, the session stops at the moment you
@@ -314,6 +345,14 @@ touching code.
 ### Invites
 - Sign-up is invite-only. Invites are 8-character codes (no look-alike
   characters) that last 14 days; you can hold 5 unused ones at a time.
+- Signing up takes a real email address too, for news of Focus Together
+  (`public.emails`): one @, a domain with a dot, and none of the names kept
+  for tests and examples. Only its owner can read it, and the project's
+  dashboard. Players who joined before add theirs on the Friends board (a
+  tip in the car park asks, once).
+- An invite opened by someone who's already signed in makes them friends
+  with whoever made it, and uses it up.
+- An invite can be to a session (see *Studying together*).
 - Whoever joins with your invite starts out as your friend. Friendships stay
   pairwise, but friends of your friends who are at work show see-through at
   their desks, in their bays and walking about the garden, as "Alice's
@@ -329,8 +368,27 @@ preview changes as you choose, and *Save my look* keeps it. Until someone
 chooses, the app picks for them from their username, as it always did.
 Friends, and friends of friends, see it everywhere you're drawn.
 
+### Vehicles
+- Every vehicle has **health**, 0 to 100, which shows on it: scratches, then
+  dents, a cracked windscreen and a crumpled bumper, and a sprung bonnet near
+  the end (a bike's front wheel buckles). Tap a vehicle to see its health.
+- Driving into a friend's parked vehicle faster than a nudge (18 units a
+  second) takes up to 30 health from both, by speed. Bumping it again in the
+  next 5 seconds is the same crash. The app reports the crash; the server
+  checks you're friends, you're both at work and the owner has a vehicle.
+- Its owner sees it in the car park and can **claim damages**: the shed's
+  cost to put their damage right (half a vehicle's price for a wreck, so a
+  hatchback's 20 damage is 30 chips) comes out of the driver's chips (or
+  what they have, if it's less), and their vehicle is put right. If the
+  driver was **insured** at the time, the insurer pays instead. Or they
+  **let it go**. Either way, the driver hears which.
+- The shed repairs your own vehicle for the same cost, and sells
+  insurance: 30 chips a week, up to four weeks ahead. Buying a vehicle
+  suggests it. A new vehicle comes without a scratch.
+- A wreck (0 health) can't be driven: you come on foot until it's repaired.
+
 ### Cigarettes
-Smoked in the garden, one at a time. Each burns for **3 minutes**, getting
+Smoked in the garden or the car park, one at a time. Each burns for **3 minutes**, getting
 shorter as it goes, then it's out. Friends see the smoke and hear a lighter
 flick and a quiet crackle.
 
@@ -373,6 +431,14 @@ your garden channel about 5 times a second, and friends' (and friends of
 friends') screens ease between updates. You say hello when you arrive (friends reply with where they are),
 bye when you leave, and where you are every 20 seconds while you stand still;
 a friend not heard from for 50 seconds has gone.
+
+### The car park, live
+The car park has its own pair of channels, `carpark:<username>` and
+`carpark-chat:<username>`, which work like the garden's (friends of friends
+see you walk and drive, only friends hear you). A position also says
+whether you're driving (`car`) and which way you face (`a`). Getting out
+parks your vehicle on the server, so friends who weren't watching see it
+there too. Your other devices follow you, but there's no rift out here.
 
 ### On two devices at once
 You can be in the garden on a phone and a laptop at once, and you're in one
@@ -551,6 +617,11 @@ deployment/               numbered runbooks for setting up and shipping each upd
 | `desk_layout` | (player, desk thing) → where it sits on their desk; no row means it's in the drawer (0013) |
 | `profiles` | + `active_at`: when their app last checked in, to within a minute (0014) |
 | `push_subscriptions` | endpoint → player and keys: a device to notify (0015) |
+| `profiles` | + `hard_mode` (0017); + `parked` {x, y, a}, `vehicle_health` (0–100), `insured_until` (0017) |
+| `sessions` | + `hard`: started in hard mode (0017) |
+| `emails` | player → email, for news; readable only by its owner (0017) |
+| `invites` | + `session`: the session it asks you to join (0017) |
+| `crashes` | driver, owner, vehicle hit, damage, repair cost, open / claimed / waived, who paid what (0017) |
 | `sessions`, `friend_requests` | + `start_pushed_at`, `end_pushed_at`, `break_pushed_at` / `pushed_at`: told once (0015) |
 
 | RPC | Allowed when | Returns |
@@ -590,7 +661,14 @@ deployment/               numbered runbooks for setting up and shipping each upd
 | `list_item(item, qty, price)`, `unlist(id)` | on a break | garden |
 | `buy_listing(id, qty)` | both on a break, and friends | garden |
 | `create_invite()`, `get_invites()` | signed in | invite / invites |
-| `check_signup(code, username)` | anyone, signed in or not | whether that sign-up would work, and whose invite it is |
+| `check_signup(code, username, email)` | anyone, signed in or not | whether that sign-up would work, whose invite it is, and when the session it's to ends (email from 0017) |
+| `set_hard_mode(on)`, `set_email(email)` | signed in (0017) | me |
+| `invite_to_session()` | studying (0017) | invite, and when your session ends |
+| `use_invite(code, device)` | signed in; an invite that's unused or used by you, not your own (0017) | whose it is, whether you joined their session (and why not), me |
+| `park(x, y, a)` | not studying; a vehicle that isn't a wreck (arrives you) (0017) | me |
+| `crash(username, speed)` | not studying; driving; a friend at work with a vehicle (0017) | me |
+| `claim_crash(id, claim)` | the owner, while it's open (0017) | me |
+| `repair_vehicle()`, `buy_insurance()` | not studying; a vehicle (0017) | shop |
 
 Sign-up itself is Supabase Auth's: a trigger on `auth.users` (0003) refuses
 any account without a valid invite in its metadata, then makes the profile,
@@ -695,6 +773,11 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 - [x] Migration `0015_notifications.sql` and the `push` Edge Function:
       notifications by web push, even with the app closed (81 scenario tests
       in all).
+- [x] Migration `0017_hard_mode_driving_and_study_invites.sql`: sessions run
+      whatever you do, with hard mode for the strict rules; a real email at
+      sign-up; driving in and parking, crashes, claims, repairs and
+      insurance; walking about, chatting and smoking in the car park; and
+      invites to the session you're studying (94 scenario tests in all).
 
 **M2: feel**
 - Illustrated art, recorded audio (layer by layer), a typeface, gentle
@@ -717,7 +800,9 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 |---|---|
 | Where does the weather come from? | A shared, procedural cycle seeded by the clock: the same for everyone. |
 | How does the allotment grow? | In real time over a few days, depending on the crop (it used to be by the minutes studied); watering speeds it up. Crops are never sold to the game for chips; they're eaten, sold to friends, traded or saved for seeds. |
-| How do friends without a car appear in the car park? | They don't. You can buy a bike (shown in the bike rack) or a car. |
+| How do friends without a car appear in the car park? | Walking about, while they're out there. Their vehicle, if they have one, is where they parked it. |
+| Arriving | Drive in from the road and park wherever there's room, or walk in. Either is arriving. |
+| Crashes | Into friends' parked vehicles only. Both lose health; the owner can claim damages, which the driver pays unless insured. |
 | How does a break end? | An earned break timer (1 min per 5 studied), then a bell and a choice of office or home. |
 | Perspective | Top-front for every place, with no sky: time of day only shows as the scene's changing hues. |
 | Web hosting | EAS Hosting with a static export; Supabase for the backend. |
@@ -736,17 +821,18 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 | Usernames with accents | Allowed (Latin letters). The plain spelling is unique, so accents never tell two players apart. |
 | Eating | Just a munching sound. Nothing to see, no effect. |
 | Friends' plots | You can water them, but not plant or harvest. |
-| Sign-ups | Invite-only for now. Whoever invites you starts as your friend. |
+| Sign-ups | Invite-only for now, with a real email. Whoever invites you starts as your friend. |
+| Studying with someone new | An invite link to your session: they sign up if they need to, and join it as your friend. |
 | "Roughly" 1 chip a minute | The minutes, plus or minus a little random luck (up to 12%, usually far less). |
 | Where you sit | Not at the front: the office starts as twelve empty desks, and everyone (you included) gets a random one on arrival, kept across breaks until they go home. |
-| Car park | No kiosk; three even rows of bays that follow the desks. |
+| Car park | No kiosk; two rows of eight bays, and you park where you like. |
 | The garden | Walkable with a thumbstick, three phones wide and one tall, with every allotment on one grid in a fixed place. |
 | Trading | A market: stalls with prices, bought from face to face in the garden. Swaps and gifts by offer stay too. |
 | Unpicked crops | Wither 2 days after ripening (going over for the last 12 hours), give nothing, and must be cleared before replanting. |
 | After a session | You stay at your desk (friends see you there) until you choose to leave it. |
 | Testing | A Test button, only in local builds with `EXPO_PUBLIC_TESTING=true` and only for accounts marked as testers. |
-| Leaving the page mid-session | Stops the session with nothing paid, after 10 seconds' grace. Only the page the session started on counts. |
-| Other tabs on a computer | Fine, for lecture notes: on a computer only closing the page counts as leaving. On a phone or tablet, another app or tab still does. |
+| Leaving the page mid-session | Fine: the session carries on. In hard mode, it stops the session with nothing paid, after 10 seconds' grace, and only the page the session started on counts. |
+| Other tabs on a computer | In hard mode, fine, for lecture notes: on a computer only closing the page counts as leaving. On a phone or tablet, another app or tab still does. |
 | A friend standing at a place | Doesn't hide it: you get the place's button and the friend's (by name). |
 | New players | Tips, one at a time, and a skippable first session (as 25 minutes at most). |
 | Planting | One seed, one visible plant; four plants to a bed, any mix of crops. |
@@ -781,6 +867,10 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
   from a laptop that's been shut. Only closing the page stops a session there.
 - **Leaving is reported by the page:** a modified client could stay quiet when
   it's hidden. As with proximity, the server trusts friends' apps here.
+- **Crashes are reported by the driver's app:** a modified client could
+  report crashes into a friend's car from anywhere. It damages the driver's
+  own vehicle as much, the driver pays any claim, and a pair can crash at
+  most once every 5 seconds, so there's little to gain.
 - **Cheating:** rewards are computed in Postgres from server time, so a client
   can't award itself chips. Chat is friends-only and unstored, so there's
   nothing to moderate after the fact, but also no history.

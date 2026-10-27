@@ -1,9 +1,13 @@
 import { Stack, usePathname, useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { BetaBanner } from '@/components/BetaBanner';
+import { Toast } from '@/components/Chrome';
 import { TestPanel } from '@/components/TestPanel';
+import { api } from '@/lib/api';
+import { pageId } from '@/lib/away';
+import { forgetInvite, pendingInvite } from '@/lib/invites';
 import { BACKDROP } from '@/lib/theme';
 import { isPayoutSeen, loadSeenPayout, useWorld, WorldProvider } from '@/world/World';
 
@@ -17,16 +21,48 @@ export default function AppLayout() {
 
 function World() {
   const pathname = usePathname();
+  const [note, clearNote] = useInviteOnArrival();
   return (
     <View style={styles.fill}>
       {/* Not in the office, which is for studying. Every session runs there,
-          and on a phone, opening WhatsApp mid-session would stop it. */}
+          and in hard mode on a phone, opening WhatsApp mid-session would stop it. */}
       <BetaBanner hidden={pathname === '/office'}>
         <Places />
       </BetaBanner>
       <TestPanel />
+      {note && <Toast key={note} text={note} onDone={clearNote} />}
     </View>
   );
+}
+
+/**
+ * Came in through an invite link (or joined with a code): you're friends with
+ * whoever made it, and if it's to their session, you're studying with them.
+ * Says which, once.
+ */
+function useInviteOnArrival() {
+  const { setMe } = useWorld();
+  const router = useRouter();
+  const [note, setNote] = useState<string | null>(null);
+  useEffect(() => {
+    const code = pendingInvite();
+    if (!code) return;
+    forgetInvite();
+    api.openInvite(code, pageId).then(
+      (used) => {
+        setMe(used.me);
+        if (used.joined) {
+          router.replace('/office');
+          setNote(`You're studying with ${used.from} now, as friends.`);
+        } else {
+          setNote(`You and ${used.from} are friends now.${used.note ? ` ${used.note}.` : ''}`);
+        }
+      },
+      (e: Error) => setNote(e.message)
+    );
+  }, [setMe, router]);
+  const clear = useCallback(() => setNote(null), []);
+  return [note, clear] as const;
 }
 
 function Places() {

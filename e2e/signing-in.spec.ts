@@ -9,6 +9,7 @@ test('joining with an invite link', async ({ page, fake }) => {
   const username = page.getByPlaceholder('Username (how friends find you)');
   await username.fill('Nate!');
   await page.getByPlaceholder('Your name (shown to friends)').fill('Nate');
+  await page.getByPlaceholder('Email (for news; never shown)').fill('nate@studymail.co.uk');
   await page.getByPlaceholder('Password').fill('hunter22');
   await button(page, 'Join').click();
   await expect(
@@ -21,7 +22,12 @@ test('joining with an invite link', async ({ page, fake }) => {
   expect(fake.called('signup')).toEqual([
     expect.objectContaining({
       email: 'nate@focus.test',
-      data: { invite: INVITE, username: 'nate', display_name: 'Nate' },
+      data: {
+        invite: INVITE,
+        username: 'nate',
+        display_name: 'Nate',
+        contact_email: 'nate@studymail.co.uk',
+      },
     }),
   ]);
 });
@@ -33,13 +39,19 @@ test('a username can have accents; the account email is its plain spelling', asy
   fake.signedIn = false;
   await fake.open(`/login?invite=${INVITE}`);
   await page.getByPlaceholder('Username (how friends find you)').fill(' Zoë_Straße ');
+  await page.getByPlaceholder('Email (for news; never shown)').fill('nate@studymail.co.uk');
   await page.getByPlaceholder('Password').fill('hunter22');
   await button(page, 'Join').click();
   await expect(button(page, 'Walk in')).toBeVisible();
   expect(fake.called('signup')).toEqual([
     expect.objectContaining({
       email: 'zoe_strasse@focus.test',
-      data: { invite: INVITE, username: 'zoë_straße', display_name: 'Zoë_Straße' },
+      data: {
+        invite: INVITE,
+        username: 'zoë_straße',
+        display_name: 'Zoë_Straße',
+        contact_email: 'nate@studymail.co.uk',
+      },
     }),
   ]);
 });

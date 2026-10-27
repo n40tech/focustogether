@@ -1,6 +1,7 @@
 import type { Page, Route, WebSocketRoute } from '@playwright/test';
 
 import type {
+  Crash,
   Friend,
   FriendOfFriend,
   FriendRequests,
@@ -34,6 +35,8 @@ const SESSION_KEY = 'sb-example-auth-token';
 
 /** The invite code the fake accepts. */
 export const INVITE = 'K7QM4XPA';
+/** An invite to Bob's session, which is running. */
+export const STUDY_INVITE = 'B0BSTUDY';
 /** Mirrors AWAY_GRACE_S in src/lib/api.ts. */
 const AWAY_GRACE_S = 10;
 /** Every tip in the app: tests that aren't about tips start with them all seen. */
@@ -49,6 +52,9 @@ export const ALL_TIPS = [
   'invite',
   'home_screen',
   'arrange',
+  'away',
+  'drive',
+  'email',
 ];
 
 const USER_ID = '00000000-0000-4000-8000-00000000000a';
@@ -123,8 +129,14 @@ export class FakeSupabase {
     desk: null,
     place: null,
     vehicle: null,
+    vehicle_health: 100,
+    parked: null,
+    insured_until: null,
+    crashes: [],
     activity: null,
     activity_until: null,
+    hard_mode: false,
+    email: 'nate@studymail.co.uk',
     active_session: null,
     last_completed: null,
     left_session: null,
@@ -152,8 +164,11 @@ export class FakeSupabase {
       place: 'garden',
       arrived_at: iso(-30),
       vehicle: 'bike',
+      vehicle_health: 100,
+      parked: null,
       desk_items: [{ item: 'mug', x: -36, y: -24 }],
       activity: null,
+      activity_until: null,
     },
   ];
   /** Looks people have chosen, by username. */
@@ -200,6 +215,10 @@ export class FakeSupabase {
       yield: null,
     },
   ];
+  /** What the shed says about your vehicle's insurance. */
+  insurance = { price: 30, days: 7 };
+  /** Invites to your session you've made: whoever opens one studies with you. */
+  sessionInvites: string[] = [];
   /** Start signed in, or at the sign-in page. */
   signedIn = true;
   /** The finished session whose payout you've seen already, if any. */
@@ -257,6 +276,7 @@ export class FakeSupabase {
         duration_min: minutes,
         ends_at: iso(minutes),
         device: null,
+        hard: false,
       },
     } satisfies Partial<Me>);
   }
@@ -388,6 +408,32 @@ export class FakeSupabase {
     };
   }
 
+  /** A crash, as the server lists it. */
+  crashOf(
+    driver: string,
+    driverName: string,
+    owner: string,
+    ownerName: string,
+    vehicle: string,
+    damage: number
+  ): Crash {
+    const price = vehicle === 'bike' ? 60 : 300;
+    return {
+      id: 70 + this.calls.length,
+      driver,
+      driver_name: driverName,
+      owner,
+      owner_name: ownerName,
+      vehicle,
+      damage,
+      cost: Math.ceil((price * damage) / 200),
+      at: iso(0),
+      status: 'open',
+      paid_by: null,
+      paid: null,
+    };
+  }
+
   /** Someone who's just become your friend, at home. */
   private befriend(username: string, display_name: string) {
     this.friends.push({
@@ -400,8 +446,11 @@ export class FakeSupabase {
       place: null,
       arrived_at: null,
       vehicle: null,
+      vehicle_health: 100,
+      parked: null,
       desk_items: [],
       activity: null,
+      activity_until: null,
     });
   }
 
@@ -447,7 +496,18 @@ export class FakeSupabase {
   }
 
   private shopNow(): Shop {
-    return { chips: this.me.chips, items: this.shop };
+    const me = this.me;
+    const price = this.shop.find((i) => i.slug === me.vehicle)?.price ?? 0;
+    return {
+      chips: me.chips,
+      items: this.shop,
+      vehicle: me.vehicle,
+      vehicle_health: me.vehicle_health,
+      repair_cost: Math.ceil((price * (100 - me.vehicle_health)) / 200),
+      insured_until: me.insured_until,
+      insurance_price: this.insurance.price,
+      insurance_days: this.insurance.days,
+    };
   }
 
   private take(item: string, qty: number) {
@@ -538,12 +598,16 @@ export class FakeSupabase {
       return { username: friend.username };
     },
 
-    check_signup: ({ p_code, p_username }): SignupCheck => {
+    check_signup: ({ p_code, p_username, p_email }): SignupCheck => {
       const code = String(p_code)
         .replace(/[^A-Z0-9]/gi, '')
         .toUpperCase();
+      // An invite to Bob's session, which runs for another 40 minutes.
+      if (code === STUDY_INVITE) return { ok: true, from: 'Bob', studying_until: iso(40) };
       if (code !== INVITE)
         return { ok: false, reason: "That invite code isn't valid, or it's been used" };
+      if (p_email && !String(p_email).includes('@'))
+        return { ok: false, from: 'Alice', reason: "That doesn't look like a real email address" };
       if (!isUsername(normalUsername(String(p_username))))
         return {
           ok: false,
@@ -587,6 +651,7 @@ export class FakeSupabase {
           duration_min: minutes,
           ends_at: iso(minutes),
           device: String(p_device),
+          hard: this.me.hard_mode,
         },
       } satisfies Partial<Me>);
       return this.now();
@@ -606,6 +671,7 @@ export class FakeSupabase {
           duration_min: minutes,
           ends_at: f.ends_at,
           device: String(p_device),
+          hard: this.me.hard_mode,
         },
       } satisfies Partial<Me>);
       return this.now();
@@ -639,8 +705,8 @@ export class FakeSupabase {
     back_to_page: ({ p_session, p_away_s }) => {
       const running = this.me.active_session;
       const away = Number(p_away_s);
-      // Away for longer than the grace: the session stops.
-      if (running && running.id === p_session && away > AWAY_GRACE_S)
+      // Away for longer than the grace, in hard mode: the session stops.
+      if (running?.hard && running.id === p_session && away > AWAY_GRACE_S)
         Object.assign(this.me, {
           status: 'idle',
           active_session: null,
@@ -652,6 +718,103 @@ export class FakeSupabase {
           },
         } satisfies Partial<Me>);
       return this.now();
+    },
+    set_hard_mode: ({ p_on }) => {
+      this.me.hard_mode = !!p_on;
+      return this.now();
+    },
+    set_email: ({ p_email }) => {
+      const email = String(p_email).trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/.test(email))
+        throw new Error("That doesn't look like a real email address");
+      this.me.email = email;
+      return this.now();
+    },
+    invite_to_session: () => {
+      const running = this.me.active_session;
+      if (!running) throw new Error('Start a session first');
+      const code = `STUDY${this.sessionInvites.length + 100}`;
+      this.sessionInvites.push(code);
+      return { code, expires_at: iso(14 * 24 * 60), ends_at: running.ends_at };
+    },
+    use_invite: ({ p_code, p_device }) => {
+      const code = String(p_code);
+      if (code !== STUDY_INVITE && code !== INVITE)
+        throw new Error("That invite isn't valid, or it's been used");
+      const from = code === STUDY_INVITE ? 'Bob' : 'Alice';
+      if (!this.friends.some((f) => f.display_name === from))
+        this.befriend(from.toLowerCase(), from);
+      const host = this.friends.find((f) => f.display_name === from)!;
+      if (code === STUDY_INVITE && !this.me.active_session) {
+        Object.assign(host, { status: 'focused', ends_at: iso(40) } satisfies Partial<Friend>);
+        this.rpc.join_session({ p_username: host.username, p_device });
+        return {
+          from,
+          username: host.username,
+          session: true,
+          joined: true,
+          note: null,
+          me: this.now(),
+        };
+      }
+      return {
+        from,
+        username: host.username,
+        session: code === STUDY_INVITE,
+        joined: false,
+        note: null,
+        me: this.now(),
+      };
+    },
+    park: ({ p_x, p_y, p_a }) => {
+      if (!this.me.vehicle) throw new Error('You came on foot');
+      if (this.me.status === 'absent')
+        Object.assign(this.me, { status: 'idle', desk: 7 } satisfies Partial<Me>);
+      this.me.place = 'outside';
+      this.me.parked = { x: Number(p_x), y: Number(p_y), a: Number(p_a) };
+      return this.now();
+    },
+    crash: ({ p_username, p_speed }) => {
+      const f = this.friends.find((f) => f.username === p_username);
+      if (!f?.vehicle) throw new Error("You can only bump into friends' vehicles");
+      const damage = Math.min(30, Math.floor(Number(p_speed) / 6));
+      if (damage < 3) return this.now();
+      this.me.vehicle_health = Math.max(0, this.me.vehicle_health - damage);
+      f.vehicle_health = Math.max(0, f.vehicle_health - damage);
+      this.me.crashes = [
+        this.crashOf('nate', 'Nate', f.username, f.display_name, f.vehicle, damage),
+        ...this.me.crashes,
+      ];
+      return this.now();
+    },
+    claim_crash: ({ p_id, p_claim }) => {
+      const crash = this.me.crashes.find((c) => c.id === p_id && c.status === 'open');
+      if (!crash) throw new Error("That's been settled");
+      Object.assign(
+        crash,
+        p_claim ? { status: 'claimed', paid_by: 'driver', paid: crash.cost } : { status: 'waived' }
+      ) satisfies Partial<Crash>;
+      if (p_claim) this.me.vehicle_health = Math.min(100, this.me.vehicle_health + crash.damage);
+      return this.now();
+    },
+    smoke: () => {
+      if (this.me.status === 'absent') throw new Error('Park up or walk about first');
+      this.take('cigarette', 1);
+      Object.assign(this.me, { activity: 'smoking', activity_until: iso(3) } satisfies Partial<Me>);
+      return this.garden();
+    },
+    repair_vehicle: () => {
+      const shop = this.shopNow();
+      if (this.me.chips < shop.repair_cost) throw new Error('Not enough chips');
+      this.me.chips -= shop.repair_cost;
+      this.me.vehicle_health = 100;
+      return this.shopNow();
+    },
+    buy_insurance: () => {
+      if (!this.me.vehicle) throw new Error("You've nothing to insure");
+      this.me.chips -= this.insurance.price;
+      this.me.insured_until = iso(this.insurance.days * 24 * 60);
+      return this.shopNow();
     },
     done_tip: ({ p_tip }) => {
       const tip = String(p_tip);
@@ -710,7 +873,8 @@ export class FakeSupabase {
       this.me.chips -= item.price;
       item.owned += item.pack_size;
       this.give(item.slug, item.pack_size);
-      if (item.kind === 'vehicle') this.me.vehicle = item.slug;
+      if (item.kind === 'vehicle')
+        Object.assign(this.me, { vehicle: item.slug, vehicle_health: 100 });
       return this.shopNow();
     },
 

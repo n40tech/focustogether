@@ -21,7 +21,7 @@ const SECTIONS: { kind: ItemKind; title: string; note: string }[] = [
   {
     kind: 'vehicle',
     title: 'Getting here',
-    note: 'Friends see what you arrive in, in the car park, while you’re in.',
+    note: 'You drive it into the car park and park it, and friends see it there while you’re in.',
   },
   { kind: 'desk', title: 'For your desk', note: 'Friends see these on your desk in the office.' },
   {
@@ -29,7 +29,7 @@ const SECTIONS: { kind: ItemKind; title: string; note: string }[] = [
     title: 'For your allotment',
     note: 'Plant them on a break; they grow in real time, studying or not.',
   },
-  { kind: 'cigarette', title: 'For your break', note: 'Smoked in the garden.' },
+  { kind: 'cigarette', title: 'For your break', note: 'Smoked in the garden or the car park.' },
 ];
 
 const BACK: Record<string, { href: Href; label: string }> = {
@@ -51,6 +51,8 @@ export default function ShedShop() {
   const [shop, setShop] = useState<Shop | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  // Just bought a vehicle: insurance is worth a mention.
+  const [suggest, setSuggest] = useState(false);
 
   useEffect(() => {
     api.getShop().then(setShop, (e: Error) => setError(e.message));
@@ -65,6 +67,26 @@ export default function ShedShop() {
         playSound('coin');
         await refresh();
         if (item.kind === 'desk') setArranging(item.slug);
+        if (item.kind === 'vehicle') setSuggest(true);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setBusy(null);
+      }
+    },
+    [refresh]
+  );
+
+  // Repairs and insurance, for the vehicle you arrive in.
+  const garage = useCallback(
+    async (what: 'repair' | 'insure') => {
+      setBusy(what);
+      setError(null);
+      try {
+        setShop(await (what === 'repair' ? api.repairVehicle() : api.buyInsurance()));
+        playSound('coin');
+        setSuggest(false);
+        await refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       } finally {
@@ -104,7 +126,14 @@ export default function ShedShop() {
   return (
     <Scene conditions={conditions} ground="#cbbfae" art={art} reserve={{ top: 56, bottom: 420 }}>
       <SceneHeader place="Shed" chips={shop?.chips} />
-      <Catalogue shop={shop} busy={busy} error={error} onBuy={buy} />
+      <Catalogue
+        shop={shop}
+        busy={busy}
+        error={error}
+        onBuy={buy}
+        suggest={suggest}
+        onGarage={garage}
+      />
       <Leave label={back.label} onPress={() => go(back.href, null)} />
       {arranging && (
         <ArrangeSheet me={me} setMe={setMe} fresh={arranging} onClose={() => setArranging(null)} />
@@ -118,11 +147,15 @@ function Catalogue({
   busy,
   error,
   onBuy,
+  suggest,
+  onGarage,
 }: {
   shop: Shop | null;
   busy: string | null;
   error: string | null;
   onBuy: (item: ShopItem) => void;
+  suggest: boolean;
+  onGarage: (what: 'repair' | 'insure') => void;
 }) {
   const tone = useTone();
   const insets = useSafeAreaInsets();
@@ -142,6 +175,9 @@ function Catalogue({
               <View key={kind} style={styles.section}>
                 <Text style={[font.label, { color: tone.muted }]}>{title}</Text>
                 <Muted>{note}</Muted>
+                {kind === 'vehicle' && shop.vehicle && (
+                  <Garage shop={shop} busy={busy} suggest={suggest} onGarage={onGarage} />
+                )}
                 {shop.items
                   .filter((i) => i.kind === kind)
                   .map((item) => (
@@ -212,6 +248,66 @@ function Row({
   );
 }
 
+/** Your vehicle: its health and repair, and insurance against claims when you bump into friends. */
+function Garage({
+  shop,
+  busy,
+  suggest,
+  onGarage,
+}: {
+  shop: Shop;
+  busy: string | null;
+  suggest: boolean;
+  onGarage: (what: 'repair' | 'insure') => void;
+}) {
+  const tone = useTone();
+  const name = itemInfo(shop.vehicle ?? '').name.toLowerCase();
+  const until = shop.insured_until
+    ? new Date(shop.insured_until).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+    : null;
+  return (
+    <View style={[styles.garage, { borderColor: tone.line, backgroundColor: tone.raised }]}>
+      {suggest && !until && (
+        <Text style={{ color: tone.text, fontSize: 14 }}>
+          {`Bumps happen in the car park. If you drive into a friend's car and they claim, insurance pays instead of you: ${shop.insurance_price} chips for ${shop.insurance_days} days.`}
+        </Text>
+      )}
+      <View style={styles.garageRow}>
+        <Muted style={styles.rowText}>
+          {shop.vehicle_health >= 100
+            ? `Your ${name}: not a scratch on it.`
+            : `Your ${name}: health ${shop.vehicle_health} / 100.`}
+        </Muted>
+        {shop.vehicle_health < 100 && (
+          <Button
+            title={`Repair · ${shop.repair_cost}`}
+            accessibilityLabel={`Repair your ${name} for ${shop.repair_cost} chips`}
+            small
+            variant="quiet"
+            onPress={() => onGarage('repair')}
+            disabled={busy !== null || shop.chips < shop.repair_cost}
+          />
+        )}
+      </View>
+      <View style={styles.garageRow}>
+        <Muted style={styles.rowText}>
+          {until
+            ? `Insured until ${until}: claims against you are paid for you.`
+            : 'Not insured: if a friend claims for a bump, you pay.'}
+        </Muted>
+        <Button
+          title={`${until ? 'Another week' : 'Insure it'} · ${shop.insurance_price}`}
+          accessibilityLabel={`Insure your ${name} for ${shop.insurance_days} days, ${shop.insurance_price} chips`}
+          small
+          variant={suggest && !until ? 'primary' : 'quiet'}
+          onPress={() => onGarage('insure')}
+          disabled={busy !== null || shop.chips < shop.insurance_price}
+        />
+      </View>
+    </View>
+  );
+}
+
 function Leave({ label, onPress }: { label: string; onPress: () => void }) {
   const tone = useTone();
   const insets = useSafeAreaInsets();
@@ -237,6 +333,8 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   rowText: { flex: 1, gap: 2 },
+  garage: { gap: 8, padding: 10, borderRadius: 12, borderWidth: 1 },
+  garageRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   buy: { alignItems: 'flex-end', gap: 6 },
   price: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   leave: { position: 'absolute', left: 12, right: 12, alignItems: 'center' },
