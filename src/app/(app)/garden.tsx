@@ -36,7 +36,7 @@ import {
   TradeSheet,
   type Act,
 } from '@/components/GardenSheets';
-import { Joystick } from '@/components/Joystick';
+import { Steering } from '@/components/Steering';
 import { LooksSheet } from '@/components/LooksSheet';
 import { Noticeboard } from '@/components/Noticeboard';
 import { INVITE_TIP, Tip, useTips } from '@/components/Tip';
@@ -764,7 +764,7 @@ export default function GardenScene() {
     : !tips.has('walk')
       ? {
           id: 'walk',
-          text: 'Drag the stick (or use the arrow keys) to walk. Your plot is marked "Your plot". Walk out through the gate to go back to work.',
+          text: 'Drag the stick (or use W A S D, or the arrow keys) to walk. Your plot is marked "Your plot". Walk out through the gate to go back to work.',
         }
       : me.sessions_studied > 0 && !tips.has('invite')
         ? { id: 'invite', text: INVITE_TIP }
@@ -871,7 +871,7 @@ export default function GardenScene() {
               </View>
             </View>
             {/* On the right, under your thumb. */}
-            <Joystick size={92} onChange={walker.steer} />
+            <Steering size={92} onChange={walker.steer} />
           </View>
           <View style={styles.row}>
             <Button title="Back to work" small style={styles.flex} onPress={() => go('/office')} />

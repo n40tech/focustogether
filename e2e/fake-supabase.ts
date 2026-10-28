@@ -787,6 +787,12 @@ export class FakeSupabase {
       ];
       return this.now();
     },
+    bump: ({ p_speed }) => {
+      if (!this.me.vehicle) throw new Error("You're not driving anything");
+      const damage = Math.min(30, Math.floor(Number(p_speed) / 6));
+      if (damage >= 3) this.me.vehicle_health = Math.max(0, this.me.vehicle_health - damage);
+      return this.now();
+    },
     claim_crash: ({ p_id, p_claim }) => {
       const crash = this.me.crashes.find((c) => c.id === p_id && c.status === 'open');
       if (!crash) throw new Error("That's been settled");

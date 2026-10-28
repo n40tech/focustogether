@@ -377,6 +377,8 @@ export const api = {
   /** You drove into a friend's parked vehicle at `speed` (car park units a second). */
   crash: (username: string, speed: number) =>
     rpc<Me>('crash', { p_username: username, p_speed: speed }),
+  /** You drove into a lamp post at `speed`: your own vehicle's damaged. */
+  bump: (speed: number) => rpc<Me>('bump', { p_speed: speed }),
   /** Claims damages for a crash into your vehicle, or lets it go. */
   claimCrash: (id: number, claim: boolean) => rpc<Me>('claim_crash', { p_id: id, p_claim: claim }),
   /** A tip seen through or put away; and all of them back again. */

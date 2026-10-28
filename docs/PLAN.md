@@ -57,10 +57,11 @@ agreed; **Open questions** lists what hasn't.
 ## 3. Places
 
 ### Car park (where the app opens)
-- **See:** one phone wide, as it always was: the office building and its
-  door, the pavement with a bike rack and the hedge with the garden gate,
-  and three even rows of four bays, with more of the car park past either
-  side. Friends who are *at work* (arrived, studying, on a break, or between the
+- **See:** one phone wide: the office building and its door, the pavement
+  with a bike rack and the hedge with the garden gate, and two rows of six
+  bays (each sized for the longest vehicle, a campervan), with an aisle
+  between them wide enough to drive along, more room below, and two lamp
+  posts. Friends who are *at work* (arrived, studying, on a break, or between the
   two) appear as their **car** or **bike**, where they parked it; friends
   who came before parking was a thing are in the bay (or rack slot) that
   goes with their desk. Friends with neither aren't shown. Friends of your
@@ -69,17 +70,19 @@ agreed; **Open questions** lists what hasn't.
   to be friends. Friends out in the car park walk about (and drive about),
   as in the garden, with chat bubbles and cigarettes.
 - **Arriving:** with a vehicle, you start in it just past the right-hand
-  edge, in the lane between the top two rows. Steer it in with the
-  thumbstick (point where you want to go; it backs up if you point behind
-  it) or the arrow keys; on a computer there's no thumbstick. A car parks in
+  edge, in the aisle. Steer it in with the thumbstick (point where you want
+  to go; it backs up if you point behind it); on a computer, where the
+  thumbstick would be, it shows the keys: W and S to go and back, A and D to
+  steer (or the arrows). The garden shows them too. A car parks in
   a free bay, nose in or out; a bike rides up onto the pavement and parks in
   a free slot of the bike rack. Stopped in one, **Park here** straightens it
   up and you get out beside it. Parking is arriving, and you can't walk in
   until you've parked. On foot (or if your vehicle's a wreck), you walk in
   from the side, and walking about is arriving. You **Get in** a car and
   **Get on** a bike; riding one, you're drawn on it.
-- **Driving into things:** the kerb (for cars), the office wall, the hedge
-  and lamp posts just stop you.
+- **Driving into things:** the kerb (for cars), the office wall and the
+  hedge just stop you. A lamp post damages your own vehicle, as driving into
+  a friend's does, but there's nobody to claim.
   Driving into a friend's parked vehicle faster than a nudge damages both
   (see *Vehicles*). Friends of friends' vehicles are see-through: you drive
   through them.
@@ -621,7 +624,7 @@ deployment/               numbered runbooks for setting up and shipping each upd
 | `desk_layout` | (player, desk thing) → where it sits on their desk; no row means it's in the drawer (0013) |
 | `profiles` | + `active_at`: when their app last checked in, to within a minute (0014) |
 | `push_subscriptions` | endpoint → player and keys: a device to notify (0015) |
-| `profiles` | + `hard_mode` (0017); + `parked` {x, y, a}, `vehicle_health` (0–100), `insured_until` (0017) |
+| `profiles` | + `hard_mode` (0017); + `parked` {x, y, a}, `vehicle_health` (0–100), `insured_until` (0017); + `bumped_at` (0019) |
 | `sessions` | + `hard`: started in hard mode (0017) |
 | `emails` | player → email, for news; readable only by its owner (0017) |
 | `invites` | + `session`: the session it asks you to join (0017) |
@@ -672,6 +675,7 @@ deployment/               numbered runbooks for setting up and shipping each upd
 | `park(x, y, a)` | not studying; a vehicle that isn't a wreck (arrives you) (0017) | me |
 | `crash(username, speed)` | not studying; driving; a friend at work with a vehicle (0017) | me |
 | `claim_crash(id, claim)` | the owner, while it's open (0017) | me |
+| `bump(speed)` | not studying; driving (0019) | me |
 | `repair_vehicle()`, `buy_insurance()` | not studying; a vehicle (0017) | shop |
 
 Sign-up itself is Supabase Auth's: a trigger on `auth.users` (0003) refuses
@@ -785,6 +789,9 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 - [x] Migration `0018_parking_in_the_rack.sql`: the car park back to one
       phone wide, parking only in bays and the rack, bikes onto the
       pavement.
+- [x] Migration `0019_bumping_into_lamp_posts.sql`: lamp posts damage your
+      vehicle; two rows of six bays with an aisle to drive along; the keys
+      to press shown on computers (95 scenario tests in all).
 
 **M2: feel**
 - Illustrated art, recorded audio (layer by layer), a typeface, gentle
@@ -832,7 +839,7 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 | Studying with someone new | An invite link to your session: they sign up if they need to, and join it as your friend. |
 | "Roughly" 1 chip a minute | The minutes, plus or minus a little random luck (up to 12%, usually far less). |
 | Where you sit | Not at the front: the office starts as twelve empty desks, and everyone (you included) gets a random one on arrival, kept across breaks until they go home. |
-| Car park | No kiosk; three even rows of four bays, one phone wide. You park in any free bay, a bike in any free rack slot. |
+| Car park | No kiosk; two rows of six bays with an aisle between, one phone wide. You park in any free bay, a bike in any free rack slot. |
 | The garden | Walkable with a thumbstick, three phones wide and one tall, with every allotment on one grid in a fixed place. |
 | Trading | A market: stalls with prices, bought from face to face in the garden. Swaps and gifts by offer stay too. |
 | Unpicked crops | Wither 2 days after ripening (going over for the last 12 hours), give nothing, and must be cleared before replanting. |

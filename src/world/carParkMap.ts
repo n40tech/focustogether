@@ -2,11 +2,11 @@ import { DESKS, type Parked } from '@/lib/api';
 import type { Point, Rect } from './gardenMap';
 
 /**
- * The car park's layout, in stage units: one phone wide, as it always was.
- * The office and its pavement are along the top, with the bike rack on the
- * left and the hedge and garden gate on the right; then three even rows of
- * four bays. More of the car park carries on past either side (scenery), and
- * you drive in from the right, along the lane between the top two rows.
+ * The car park's layout, in stage units: one phone wide. The office and its
+ * pavement are along the top, with the bike rack on the left and the hedge
+ * and garden gate on the right; then two rows of six bays, with an aisle
+ * between them wide enough to drive along, and more room below. You drive in
+ * from the right, along the aisle.
  */
 export const WORLD = { w: 360, h: 640 };
 
@@ -26,27 +26,35 @@ const GATEWAY = { x0: 312, x1: 340, y0: 176 };
 /** Walk this far up the doorway or the gateway and you've gone through. */
 export const IN_AT = 172;
 
-export const BAY_W = 75;
-export const BAY_H = 92;
-export const ROW_TOPS = [256, 384, 512];
-/** Twelve bays, three rows of four: each one's middle, and its top. */
+/** A bay fits the longest vehicle (a campervan) with a little to spare. */
+export const BAY_W = 56;
+export const BAY_H = 90;
+export const BAYS_PER_ROW = 6;
+/** The rows' top lines: the aisle runs between them, and there's more room below. */
+export const ROW_TOPS = [244, 424];
+/** Where the bays start, from the left. */
+export const BAYS_X = 12;
+/** Twelve bays, two rows of six: each one's middle, and its top. */
 export const BAYS = Array.from({ length: DESKS }, (_, i) => ({
-  x: 30 + (i % 4) * BAY_W + BAY_W / 2,
-  top: ROW_TOPS[Math.floor(i / 4)],
+  x: BAYS_X + (i % BAYS_PER_ROW) * BAY_W + BAY_W / 2,
+  top: ROW_TOPS[Math.floor(i / BAYS_PER_ROW)],
 }));
+/** The middle of the aisle between the rows. */
+export const AISLE_Y = (ROW_TOPS[0] + BAY_H + ROW_TOPS[1]) / 2;
 /** The bike rack on the pavement, and its slots: where each bike's back wheel goes. */
 export const RACK = { x: 16, y: 182, w: 118, h: 14 };
 export const RACK_SLOTS: Point[] = Array.from({ length: DESKS }, (_, i) => ({
   x: 22 + i * 9.6,
   y: 222 + (i % 2) * 6,
 }));
+/** Lamp posts, below the bottom row: drive into one and your vehicle's damaged. */
 export const LAMPS: Point[] = [
-  { x: 14, y: 470 },
-  { x: 346, y: 340 },
+  { x: 20, y: 592 },
+  { x: 340, y: 592 },
 ];
 
-/** Where you come in: just past the right-hand edge, in the lane, heading left. */
-export const ENTRANCE: Parked = { x: 380, y: 366, a: -Math.PI / 2 };
+/** Where you come in: just past the right-hand edge, in the aisle, heading left. */
+export const ENTRANCE: Parked = { x: 380, y: AISLE_Y, a: -Math.PI / 2 };
 /** How far past the stage's edges you can drive (the car park carries on). */
 const SIDES = { x0: -80, x1: 460 };
 
@@ -81,23 +89,28 @@ export function overlaps(a: string, pa: Parked, b: string, pb: Parked) {
 
 /**
  * True if a posed vehicle would hit the kerb (cars), the office wall or the
- * hedge (bikes, which can ride onto the pavement to the rack), a lamp post,
- * or the far edges.
+ * hedge (bikes, which can ride onto the pavement to the rack), or the far
+ * edges.
  */
 export function offRoad(model: string, p: Parked) {
   const bike = isBike(model);
   return circlesOf(model, p).some(({ x, y, r }) => {
     if (x - r < SIDES.x0 || x + r > SIDES.x1 || y + r > WORLD.h + 20) return true;
     if (y - r < (bike ? WALL_Y + 8 : KERB_Y)) return true;
-    if (bike && x + r > HEDGE_X && y - r < KERB_Y - 4) return true;
-    return LAMPS.some((l) => Math.hypot(x - l.x, y - l.y) < r + 5);
+    return bike && x + r > HEDGE_X && y - r < KERB_Y - 4;
   });
 }
 
-/** Where a vehicle sits in bay `i`: its rear bumper on the bay's back line, as the cars always parked. */
+/** True if a posed vehicle would hit a lamp post. */
+export const hitsPole = (model: string, p: Parked) =>
+  circlesOf(model, p).some(({ x, y, r }) =>
+    LAMPS.some((l) => Math.hypot(x - l.x, y - l.y) < r + 5)
+  );
+
+/** Where a vehicle sits in bay `i`: in the middle of it, nose up (or down, `a` = pi). */
 export function bayPose(i: number, model: string, a = 0): Parked {
   const bay = BAYS[i] ?? BAYS[0];
-  return { x: bay.x, y: bay.top + 88 - shapeOf(model).h / 2, a };
+  return { x: bay.x, y: bay.top + BAY_H / 2, a };
 }
 
 /** Where a bike sits in rack slot `i`, nose in. */
@@ -139,7 +152,7 @@ export function parkingSpot(
   if (Math.abs(facing) > SQUARE && !backwards) return null;
   for (let i = 0; i < BAYS.length; i++) {
     const spot = bayPose(i, model, backwards ? Math.PI : 0);
-    if (Math.abs(spot.x - p.x) < 18 && Math.abs(spot.y - p.y) < 20 && free(spot)) return spot;
+    if (Math.abs(spot.x - p.x) < 14 && Math.abs(spot.y - p.y) < 20 && free(spot)) return spot;
   }
   return null;
 }

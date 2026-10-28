@@ -12,12 +12,11 @@ import { Body, HeaderDetail, Muted, Panel, SceneHeader, Sheet, Toast } from '@/c
 import { Countdown } from '@/components/Countdown';
 import { FriendOfFriendSheet } from '@/components/FriendOfFriendSheet';
 import { HomeScreenTip, useHomeScreenTip } from '@/components/HomeScreenTip';
-import { Joystick } from '@/components/Joystick';
 import { RipeNote } from '@/components/RipeNote';
+import { Steering } from '@/components/Steering';
 import { INVITE_TIP, Tip, useTips } from '@/components/Tip';
 import { ChatBar, Follow, Label, Pan, useLit, walkabout } from '@/components/Walkabout';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { otherTabsAllowed } from '@/lib/away';
 import { api, CRASH_SPEED, type Crash, type Me, type Parked } from '@/lib/api';
 import { itemInfo } from '@/lib/catalog';
 import { cancelSessionEnd } from '@/lib/notifications';
@@ -29,6 +28,8 @@ import {
   BAY_H,
   BAY_W,
   bayPose,
+  BAYS_PER_ROW,
+  BAYS_X,
   besideVehicle,
   blockedOnFoot,
   BOARD,
@@ -37,6 +38,7 @@ import {
   ENTRANCE,
   GATE,
   HEDGE_X,
+  hitsPole,
   isBike,
   LAMPS,
   offRoad,
@@ -120,7 +122,7 @@ function startFor(me: Me) {
   if (me.status === 'absent')
     return canDrive
       ? { at: { x: ENTRANCE.x, y: ENTRANCE.y }, heading: ENTRANCE.a, driving: true }
-      : { at: { x: 348, y: ENTRANCE.y }, heading: 0, driving: false };
+      : { at: { x: 348, y: ENTRANCE.y + 30 }, heading: 0, driving: false };
   if (me.place === 'garden') return { at: GATE, heading: 0, driving: false };
   return { at: DOOR, heading: 0, driving: false };
 }
@@ -149,8 +151,6 @@ export default function CarPark() {
     [say]
   );
   const [viewWidth, setViewWidth] = useState<number>(STAGE.width);
-  // A computer: steering is by the arrow keys, so there's no thumbstick.
-  const [keyboard] = useState(otherTabsAllowed);
   const onStage = useCallback((s: { viewWidth: number }) => setViewWidth(s.viewWidth), []);
 
   const [start] = useState(() => startFor(me));
@@ -264,6 +264,17 @@ export default function CarPark() {
   const onHit = useCallback(
     (what: string, speed: number) => {
       if (what === 'wall' || speed < CRASH_SPEED) return;
+      if (what === 'pole') {
+        const now = Date.now();
+        if (now - (lastHit.current.get(what) ?? 0) < 3000) return;
+        lastHit.current.set(what, now);
+        playSound('crunch');
+        api.bump(speed).then((next) => {
+          setMe(next);
+          say('Bang. You drove into a lamp post.');
+        }, sayError);
+        return;
+      }
       const now = Date.now();
       if (now - (lastHit.current.get(what) ?? 0) < 3000) return;
       lastHit.current.set(what, now);
@@ -288,6 +299,7 @@ export default function CarPark() {
               const now = pose.current();
               // Already in a tight spot: let them drive out of it.
               if (offRoad(myModel, next) && !offRoad(myModel, now)) return 'wall';
+              if (hitsPole(myModel, next) && !hitsPole(myModel, now)) return 'pole';
               const hit = solid.find(
                 (v) =>
                   !v.mine &&
@@ -616,10 +628,8 @@ export default function CarPark() {
         <Box key={i} x={GATE.x - 14 + i * 8} y={164} w={4} h={48} c="#8a7154" />
       ))}
 
-      {/* Three even rows of bays, and more of the car park past the stage. */}
-      {[-330, 30, 390].map((x0) => (
-        <Bays key={x0} x={x0} faint={x0 !== 30} />
-      ))}
+      {/* Two rows of six bays, with an aisle between. */}
+      <Bays />
       {[-150, -280, 520, 650].map((x, i) => (
         <Tree key={x} x={x} y={300 + (i % 2) * 210} />
       ))}
@@ -837,8 +847,8 @@ export default function CarPark() {
   const tip = homeScreenTip ? null : driving && !tips.has('drive') ? (
     <Tip id="drive">
       {bike
-        ? "Steer with the stick or the arrow keys. Ride into the bike rack by the office, stop, and park. Mind other people's cars: a bump costs you if they claim."
-        : "Steer with the stick or the arrow keys. Drive into a free bay, stop, and park. Mind other people's cars: a bump costs you if they claim."}
+        ? "Ride into the bike rack by the office, stop, and park. Mind other people's cars: a bump costs you if they claim."
+        : "Drive into a free bay, stop, and park. Mind other people's cars: a bump costs you if they claim."}
     </Tip>
   ) : me.sessions_done === 0 ? (
     <Tip id="welcome">
@@ -927,8 +937,8 @@ export default function CarPark() {
               )}
             </View>
           </View>
-          {/* On the right, under your thumb (on a computer, the arrow keys steer). */}
-          {!keyboard && <Joystick size={88} onChange={walker.steer} />}
+          {/* On the right, under your thumb (on a computer, the keys to press). */}
+          <Steering size={88} onChange={walker.steer} driving={driving} />
         </View>
         <View style={styles.row}>
           <Button title="Walk in" small onPress={walkIn} disabled={leaving} style={styles.flex} />
@@ -1166,17 +1176,24 @@ function VehicleSheet({
   );
 }
 
-/** Three rows of four bays starting at `x`; faint ones are just scenery. */
-function Bays({ x, faint }: { x: number; faint?: boolean }) {
-  const o = faint ? 0.5 : 0.8;
+/** Two rows of bays: each a back line, with a line down either side. */
+function Bays() {
   return (
     <>
       {ROW_TOPS.map((y) => (
-        <Box key={y} x={x} y={y} w={4 * BAY_W} h={2} c={C.line} o={o} />
+        <Box key={y} x={BAYS_X} y={y} w={BAYS_PER_ROW * BAY_W} h={2} c={C.line} o={0.8} />
       ))}
       {ROW_TOPS.flatMap((y) =>
-        [0, 1, 2, 3, 4].map((i) => (
-          <Box key={`${y}-${i}`} x={x - 1 + i * BAY_W} y={y + 2} w={2} h={BAY_H} c={C.line} o={o} />
+        Array.from({ length: BAYS_PER_ROW + 1 }, (_, i) => (
+          <Box
+            key={`${y}-${i}`}
+            x={BAYS_X - 1 + i * BAY_W}
+            y={y + 2}
+            w={2}
+            h={BAY_H}
+            c={C.line}
+            o={0.8}
+          />
         ))
       )}
     </>

@@ -33,6 +33,7 @@ screen or a module, change the tables below.
 | `src/app/(app)/payout.tsx`, `garden.tsx`, `shop.tsx`, `friends.tsx` | The payout, the garden, the shed (with repairs and insurance) and the Friends board. |
 | `src/components/StudyPanel.tsx` | Picking a length, hard mode, the countdown, and the study invite. |
 | `src/components/Noticeboard.tsx` | The Friends board: friends, requests, invites, notifications, your email. |
+| `src/components/Steering.tsx` | The thumbstick on a touchscreen; on a computer, the keys to press. |
 | `src/components/Walkabout.tsx` | Shared by the garden and the car park: `Pan`, `Follow`, `Label`, `ChatBar`, `useLit`. |
 | `src/world/World.tsx` | `useWorld()`: you, friends, friends of friends and looks, polled every 10 s. `useGo()` moves between places. |
 | `src/world/useWalker.ts` | Walking (and, with `driving`, driving) with the stick or keys, the camera, collisions. |
@@ -81,6 +82,7 @@ Public (called by the app with `supabase.rpc`):
 | 0015 | `drop_push`, `due_pushes`, `forget_pushes`, `save_push` |
 | 0017 | `back_to_page`, `buy`, `buy_insurance`, `check_signup`, `claim_crash`, `crash`, `get_friends_board`, `get_friends_of_friends`, `get_me`, `get_shop`, `go_home`, `invite_to_session`, `join_session`, `leave_page`, `may_listen`, `repair_vehicle`, `set_email`, `set_hard_mode`, `set_place`, `smoke`, `start_session`, `use_invite` |
 | 0018 | `park` |
+| 0019 | `bump` |
 
 Private (helpers; the app can't call them):
 
