@@ -20,6 +20,8 @@ test('parking in a bay straightens you up, and you get out beside it', async ({ 
   fake.atDesk();
   Object.assign(fake.me, { vehicle: 'hatchback', parked: { x: 140, y: 446, a: 0.2 } });
   await fake.open('/');
+  // Out of the office door, and the car park's listening for the arrow keys.
+  await expect(button(page, 'Go in')).toBeVisible();
   await walk(page, 'ArrowDown', 3000, button(page, 'Get in'));
   await button(page, 'Get in').click();
   // Already in bay 6, near enough straight: stopped there, you can park.
@@ -33,6 +35,8 @@ test('a bike goes in the rack: get on, and park it there', async ({ page, fake }
   fake.atDesk();
   Object.assign(fake.me, { vehicle: 'bike', parked: { x: 41.2, y: 202, a: 0 } });
   await fake.open('/');
+  // Out of the office door, and the car park's listening for the arrow keys.
+  await expect(button(page, 'Go in')).toBeVisible();
   await walk(page, 'ArrowLeft', 2500, button(page, 'Get on'));
   await button(page, 'Get on').click();
   await button(page, 'Park here').click();
