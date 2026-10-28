@@ -17,6 +17,7 @@ import { RipeNote } from '@/components/RipeNote';
 import { INVITE_TIP, Tip, useTips } from '@/components/Tip';
 import { ChatBar, Follow, Label, Pan, useLit, walkabout } from '@/components/Walkabout';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { otherTabsAllowed } from '@/lib/away';
 import { api, CRASH_SPEED, type Crash, type Me, type Parked } from '@/lib/api';
 import { itemInfo } from '@/lib/catalog';
 import { cancelSessionEnd } from '@/lib/notifications';
@@ -27,8 +28,7 @@ import { useConditions } from '@/weather/useConditions';
 import {
   BAY_H,
   BAY_W,
-  BAYS,
-  BAYS_PER_ROW,
+  bayPose,
   besideVehicle,
   blockedOnFoot,
   BOARD,
@@ -37,17 +37,18 @@ import {
   ENTRANCE,
   GATE,
   HEDGE_X,
-  KERB_Y,
+  isBike,
   LAMPS,
   offRoad,
   overlaps,
+  parkingSpot,
   RACK,
   RACK_SLOTS,
-  ROWS,
+  ROW_TOPS,
   shapeOf,
+  slotPose,
   throughDoor,
   throughGate,
-  VERGE,
   WALL_Y,
   WORLD,
 } from '@/world/carParkMap';
@@ -71,12 +72,15 @@ const CHANNELS: Where = { prefix: 'carpark', clamp: clampToCarPark };
 const REACH = { door: 34, board: 34, gate: 30, vehicle: 22 };
 /** Footsteps are this far apart. */
 const STRIDE = 26;
-/** Slower than this, you can get out. */
+/** Slower than this, you've stopped, and can park. */
 const STOPPED = 6;
 
 const WINDOW_XS = Array.from({ length: 94 }, (_, i) => -1956 + i * 46).filter(
   (x) => x + 30 < 138 || x > 222
 );
+
+/** How far down from a bike's middle its rider's feet are drawn, so they sit astride it. */
+const RIDER_Y = 12;
 
 /** A parked vehicle, as you see it. */
 type Vehicle = {
@@ -104,20 +108,19 @@ type Near =
  * (or rack slot) that matches their desk.
  */
 function bayFor(model: string, slot: number): Parked {
-  if (model === 'bike') {
-    const s = RACK_SLOTS[slot] ?? RACK_SLOTS[0];
-    return { x: s.x, y: s.y - 20, a: 0 };
-  }
-  return BAYS[slot] ?? BAYS[0];
+  return isBike(model) ? slotPose(slot) : bayPose(slot, model);
 }
 
-/** Where you start: driving in, walking in from the road, out of the office, or back from the garden. */
+/** Your car or your bike. */
+const kindOf = (model: string) => (isBike(model) ? 'bike' : 'car');
+
+/** Where you start: driving in from the side, walking in, out of the office, or back from the garden. */
 function startFor(me: Me) {
   const canDrive = !!me.vehicle && me.vehicle_health > 0;
   if (me.status === 'absent')
     return canDrive
       ? { at: { x: ENTRANCE.x, y: ENTRANCE.y }, heading: ENTRANCE.a, driving: true }
-      : { at: { x: ENTRANCE.x, y: 612 }, heading: 0, driving: false };
+      : { at: { x: 348, y: ENTRANCE.y }, heading: 0, driving: false };
   if (me.place === 'garden') return { at: GATE, heading: 0, driving: false };
   return { at: DOOR, heading: 0, driving: false };
 }
@@ -146,6 +149,8 @@ export default function CarPark() {
     [say]
   );
   const [viewWidth, setViewWidth] = useState<number>(STAGE.width);
+  // A computer: steering is by the arrow keys, so there's no thumbstick.
+  const [keyboard] = useState(otherTabsAllowed);
   const onStage = useCallback((s: { viewWidth: number }) => setViewWidth(s.viewWidth), []);
 
   const [start] = useState(() => startFor(me));
@@ -429,12 +434,22 @@ export default function CarPark() {
 
   // --- getting in and out ----------------------------------------------------
 
-  const [speedy, setSpeedy] = useState(false);
+  // Where you'd park if you stopped here: a free bay, or a free slot in the rack.
+  const [spot, setSpot] = useState<Parked | null>(null);
+  const [stopped, setStopped] = useState(true);
   useEffect(() => {
-    if (!driving) return;
-    const id = setInterval(() => setSpeedy(Math.abs(walker.driven()) > STOPPED), 200);
+    if (!driving || !myModel) return;
+    // Friends of friends' vehicles take up a bay too.
+    const others = parked.filter((v) => !v.mine);
+    const check = () => {
+      const next = parkingSpot(myModel, { ...where(), a: facing() }, others);
+      setSpot((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+      setStopped(Math.abs(walker.driven()) <= STOPPED);
+    };
+    check();
+    const id = setInterval(check, 200);
     return () => clearInterval(id);
-  }, [driving, walker]);
+  }, [driving, myModel, parked, where, facing, walker]);
 
   const park = useCallback(
     async (at: Parked) => {
@@ -450,21 +465,24 @@ export default function CarPark() {
     [setMe, sayError, tips]
   );
 
-  const getOut = () => {
-    if (!myModel) return;
-    const at = { ...where(), a: facing() };
+  // Parking: only in a free bay (or, on a bike, the rack), straightened up, and
+  // then you get out beside it.
+  const parkHere = () => {
+    if (!myModel || !spot) return;
     const others = solid.filter((v) => !v.mine).map((v) => ({ model: v.model, at: v.at }));
     const spots = [
-      besideVehicle(myModel, at),
-      besideVehicle(myModel, { ...at, a: at.a + Math.PI }),
+      besideVehicle(myModel, spot),
+      besideVehicle(myModel, { ...spot, a: spot.a + Math.PI }),
+      { x: spot.x, y: spot.y + shapeOf(myModel).h / 2 + 12 },
     ];
-    const spot =
-      spots.find((p) => !blockedOnFoot(p, [...others, { model: myModel, at }], onBreak)) ??
+    const standAt =
+      spots.find((p) => !blockedOnFoot(p, [...others, { model: myModel, at: spot }], onBreak)) ??
       spots[0];
     setDriving(false);
-    walker.place(spot, 0);
+    setMyParked(spot);
+    walker.place(standAt, 0);
     playSound('car_door');
-    park(at);
+    park(spot);
   };
 
   const getIn = () => {
@@ -475,18 +493,14 @@ export default function CarPark() {
     playSound('car_door');
   };
 
-  // Walking in while you're still in your vehicle: you park first, in a free
-  // bay if you're still on the road.
-  const walkIn = async () => {
-    if (driving && myModel) {
-      const at = { ...where(), a: facing() };
-      const others = solid.filter((v) => !v.mine);
-      const onRoad = at.y > VERGE.y0;
-      const spot = onRoad
-        ? (BAYS.find((b) => !others.some((v) => overlaps(myModel, b, v.model, v.at))) ?? at)
-        : at;
-      await park(spot);
-    }
+  // You park before you go in.
+  const walkIn = () => {
+    if (driving && myModel)
+      return say(
+        isBike(myModel)
+          ? 'Park your bike in the rack first, by the office.'
+          : 'Park first: drive into a free bay and stop.'
+      );
     go('/office');
   };
 
@@ -579,9 +593,9 @@ export default function CarPark() {
       ))}
 
       {/* Pavement, bike rack and the hedge with the garden gate. */}
-      <Box x={BLEED.x} y={WALL_Y} w={BLEED.w} h={KERB_Y - 4 - WALL_Y} c={C.pavement} />
-      <Box x={BLEED.x} y={KERB_Y - 4} w={BLEED.w} h={4} c="#8f8a82" />
-      <Box x={RACK.x} y={RACK.y + 8} w={RACK.w - 2} h={3} c="#8b9096" r={1} />
+      <Box x={BLEED.x} y={WALL_Y} w={BLEED.w} h={80} c={C.pavement} />
+      <Box x={BLEED.x} y={232} w={BLEED.w} h={3} c="#8f8a82" />
+      <Box x={RACK.x} y={RACK.y + 8} w={RACK.w} h={3} c="#8b9096" r={1} />
       {RACK_SLOTS.map((s) => (
         <Box
           key={s.x}
@@ -593,31 +607,21 @@ export default function CarPark() {
           style={{ borderWidth: 1.2, borderColor: '#8b9096' }}
         />
       ))}
-      <Box x={HEDGE_X} y={WALL_Y} w={2100} h={KERB_Y - 4 - WALL_Y} c={C.hedge} />
-      {[0, 24, 48, 72, 96, 120, 144, 168].map((dx) => (
-        <Dot key={dx} x={HEDGE_X + 10 + dx} y={KERB_Y - 10} d={28} h={14} c="#557352" />
+      <Box x={HEDGE_X} y={WALL_Y} w={2100} h={80} c={C.hedge} />
+      {[300, 324, 348, 372].map((x) => (
+        <Dot key={x} x={x + 10} y={226} d={28} h={14} c="#557352" />
       ))}
       <Box x={GATE.x - 18} y={160} w={36} h={56} c={onBreak ? '#b59a72' : '#9c8466'} r={2} />
       {[0, 1, 2, 3].map((i) => (
         <Box key={i} x={GATE.x - 14 + i * 8} y={164} w={4} h={48} c="#8a7154" />
       ))}
 
-      {/* Two rows of bays; grass past the ends; the verge, the way in and the road. */}
-      <Bays />
-      <Box x={BLEED.x} y={KERB_Y} w={-BLEED.x} h={VERGE.y1 - KERB_Y} c={C.verge} />
-      <Box x={WORLD.w} y={KERB_Y} w={2000} h={VERGE.y1 - KERB_Y} c={C.verge} />
-      <Box x={BLEED.x} y={VERGE.y0} w={VERGE.gap - BLEED.x} h={VERGE.y1 - VERGE.y0} c={C.verge} />
-      <Box x={BLEED.x} y={VERGE.y1} w={BLEED.w} h={STAGE.height - VERGE.y1 + 400} c={C.road} />
-      {Array.from({ length: 80 }, (_, i) => (
-        <Box key={i} x={-1000 + i * 40} y={594} w={20} h={3} c={C.line} o={0.6} />
+      {/* Three even rows of bays, and more of the car park past the stage. */}
+      {[-330, 30, 390].map((x0) => (
+        <Bays key={x0} x={x0} faint={x0 !== 30} />
       ))}
-      {[
-        [-110, 320],
-        [-150, 470],
-        [820, 330],
-        [870, 470],
-      ].map(([x, y]) => (
-        <Tree key={x} x={x} y={y} />
+      {[-150, -280, 520, 650].map((x, i) => (
+        <Tree key={x} x={x} y={300 + (i % 2) * 210} />
       ))}
       {LAMPS.map((l) => (
         <LampPost key={l.x} x={l.x} y={l.y} />
@@ -635,6 +639,20 @@ export default function CarPark() {
           </Faint>
         </FollowVehicle>
       ))}
+      {friendsDriving
+        .filter((v) => isBike(v.model))
+        .map((v) => (
+          <Follow
+            key={`rider-${v.username}`}
+            whereabouts={whereabouts}
+            who={v.username}
+            home={v.at}
+          >
+            <Faint on={!!v.via}>
+              <Person username={v.username} x={0} y={RIDER_Y} />
+            </Faint>
+          </Follow>
+        ))}
       {around.map((f) => (
         <Follow key={f.username} whereabouts={whereabouts} who={f.username} home={DOOR}>
           <Person
@@ -673,7 +691,16 @@ export default function CarPark() {
         >
           <VehicleArt model={myModel} health={me.vehicle_health} />
         </Animated.View>
-      ) : (
+      ) : null}
+      {driving && myModel && isBike(myModel) && (
+        <Animated.View
+          pointerEvents="none"
+          style={[walkabout.figure, { transform: walker.pos.getTranslateTransform() }]}
+        >
+          <Person username={me.username} x={0} y={RIDER_Y} />
+        </Animated.View>
+      )}
+      {!driving && (
         <Animated.View
           pointerEvents="none"
           style={[walkabout.figure, { transform: walker.pos.getTranslateTransform() }]}
@@ -704,7 +731,7 @@ export default function CarPark() {
         <Glow key={p.x} x={p.x} y={p.y - 6} w={150} h={64} c="#ffe2a0" o={0.45} />
       ))}
       {parked
-        .filter((v) => v.model !== 'bike')
+        .filter((v) => !isBike(v.model))
         .map((v) => (
           <Pivot key={v.username} at={v.at}>
             <CarLights model={v.model} x={0} y={shapeOf(v.model).h / 2} />
@@ -717,7 +744,7 @@ export default function CarPark() {
     v.mine
       ? `Your ${itemInfo(v.model).name.toLowerCase()}`
       : v.via
-        ? `${v.name}'s ${v.model === 'bike' ? 'bike' : 'car'}`
+        ? `${v.name}'s ${kindOf(v.model)}`
         : `${v.name}'s ${itemInfo(v.model).name.toLowerCase()}`;
 
   const overlay = (
@@ -779,17 +806,13 @@ export default function CarPark() {
   );
 
   // What you can do where you are (done by `run`, as you press it).
-  type Act = 'get out' | 'go in' | 'board' | 'gate' | 'get in' | 'look';
+  type Act = 'park' | 'go in' | 'board' | 'gate' | 'get in' | 'look';
   const actions: { title: string; label?: string; act: Act; quiet?: boolean }[] = [];
   const nearVehicle =
     near?.kind === 'vehicle' ? parked.find((p) => p.username === near.username) : undefined;
+  const bike = !!myModel && isBike(myModel);
   if (driving) {
-    actions.push({
-      title: speedy ? 'Stop to get out' : 'Get out',
-      label: speedy ? undefined : 'Get out here',
-      act: 'get out',
-      quiet: speedy,
-    });
+    if (spot && stopped) actions.push({ title: 'Park here', act: 'park' });
   } else if (near?.kind === 'door') {
     actions.push({ title: 'Go in', act: 'go in' });
   } else if (near?.kind === 'board') {
@@ -797,13 +820,12 @@ export default function CarPark() {
   } else if (near?.kind === 'gate') {
     actions.push({ title: 'Through the gate', act: 'gate' });
   } else if (nearVehicle?.mine) {
-    if (canDrive && !studying) actions.push({ title: 'Get in', act: 'get in' });
-    actions.push({ title: 'Look', quiet: true, act: 'look' });
+    if (canDrive && !studying) actions.push({ title: bike ? 'Get on' : 'Get in', act: 'get in' });
   } else if (nearVehicle) {
     actions.push({ title: vehicleLabel(nearVehicle), quiet: true, act: 'look' });
   }
   const run = (act: Act) => {
-    if (act === 'get out') getOut();
+    if (act === 'park') parkHere();
     else if (act === 'go in') walkIn();
     else if (act === 'board') go('/friends', null);
     else if (act === 'gate') go('/garden');
@@ -814,9 +836,9 @@ export default function CarPark() {
   const looked = looking ? vehicles.find((v) => v.username === looking) : undefined;
   const tip = homeScreenTip ? null : driving && !tips.has('drive') ? (
     <Tip id="drive">
-      {
-        "Steer with the stick (or the arrow keys) and park wherever there's room, then get out. Mind other people's cars: a bump costs you if they claim."
-      }
+      {bike
+        ? "Steer with the stick or the arrow keys. Ride into the bike rack by the office, stop, and park. Mind other people's cars: a bump costs you if they claim."
+        : "Steer with the stick or the arrow keys. Drive into a free bay, stop, and park. Mind other people's cars: a bump costs you if they claim."}
     </Tip>
   ) : me.sessions_done === 0 ? (
     <Tip id="welcome">
@@ -840,7 +862,7 @@ export default function CarPark() {
       glow={glow}
       overlay={overlay}
       onStage={onStage}
-      reserve={{ top: 56, bottom: 260 }}
+      reserve={{ top: 56, bottom: 220 }}
     >
       <SceneHeader
         place="Car park"
@@ -865,14 +887,21 @@ export default function CarPark() {
                     variant={a.quiet ? 'quiet' : 'primary'}
                     style={styles.fit}
                     onPress={() => run(a.act)}
-                    disabled={a.title === 'Stop to get out'}
                   />
                 ))
               ) : (
                 <Muted style={styles.hint} numberOfLines={2}>
-                  {atWork
-                    ? 'Walk about, or up to a car to look at it.'
-                    : 'Walk up to the office door to go in.'}
+                  {driving
+                    ? bike
+                      ? spot
+                        ? 'Stop to park.'
+                        : 'Ride into the bike rack, by the office, to park.'
+                      : spot
+                        ? 'Stop to park.'
+                        : 'Drive into a free bay, straight on, to park.'
+                    : atWork
+                      ? 'Walk about, or tap a car to see how it is.'
+                      : 'Walk up to the office door to go in.'}
                 </Muted>
               )}
             </View>
@@ -888,7 +917,7 @@ export default function CarPark() {
               />
               {mine && (
                 <Button
-                  title={driving ? 'Your car' : 'Your vehicle'}
+                  title={`Your ${kindOf(mine.model)}`}
                   accessibilityLabel={vehicleLabel(mine)}
                   variant="quiet"
                   small
@@ -898,8 +927,8 @@ export default function CarPark() {
               )}
             </View>
           </View>
-          {/* On the right, under your thumb. */}
-          <Joystick size={88} onChange={walker.steer} />
+          {/* On the right, under your thumb (on a computer, the arrow keys steer). */}
+          {!keyboard && <Joystick size={88} onChange={walker.steer} />}
         </View>
         <View style={styles.row}>
           <Button title="Walk in" small onPress={walkIn} disabled={leaving} style={styles.flex} />
@@ -929,8 +958,15 @@ export default function CarPark() {
               style={styles.flex}
             />
           )}
+          <Button
+            title="Log out"
+            variant="ghost"
+            small
+            onPress={logOut}
+            disabled={leaving}
+            style={styles.flex}
+          />
         </View>
-        <Button title="Log out" variant="ghost" small onPress={logOut} disabled={leaving} />
       </Panel>
       {looked &&
         (looked.via ? (
@@ -999,7 +1035,7 @@ function Greeting({ me, friendsIn, driving }: { me: Me; friendsIn: number; drivi
           : me.vehicle_health === 0
             ? `Your ${vehicle} is a wreck, so you came on foot. The shed can repair it.`
             : driving && me.status === 'absent'
-              ? `You came by ${vehicle}. Park wherever there's room.`
+              ? `You came by ${vehicle}. Park it to go in.`
               : `You came by ${vehicle}.`}
       </Muted>
       <RipeNote ripe={me.ripe} />
@@ -1103,7 +1139,12 @@ function VehicleSheet({
           {health < 100 && <Muted>The shed can put it right, for chips.</Muted>}
           <View style={styles.row}>
             {near && canDrive && (
-              <Button title="Get in" small style={styles.flex} onPress={onGetIn} />
+              <Button
+                title={isBike(v.model) ? 'Get on' : 'Get in'}
+                small
+                style={styles.flex}
+                onPress={onGetIn}
+              />
             )}
             <Button
               title="To the shed"
@@ -1125,16 +1166,17 @@ function VehicleSheet({
   );
 }
 
-/** Two rows of eight bays. */
-function Bays() {
+/** Three rows of four bays starting at `x`; faint ones are just scenery. */
+function Bays({ x, faint }: { x: number; faint?: boolean }) {
+  const o = faint ? 0.5 : 0.8;
   return (
     <>
-      {ROWS.map((y) => (
-        <Box key={y} x={30} y={y} w={BAYS_PER_ROW * BAY_W} h={2} c={C.line} o={0.8} />
+      {ROW_TOPS.map((y) => (
+        <Box key={y} x={x} y={y} w={4 * BAY_W} h={2} c={C.line} o={o} />
       ))}
-      {ROWS.flatMap((y) =>
-        Array.from({ length: BAYS_PER_ROW + 1 }, (_, i) => (
-          <Box key={`${y}-${i}`} x={29 + i * BAY_W} y={y + 2} w={2} h={BAY_H} c={C.line} o={0.8} />
+      {ROW_TOPS.flatMap((y) =>
+        [0, 1, 2, 3, 4].map((i) => (
+          <Box key={`${y}-${i}`} x={x - 1 + i * BAY_W} y={y + 2} w={2} h={BAY_H} c={C.line} o={o} />
         ))
       )}
     </>

@@ -246,8 +246,11 @@ bigger change), do the whole round:
 - [ ] **Car park:** friends at work show as their car or bike, the Friends
       board opens, and the garden gate only works on a break. With a vehicle
       (buy one in the shed, or **Test → items**), go home and come back: you
-      start on the road in it. Drive in with the stick or the arrow keys,
-      stop, and **Get out**: the other player sees it parked there. Drive
+      start in it at the right-hand edge. Drive into a free bay (a bike into
+      the rack, up on the pavement), stop, and **Park here**: it straightens
+      up, and the other player sees it there. **Walk in** says to park
+      first until you have. Walk out of the office and away from the door:
+      you stay outside. Drive
       into the other player's parked car: both lose health (tap a car to
       see it), and they can **Claim** (you pay) or **Let it go**. Insure it
       in the shed and crash again: the insurance pays. Repair it in the

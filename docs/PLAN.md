@@ -57,10 +57,10 @@ agreed; **Open questions** lists what hasn't.
 ## 3. Places
 
 ### Car park (where the app opens)
-- **See:** two phones wide: the office building and its door, the pavement
-  with a bike rack and the hedge with the garden gate, two rows of eight
-  bays with an aisle between, a verge, and the road along the bottom.
-  Friends who are *at work* (arrived, studying, on a break, or between the
+- **See:** one phone wide, as it always was: the office building and its
+  door, the pavement with a bike rack and the hedge with the garden gate,
+  and three even rows of four bays, with more of the car park past either
+  side. Friends who are *at work* (arrived, studying, on a break, or between the
   two) appear as their **car** or **bike**, where they parked it; friends
   who came before parking was a thing are in the bay (or rack slot) that
   goes with their desk. Friends with neither aren't shown. Friends of your
@@ -68,14 +68,18 @@ agreed; **Open questions** lists what hasn't.
   friend's friend ("Alice's friend"); tap one to see who it is and ask them
   to be friends. Friends out in the car park walk about (and drive about),
   as in the garden, with chat bubbles and cigarettes.
-- **Arriving:** with a vehicle, you start in it on the road at the
-  entrance. Steer it in with the thumbstick (point where you want to go; it
-  backs up if you point behind it) or the arrow keys, and park wherever
-  there's room: **Get out** once you've stopped. Parking is arriving. On
-  foot (or if your vehicle's a wreck), you walk in from the road, and
-  walking about is arriving. **Walk in** while you're still driving parks
-  you where you are, or in a free bay if you're still on the road.
-- **Driving into things:** the kerb, the verge and lamp posts just stop you.
+- **Arriving:** with a vehicle, you start in it just past the right-hand
+  edge, in the lane between the top two rows. Steer it in with the
+  thumbstick (point where you want to go; it backs up if you point behind
+  it) or the arrow keys; on a computer there's no thumbstick. A car parks in
+  a free bay, nose in or out; a bike rides up onto the pavement and parks in
+  a free slot of the bike rack. Stopped in one, **Park here** straightens it
+  up and you get out beside it. Parking is arriving, and you can't walk in
+  until you've parked. On foot (or if your vehicle's a wreck), you walk in
+  from the side, and walking about is arriving. You **Get in** a car and
+  **Get on** a bike; riding one, you're drawn on it.
+- **Driving into things:** the kerb (for cars), the office wall, the hedge
+  and lamp posts just stop you.
   Driving into a friend's parked vehicle faster than a nudge damages both
   (see *Vehicles*). Friends of friends' vehicles are see-through: you drive
   through them.
@@ -778,6 +782,9 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
       sign-up; driving in and parking, crashes, claims, repairs and
       insurance; walking about, chatting and smoking in the car park; and
       invites to the session you're studying (94 scenario tests in all).
+- [x] Migration `0018_parking_in_the_rack.sql`: the car park back to one
+      phone wide, parking only in bays and the rack, bikes onto the
+      pavement.
 
 **M2: feel**
 - Illustrated art, recorded audio (layer by layer), a typeface, gentle
@@ -801,7 +808,7 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 | Where does the weather come from? | A shared, procedural cycle seeded by the clock: the same for everyone. |
 | How does the allotment grow? | In real time over a few days, depending on the crop (it used to be by the minutes studied); watering speeds it up. Crops are never sold to the game for chips; they're eaten, sold to friends, traded or saved for seeds. |
 | How do friends without a car appear in the car park? | Walking about, while they're out there. Their vehicle, if they have one, is where they parked it. |
-| Arriving | Drive in from the road and park wherever there's room, or walk in. Either is arriving. |
+| Arriving | Drive in from the side and park in a free bay (a bike in the rack), or walk in. Either is arriving; you park before you go in. |
 | Crashes | Into friends' parked vehicles only. Both lose health; the owner can claim damages, which the driver pays unless insured. |
 | How does a break end? | An earned break timer (1 min per 5 studied), then a bell and a choice of office or home. |
 | Perspective | Top-front for every place, with no sky: time of day only shows as the scene's changing hues. |
@@ -825,7 +832,7 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 | Studying with someone new | An invite link to your session: they sign up if they need to, and join it as your friend. |
 | "Roughly" 1 chip a minute | The minutes, plus or minus a little random luck (up to 12%, usually far less). |
 | Where you sit | Not at the front: the office starts as twelve empty desks, and everyone (you included) gets a random one on arrival, kept across breaks until they go home. |
-| Car park | No kiosk; two rows of eight bays, and you park where you like. |
+| Car park | No kiosk; three even rows of four bays, one phone wide. You park in any free bay, a bike in any free rack slot. |
 | The garden | Walkable with a thumbstick, three phones wide and one tall, with every allotment on one grid in a fixed place. |
 | Trading | A market: stalls with prices, bought from face to face in the garden. Swaps and gifts by offer stay too. |
 | Unpicked crops | Wither 2 days after ripening (going over for the last 12 hours), give nothing, and must be cleared before replanting. |

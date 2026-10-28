@@ -37,7 +37,7 @@ screen or a module, change the tables below.
 | `src/world/World.tsx` | `useWorld()`: you, friends, friends of friends and looks, polled every 10 s. `useGo()` moves between places. |
 | `src/world/useWalker.ts` | Walking (and, with `driving`, driving) with the stick or keys, the camera, collisions. |
 | `src/world/useGardenChannel.ts` | Realtime positions and chat, for the garden or (with `CHANNELS`) the car park. |
-| `src/world/gardenMap.ts`, `carParkMap.ts` | Each place's layout and what blocks you. |
+| `src/world/gardenMap.ts`, `carParkMap.ts` | Each place's layout and what blocks you. `carParkMap` also says where you can park (`parkingSpot`: a free bay, or a rack slot for a bike). |
 | `src/world/seats.ts` | Who sits at which desk (and the bay that goes with it). |
 | `src/lib/api.ts` | Every type the server returns, and `api.*` wrappers for each RPC. |
 | `src/lib/away.ts` | Hard mode: telling the server when the page is left, and keeping the screen on. |
@@ -79,7 +79,8 @@ Public (called by the app with `supabase.rpc`):
 | 0013 | `place_desk_item`, `store_desk_item` |
 | 0014 | `get_profile` |
 | 0015 | `drop_push`, `due_pushes`, `forget_pushes`, `save_push` |
-| 0017 | `back_to_page`, `buy`, `buy_insurance`, `check_signup`, `claim_crash`, `crash`, `get_friends_board`, `get_friends_of_friends`, `get_me`, `get_shop`, `go_home`, `invite_to_session`, `join_session`, `leave_page`, `may_listen`, `park`, `repair_vehicle`, `set_email`, `set_hard_mode`, `set_place`, `smoke`, `start_session`, `use_invite` |
+| 0017 | `back_to_page`, `buy`, `buy_insurance`, `check_signup`, `claim_crash`, `crash`, `get_friends_board`, `get_friends_of_friends`, `get_me`, `get_shop`, `go_home`, `invite_to_session`, `join_session`, `leave_page`, `may_listen`, `repair_vehicle`, `set_email`, `set_hard_mode`, `set_place`, `smoke`, `start_session`, `use_invite` |
+| 0018 | `park` |
 
 Private (helpers; the app can't call them):
 

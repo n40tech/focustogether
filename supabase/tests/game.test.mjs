@@ -1323,11 +1323,17 @@ describe('the car park', () => {
     assert.deepEqual(alice.parked, { x: 100, y: 300, a: 0.5 });
     assert.equal(alice.vehicle_health, 100);
 
-    // Kept to the car park, and facing somewhere between 0 and a full turn.
-    me = await call('alice', 'park', -50, 9999, -1);
-    assert.equal(me.parked.x, 0);
-    assert.equal(me.parked.y, 640);
+    // Kept to the car park (which carries on a little past either side), and
+    // facing somewhere between 0 and a full turn.
+    me = await call('alice', 'park', -500, 9999, -1);
+    assert.equal(me.parked.x, -80);
+    assert.equal(me.parked.y, 660);
     assertNear(me.parked.a, 2 * Math.PI - 1, 0.001, 'heading');
+    me = await call('alice', 'park', 900, 0, 0);
+    assert.deepEqual(me.parked, { x: 460, y: 150, a: 0 });
+    // Up on the pavement, as a bike in the rack is.
+    me = await call('alice', 'park', 22, 202, 0);
+    assert.deepEqual(me.parked, { x: 22, y: 202, a: 0 });
 
     await call('alice', 'start_session', 5);
     await rejects(call('alice', 'park', 100, 300, 0), /studying/);
