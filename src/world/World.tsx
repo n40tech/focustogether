@@ -21,7 +21,13 @@ import { keepPushFresh } from '@/lib/push';
 import { supabase } from '@/lib/supabase';
 import { tones } from '@/lib/theme';
 
+/** You: your status, breaks and sessions. */
 const POLL_MS = 10_000;
+/**
+ * Friends and their friends change more slowly, and where they are out in
+ * the car park or the garden comes over Realtime, so these can wait longer.
+ */
+const FRIENDS_POLL_MS = 20_000;
 /** Looks change rarely, and yours update at once. */
 const LOOKS_POLL_MS = 60_000;
 
@@ -52,8 +58,8 @@ export function useWorld() {
 /** Polls the server for you and your friends; renders children once you've loaded. */
 export function WorldProvider({ children }: { children: ReactNode }) {
   const me = usePolled(fetchMe, POLL_MS);
-  const board = usePolled(api.getFriendsBoard, POLL_MS);
-  const others = usePolled(api.getFriendsOfFriends, POLL_MS);
+  const board = usePolled(api.getFriendsBoard, FRIENDS_POLL_MS);
+  const others = usePolled(api.getFriendsOfFriends, FRIENDS_POLL_MS);
   const looks = usePolled(api.getLooks, LOOKS_POLL_MS);
 
   // Leaving the page mid-session stops the session (see src/lib/away).

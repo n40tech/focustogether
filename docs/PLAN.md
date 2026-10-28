@@ -888,8 +888,11 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 - **Cheating:** rewards are computed in Postgres from server time, so a client
   can't award itself chips. Chat is friends-only and unstored, so there's
   nothing to moderate after the fact, but also no history.
-- **Scale:** each open client polls every 10 s, which is fine for tens of
-  players. Move to Realtime Postgres Changes if it grows.
+- **Scale:** each open client polls for you every 10 s, and for friends and
+  their friends every 20 s (about 13 calls a minute), and only while the
+  page is showing. That's fine for tens of players. Move to Realtime
+  Postgres Changes if it grows. A position goes out over Realtime at most
+  5 times a second while you move, and not at all when it hasn't changed.
 - **The push function is open:** anyone can call it (it runs without a
   sign-in, as the cron job does), but it only ever sends what's due, once, so
   calling it early changes nothing. Calling it very often would only use up

@@ -120,6 +120,18 @@ Things to know when writing one:
   stubs don't catch that; rehearsing locally does.
 - Each file runs once, as one transaction, on a database in use.
 
+## Keeping it quick
+
+- `usePolled` ignores a poll that brings back what it had (bar
+  `server_now`), so nothing redraws for it. Keep it that way: a whole place
+  redrawing every few seconds stutters on slower laptops.
+- What a place draws that never changes (the car park's office, bays and
+  lamp posts) is a `memo` component, so other changes don't redraw it.
+- Walking and driving move Animated values directly; nothing re-renders as
+  you move. Keep per-frame work out of React state.
+- To measure: drive a Playwright page with the CPU slowed
+  (`Emulation.setCPUThrottlingRate`), and watch long tasks and frame times.
+
 ## Tests
 
 - **`supabase/tests/game.test.mjs`** builds a scratch database from every

@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 
 import { Person } from '@/art/People';
@@ -575,67 +575,7 @@ export default function CarPark() {
 
   const art = (
     <Pan by={walker.pan} width={WORLD.w}>
-      {/* The office: flat roof, then the front wall with its windows and door. */}
-      <Box x={BLEED.x} y={-400} w={BLEED.w} h={430} c={C.roof} />
-      <Box x={BLEED.x} y={24} w={BLEED.w} h={6} c="#6c6058" />
-      <Box x={BLEED.x} y={30} w={BLEED.w} h={WALL_Y - 30} c={C.wall} />
-      {WINDOW_XS.map((x) => (
-        <Box key={x} x={x} y={42} w={30} h={30} c={C.window} r={2} />
-      ))}
-      {WINDOW_XS.map((x) => (
-        <Box key={`b${x}`} x={x} y={100} w={30} h={30} c={C.window} r={2} />
-      ))}
-      <Box x={150} y={56} w={60} h={14} c="#efe8da" r={2} />
-      <Box x={136} y={76} w={88} h={8} c="#6f6259" r={2} />
-      <Box x={144} y={84} w={72} h={68} c="#5d5650" r={2} />
-      <Box x={148} y={88} w={31} h={64} c={C.glass} r={1} />
-      <Box x={181} y={88} w={31} h={64} c={C.glass} r={1} />
-      <Box x={174} y={114} w={3} h={12} c="#d9d4ca" r={1} />
-      <Box x={183} y={114} w={3} h={12} c="#d9d4ca" r={1} />
-      {/* the Friends board */}
-      <Box x={238} y={94} w={54} h={36} c="#a4825e" r={2} />
-      <Box x={242} y={98} w={46} h={28} c="#c49a6c" r={1} />
-      {[
-        [246, 101, '#efe8da'],
-        [262, 104, '#e6d38f'],
-        [274, 100, '#cfe0e6'],
-        [252, 114, '#ead6d0'],
-      ].map(([x, y, c]) => (
-        <Box key={`${x}${y}`} x={x as number} y={y as number} w={11} h={9} c={c as string} />
-      ))}
-
-      {/* Pavement, bike rack and the hedge with the garden gate. */}
-      <Box x={BLEED.x} y={WALL_Y} w={BLEED.w} h={80} c={C.pavement} />
-      <Box x={BLEED.x} y={232} w={BLEED.w} h={3} c="#8f8a82" />
-      <Box x={RACK.x} y={RACK.y + 8} w={RACK.w} h={3} c="#8b9096" r={1} />
-      {RACK_SLOTS.map((s) => (
-        <Box
-          key={s.x}
-          x={s.x - 3}
-          y={185}
-          w={6}
-          h={9}
-          r={3}
-          style={{ borderWidth: 1.2, borderColor: '#8b9096' }}
-        />
-      ))}
-      <Box x={HEDGE_X} y={WALL_Y} w={2100} h={80} c={C.hedge} />
-      {[300, 324, 348, 372].map((x) => (
-        <Dot key={x} x={x + 10} y={226} d={28} h={14} c="#557352" />
-      ))}
-      <Box x={GATE.x - 18} y={160} w={36} h={56} c={onBreak ? '#b59a72' : '#9c8466'} r={2} />
-      {[0, 1, 2, 3].map((i) => (
-        <Box key={i} x={GATE.x - 14 + i * 8} y={164} w={4} h={48} c="#8a7154" />
-      ))}
-
-      {/* Two rows of six bays, with an aisle between. */}
-      <Bays />
-      {[-150, -280, 520, 650].map((x, i) => (
-        <Tree key={x} x={x} y={300 + (i % 2) * 210} />
-      ))}
-      {LAMPS.map((l) => (
-        <LampPost key={l.x} x={l.x} y={l.y} />
-      ))}
+      <Backdrop onBreak={onBreak} />
 
       {parked.map((v) => (
         <Faint key={v.username} on={!!v.via}>
@@ -729,17 +669,7 @@ export default function CarPark() {
 
   const glow = (
     <Pan by={walker.pan} width={WORLD.w}>
-      {WINDOW_XS.map((x) => (
-        <Box key={x} x={x} y={42} w={30} h={30} c={C.lit} r={2} o={0.85} />
-      ))}
-      {WINDOW_XS.filter((_, i) => i % 3 !== 1).map((x) => (
-        <Box key={`b${x}`} x={x} y={100} w={30} h={30} c={C.lit} r={2} o={0.85} />
-      ))}
-      <Box x={148} y={88} w={64} h={64} c="#f6e2b4" o={0.8} />
-      <Glow x={180} y={168} w={170} h={54} c="#f6dca0" o={0.5} />
-      {LAMPS.map((p) => (
-        <Glow key={p.x} x={p.x} y={p.y - 6} w={150} h={64} c="#ffe2a0" o={0.45} />
-      ))}
+      <BackdropGlow />
       {parked
         .filter((v) => !isBike(v.model))
         .map((v) => (
@@ -1175,6 +1105,97 @@ function VehicleSheet({
     </Sheet>
   );
 }
+
+/**
+ * The office, the pavement, the rack, the hedge and the bays: everything that
+ * doesn't move. Drawn once, and not again each time something else changes.
+ */
+const Backdrop = memo(function Backdrop({ onBreak }: { onBreak: boolean }) {
+  return (
+    <>
+      {/* The office: flat roof, then the front wall with its windows and door. */}
+      <Box x={BLEED.x} y={-400} w={BLEED.w} h={430} c={C.roof} />
+      <Box x={BLEED.x} y={24} w={BLEED.w} h={6} c="#6c6058" />
+      <Box x={BLEED.x} y={30} w={BLEED.w} h={WALL_Y - 30} c={C.wall} />
+      {WINDOW_XS.map((x) => (
+        <Box key={x} x={x} y={42} w={30} h={30} c={C.window} r={2} />
+      ))}
+      {WINDOW_XS.map((x) => (
+        <Box key={`b${x}`} x={x} y={100} w={30} h={30} c={C.window} r={2} />
+      ))}
+      <Box x={150} y={56} w={60} h={14} c="#efe8da" r={2} />
+      <Box x={136} y={76} w={88} h={8} c="#6f6259" r={2} />
+      <Box x={144} y={84} w={72} h={68} c="#5d5650" r={2} />
+      <Box x={148} y={88} w={31} h={64} c={C.glass} r={1} />
+      <Box x={181} y={88} w={31} h={64} c={C.glass} r={1} />
+      <Box x={174} y={114} w={3} h={12} c="#d9d4ca" r={1} />
+      <Box x={183} y={114} w={3} h={12} c="#d9d4ca" r={1} />
+      {/* the Friends board */}
+      <Box x={238} y={94} w={54} h={36} c="#a4825e" r={2} />
+      <Box x={242} y={98} w={46} h={28} c="#c49a6c" r={1} />
+      {[
+        [246, 101, '#efe8da'],
+        [262, 104, '#e6d38f'],
+        [274, 100, '#cfe0e6'],
+        [252, 114, '#ead6d0'],
+      ].map(([x, y, c]) => (
+        <Box key={`${x}${y}`} x={x as number} y={y as number} w={11} h={9} c={c as string} />
+      ))}
+
+      {/* Pavement, bike rack and the hedge with the garden gate. */}
+      <Box x={BLEED.x} y={WALL_Y} w={BLEED.w} h={80} c={C.pavement} />
+      <Box x={BLEED.x} y={232} w={BLEED.w} h={3} c="#8f8a82" />
+      <Box x={RACK.x} y={RACK.y + 8} w={RACK.w} h={3} c="#8b9096" r={1} />
+      {RACK_SLOTS.map((s) => (
+        <Box
+          key={s.x}
+          x={s.x - 3}
+          y={185}
+          w={6}
+          h={9}
+          r={3}
+          style={{ borderWidth: 1.2, borderColor: '#8b9096' }}
+        />
+      ))}
+      <Box x={HEDGE_X} y={WALL_Y} w={2100} h={80} c={C.hedge} />
+      {[300, 324, 348, 372].map((x) => (
+        <Dot key={x} x={x + 10} y={226} d={28} h={14} c="#557352" />
+      ))}
+      <Box x={GATE.x - 18} y={160} w={36} h={56} c={onBreak ? '#b59a72' : '#9c8466'} r={2} />
+      {[0, 1, 2, 3].map((i) => (
+        <Box key={i} x={GATE.x - 14 + i * 8} y={164} w={4} h={48} c="#8a7154" />
+      ))}
+
+      {/* Two rows of six bays, with an aisle between. */}
+      <Bays />
+      {[-150, -280, 520, 650].map((x, i) => (
+        <Tree key={x} x={x} y={300 + (i % 2) * 210} />
+      ))}
+      {LAMPS.map((l) => (
+        <LampPost key={l.x} x={l.x} y={l.y} />
+      ))}
+    </>
+  );
+});
+
+/** The lit windows, the door and the lamps, after dark. */
+const BackdropGlow = memo(function BackdropGlow() {
+  return (
+    <>
+      {WINDOW_XS.map((x) => (
+        <Box key={x} x={x} y={42} w={30} h={30} c={C.lit} r={2} o={0.85} />
+      ))}
+      {WINDOW_XS.filter((_, i) => i % 3 !== 1).map((x) => (
+        <Box key={`b${x}`} x={x} y={100} w={30} h={30} c={C.lit} r={2} o={0.85} />
+      ))}
+      <Box x={148} y={88} w={64} h={64} c="#f6e2b4" o={0.8} />
+      <Glow x={180} y={168} w={170} h={54} c="#f6dca0" o={0.5} />
+      {LAMPS.map((p) => (
+        <Glow key={p.x} x={p.x} y={p.y - 6} w={150} h={64} c="#ffe2a0" o={0.45} />
+      ))}
+    </>
+  );
+});
 
 /** Two rows of bays: each a back line, with a line down either side. */
 function Bays() {
