@@ -248,6 +248,10 @@ class WebAudioEngine implements AudioEngine {
         return this.rustle(t);
       case 'rift':
         return this.rift(t);
+      case 'crunch':
+        return this.crunch(t);
+      case 'car_door':
+        return this.carDoor(t);
       case 'step':
         return this.step(t, options?.gain ?? 1, options?.pan ?? 0);
       case 'gravel':
@@ -928,6 +932,29 @@ class WebAudioEngine implements AudioEngine {
     this.burst(t, out, { colour: 'pink', freq: 700, Q: 1.2, level: 0.25, decay: 0.12 });
     this.tone(t + 0.32, out, { freq: 190, to: 110, level: 0.28, decay: 0.16 });
     this.burst(t + 0.32, out, { freq: 1100, Q: 1.5, level: 0.22, decay: 0.08 });
+  }
+
+  /** A dull thump, then crumpling metal and a tinkle of glass. */
+  private crunch(t: number) {
+    const out = this.n!.sfx;
+    this.tone(t, out, { freq: 95, to: 45, level: 0.5, decay: 0.3 });
+    this.burst(t, out, { colour: 'brown', freq: 400, Q: 0.8, level: 0.4, decay: 0.25 });
+    this.burst(t + 0.04, out, { freq: 1800, Q: 2.5, level: 0.18, decay: 0.2 });
+    for (let i = 0; i < 4; i++)
+      this.burst(t + 0.12 + i * 0.05 + Math.random() * 0.03, out, {
+        freq: 5000 + Math.random() * 2500,
+        Q: 6,
+        level: 0.06,
+        decay: 0.05,
+      });
+  }
+
+  /** A car door shutting: a low thud with a latch click. */
+  private carDoor(t: number) {
+    const out = this.n!.sfx;
+    this.tone(t, out, { freq: 120, to: 70, level: 0.3, decay: 0.14 });
+    this.burst(t, out, { colour: 'pink', freq: 600, Q: 1, level: 0.16, decay: 0.08 });
+    this.burst(t + 0.02, out, { freq: 3200, Q: 4, level: 0.08, decay: 0.03 });
   }
 
   private paper(t: number) {

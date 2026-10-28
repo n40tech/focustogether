@@ -6,8 +6,13 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { pendingInvite } from '@/lib/invites';
 import { supabase } from '@/lib/supabase';
 import { BACKDROP } from '@/lib/theme';
+
+// An invite link's code, read from the address before the router rewrites it
+// (a signed-in player at /login is sent on to the car park).
+pendingInvite();
 
 /**
  * The name in the browser tab. It's in both branches below because the web

@@ -9,7 +9,10 @@ behind it. Players see the name Focus Together; the repo, the Supabase project
 and the Expo project are still called `focus-app`. While it's in beta, a banner
 across the top links testers to a WhatsApp group (`src/components/BetaBanner.tsx`). The design pillars, rules, data model and decisions are in
 `docs/PLAN.md`; how to test is in `docs/TESTING.md`; the steps for shipping
-each update are in `deployment/`.
+each update are in `deployment/`. **Start with `docs/CODE-MAP.md`**: where
+each thing lives, which migration last defined each database function, and
+the testing shortcuts. Keep it current when you add a migration, function,
+screen or module.
 
 ## How it fits together
 
@@ -27,8 +30,11 @@ each update are in `deployment/`.
   Friends' positions and chat go over private Realtime channels named
   `garden:<username>` (`src/world/useGardenChannel.ts`). Your own devices
   listen on yours to keep you in one place; steered apart, a rift opens.
-- **Leaving the page** mid-session stops the session after 10 seconds' grace
-  (`src/lib/away.ts`).
+- **Leaving the page** mid-session is fine, unless the session was started
+  in hard mode: then it stops after 10 seconds' grace (`src/lib/away.ts`).
+- **The car park** is walkable too, and you drive your vehicle in
+  (`src/app/(app)/index.tsx`, `src/world/carParkMap.ts`; driving is in
+  `useWalker`). Friends hear you on `carpark:<username>` channels.
 - **Sound** is synthesised with Web Audio (`src/audio/engine.web.ts`; native is
   a silent stub). The **weather** is a function of the clock (`src/weather`).
   The **art** is placeholder shapes on a 360×640 stage, seen from above and in

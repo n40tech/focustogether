@@ -12,6 +12,28 @@ export type Place = 'office' | 'garden' | 'outside';
 export type Inventory = Record<string, number>;
 /** A desk thing where it sits on its desk, in desk units from the desk's front-centre. */
 export type DeskThing = { item: string; x: number; y: number };
+/** Where a vehicle is parked, in car park units; `a` is its heading in radians (0 = nose up). */
+export type Parked = { x: number; y: number; a: number };
+
+/** Someone drove into a parked vehicle; its owner can claim damages or let it go. */
+export type Crash = {
+  id: number;
+  driver: string;
+  driver_name: string;
+  owner: string;
+  owner_name: string;
+  /** The vehicle that was hit. */
+  vehicle: string;
+  /** Health it lost. */
+  damage: number;
+  /** Chips the shed charges to put that right. */
+  cost: number;
+  at: string;
+  status: 'open' | 'claimed' | 'waived';
+  paid_by: 'driver' | 'insurer' | null;
+  /** What the driver paid (the cost, or what they had if less). */
+  paid: number | null;
+};
 
 export type Me = {
   id: string;
@@ -26,15 +48,29 @@ export type Me = {
   /** Where you are while you're at work ('office' = at your desk). */
   place: Place | null;
   vehicle: string | null;
+  /** 0 to 100: a wreck at 0. */
+  vehicle_health: number;
+  /** Where you parked, while you're at work. */
+  parked: Parked | null;
+  /** While you're insured, claims against you are paid for you. */
+  insured_until: string | null;
+  /** Crashes you were in: open ones into your vehicle, and the rest from the last two days. */
+  crashes: Crash[];
   activity: Activity;
   activity_until: string | null;
+  /** Leaving the page stops sessions you start (else they run whatever you do). */
+  hard_mode: boolean;
+  /** Your email, for news of Focus Together (only you can see it). */
+  email: string | null;
   active_session: {
     id: number;
     started_at: string;
     duration_min: number;
     ends_at: string;
-    /** The page (browser tab) it was started on: leaving that page stops it. */
+    /** The page (browser tab) it was started on: in hard mode, leaving that page stops it. */
     device: string | null;
+    /** Started in hard mode. */
+    hard: boolean;
   } | null;
   last_completed: {
     id: number;
@@ -81,9 +117,13 @@ export type Friend = {
   place: Place | null;
   arrived_at: string | null;
   vehicle: string | null;
+  vehicle_health: number;
+  /** Where they parked, while they're at work (null if they came before parking was a thing). */
+  parked: Parked | null;
   /** What's on their desk, back to front. */
   desk_items: DeskThing[];
   activity: Activity;
+  activity_until: string | null;
 };
 
 /**
@@ -92,7 +132,15 @@ export type Friend = {
  */
 export type FriendOfFriend = Pick<
   Friend,
-  'username' | 'display_name' | 'status' | 'place' | 'arrived_at' | 'vehicle' | 'desk_items'
+  | 'username'
+  | 'display_name'
+  | 'status'
+  | 'place'
+  | 'arrived_at'
+  | 'vehicle'
+  | 'vehicle_health'
+  | 'parked'
+  | 'desk_items'
 > & { desk: number; via: string[] };
 
 /** Asking to be friends: the requests to you, and the ones you've made. */
@@ -138,7 +186,18 @@ export type ShopItem = {
   yield: number | null;
 };
 
-export type Shop = { chips: number; items: ShopItem[] };
+export type Shop = {
+  chips: number;
+  items: ShopItem[];
+  /** The vehicle you arrive in, how it is, and what the shed charges to put it right. */
+  vehicle: string | null;
+  vehicle_health: number;
+  repair_cost: number;
+  insured_until: string | null;
+  /** Chips for a stretch of insurance, and how many days it lasts. */
+  insurance_price: number;
+  insurance_days: number;
+};
 
 /** One plant: a bed holds up to PLANTS_PER_BED, one seed each. */
 export type Plot = {
@@ -211,7 +270,25 @@ export type Invite = {
   used_at: string | null;
 };
 
-export type SignupCheck = { ok: boolean; reason?: string; from?: string };
+export type SignupCheck = {
+  ok: boolean;
+  reason?: string;
+  from?: string;
+  /** The invite is to a session that's running: when it ends. */
+  studying_until?: string | null;
+};
+
+/** What opening an invite did: you're friends with `from`, and studying with them if `joined`. */
+export type UsedInvite = {
+  from: string;
+  username: string;
+  /** It was to a session. */
+  session: boolean;
+  joined: boolean;
+  /** Why you didn't join, if you didn't. */
+  note: string | null;
+  me: Me;
+};
 
 export type Letter = {
   id: number;
@@ -275,6 +352,8 @@ export const api = {
   /** `device` is this page's id: leaving this page stops the session. */
   startSession: (minutes: number, device: string) =>
     rpc<Me>('start_session', { p_minutes: minutes, p_device: device }),
+  /** Hard mode: leaving the page stops sessions you start from now on. */
+  setHardMode: (on: boolean) => rpc<Me>('set_hard_mode', { p_on: on }),
   /** Starts a session that ends when a friend's does. */
   joinSession: (username: string, device: string) =>
     rpc<Me>('join_session', { p_username: username, p_device: device }),
@@ -291,12 +370,23 @@ export const api = {
   backToPage: (session: number, device: string, awaySeconds: number | null) =>
     rpc<Me>('back_to_page', { p_session: session, p_device: device, p_away_s: awaySeconds }),
   goHome: () => rpc<Me>('go_home'),
+  /** Your email, for news of Focus Together. */
+  setEmail: (email: string) => rpc<Me>('set_email', { p_email: email }),
+  /** Parks your vehicle (arriving, if you hadn't). `a` is its heading in radians. */
+  park: (x: number, y: number, a: number) => rpc<Me>('park', { p_x: x, p_y: y, p_a: a }),
+  /** You drove into a friend's parked vehicle at `speed` (car park units a second). */
+  crash: (username: string, speed: number) =>
+    rpc<Me>('crash', { p_username: username, p_speed: speed }),
+  /** Claims damages for a crash into your vehicle, or lets it go. */
+  claimCrash: (id: number, claim: boolean) => rpc<Me>('claim_crash', { p_id: id, p_claim: claim }),
   /** A tip seen through or put away; and all of them back again. */
   doneTip: (tip: string) => rpc<Me>('done_tip', { p_tip: tip }),
   resetTips: () => rpc<Me>('reset_tips'),
 
   getShop: () => rpc<Shop>('get_shop'),
   buy: (item: string) => rpc<Shop>('buy', { p_item: item }),
+  repairVehicle: () => rpc<Shop>('repair_vehicle'),
+  buyInsurance: () => rpc<Shop>('buy_insurance'),
 
   getGarden: () => rpc<Garden>('get_garden'),
   plant: (bed: number, seed: string) => rpc<Garden>('plant', { p_bed: bed, p_seed: seed }),
@@ -338,6 +428,12 @@ export const api = {
 
   createInvite: () => rpc<{ code: string; expires_at: string }>('create_invite'),
   getInvites: () => rpc<Invite[]>('get_invites'),
+  /** An invite to the session you're studying: whoever opens it studies with you. */
+  inviteToSession: () =>
+    rpc<{ code: string; expires_at: string; ends_at: string }>('invite_to_session'),
+  /** Opens an invite while signed in: friends with whoever made it, and their session joined. */
+  openInvite: (code: string, device: string) =>
+    rpc<UsedInvite>('use_invite', { p_code: code, p_device: device }),
   /** Testing tools (testers only, see 0005_testing.sql). */
   dev: {
     chips: (amount: number) => rpc<Me>('dev_chips', { p_amount: amount }),
@@ -348,8 +444,12 @@ export const api = {
   },
 
   /** Works signed out: checks an invite code and a username before sign-up. */
-  checkSignup: (code: string, username: string) =>
-    rpc<SignupCheck>('check_signup', { p_code: code, p_username: username }),
+  checkSignup: (code: string, username: string, email?: string) =>
+    rpc<SignupCheck>('check_signup', {
+      p_code: code,
+      p_username: username,
+      p_email: email ?? null,
+    }),
 };
 
 export const MAX_SESSION_MIN = 120;
@@ -370,5 +470,7 @@ export const KEEPS_FOR_DAYS = 2;
  *  meanwhile the bed grows half as fast again. */
 export const WATERING_LASTS_HOURS = 24;
 export const WATERED_SPEED = 1.5;
+/** Mirrors public.crash: below this speed a bump does no damage. */
+export const CRASH_SPEED = 18;
 /** Mirrors profiles.desk (0-11): the office has twelve desks. */
 export const DESKS = 12;

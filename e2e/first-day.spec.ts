@@ -22,7 +22,7 @@ test('a first day: tips, then skipping the first session to see the garden', asy
   expect(fake.called('done_tip').every((args) => args.p_tip === 'welcome')).toBe(true);
 
   await button(page, 'Start 25 min').click();
-  const stay = page.getByText(/Keep this tab open while you study/);
+  const stay = page.getByText(/You can leave the page while you study/);
   await expect(stay).toBeVisible();
   await button(page, 'Got it: hide this tip').click();
   await expect(stay).toBeHidden();

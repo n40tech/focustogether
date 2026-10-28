@@ -10,14 +10,17 @@ up and shipping each update is in **[deployment/](deployment/)**, starting with
 change before a pull request is in **[docs/TESTING.md](docs/TESTING.md)**.
 
 ## The places
-- **Car park**: where the app opens. Friends who are in show as their car or bike,
-  in the bay that goes with their desk.
+- **Car park**: where the app opens. Drive your car or bike in and park where
+  there's room (mind friends' cars: bumps cost chips unless you're insured),
+  then walk about, chat and smoke. Friends who are in show as their vehicles
+  and, if they're out there, walking about.
 - **Office**: twelve identical desks. You get a random one when you walk in and
   keep it until you go home. Set a timer and study; while a session runs,
-  nothing else is reachable. On a phone, leaving the page (another app or
-  tab, or locking it) for more than 10 seconds stops the session with no
-  chips. On a computer, other tabs are fine, and only closing the page stops
-  it. A new player can skip their first session.
+  nothing else is reachable, but you can leave the page: it carries on. In
+  hard mode, leaving the page on a phone (or closing the tab on a computer)
+  for more than 10 seconds stops the session with no chips. While you study,
+  an invite link brings someone to study with you. A new player can skip
+  their first session.
 - **Payout**: a closer look at your desk, about 1 chip per minute (give or take a
   little luck), and an earned break (1 minute per 5 studied).
 - **Garden**: walk about with a thumbstick (or the arrow keys), chat in speech

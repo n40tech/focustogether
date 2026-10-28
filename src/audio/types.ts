@@ -17,6 +17,8 @@ export type Sfx =
   | 'rustle' // clearing a withered crop
   | 'bin' // throwing something away
   | 'rift' // your two devices pulled you apart
+  | 'crunch' // driving into someone's vehicle
+  | 'car_door' // getting into or out of your vehicle
   | 'step' // a footstep on grass
   | 'gravel'; // a footstep on the gravel path
 

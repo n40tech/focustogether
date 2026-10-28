@@ -80,12 +80,20 @@ async function asService(fn, ...args) {
 }
 
 /** What Supabase Auth does on sign-up: insert the user with the form's metadata. */
-async function signUp(username, invite, { email, name } = {}) {
+async function signUp(username, invite, { email, name, contact } = {}) {
   const [u] = await q(
     `insert into auth.users (email, raw_user_meta_data) values ($1, $2) returning id`,
     [
       email ?? `${username}@focus.test`,
-      { invite, username, display_name: name ?? username[0].toUpperCase() + username.slice(1) },
+      {
+        invite,
+        username,
+        display_name: name ?? username[0].toUpperCase() + username.slice(1),
+        contact_email:
+          contact === undefined
+            ? `${username.normalize('NFD').replace(/[^a-z0-9_]/g, '')}@studymail.co.uk`
+            : contact,
+      },
     ]
   );
   ids[username] = u.id;
@@ -101,8 +109,9 @@ async function travel(minutes) {
   );
   await q(
     `update public.profiles set went_home_at = went_home_at - ${m}, activity_until = activity_until - ${m},
-       arrived_at = arrived_at - ${m}, seen_at = seen_at - ${m}`
+       arrived_at = arrived_at - ${m}, seen_at = seen_at - ${m}, insured_until = insured_until - ${m}`
   );
+  await q(`update public.crashes set at = at - ${m}, settled_at = settled_at - ${m}`);
   await q(
     `update public.plots set planted_at = planted_at - ${m}, watered_at = watered_at - ${m},
        settled_at = settled_at - ${m}`
@@ -194,13 +203,16 @@ before(async () => {
 
 beforeEach(async () => {
   await q(
-    `truncate public.sessions, public.inventory, public.plots, public.trades, public.listings,
-       public.letters, public.friend_requests, public.desk_layout, public.push_subscriptions`
+    `truncate public.inventory, public.plots, public.trades, public.listings, public.letters,
+       public.friend_requests, public.desk_layout, public.push_subscriptions, public.crashes`
   );
+  // Invites can point at a session, so these can't be truncated.
+  await q('delete from public.sessions');
   await q(
     `update public.profiles set chips = 0, vehicle = null, went_home_at = null, activity = null,
        activity_until = null, arrived_at = null, desk = null, tester = false, place = null,
-       seen_at = null, tips = '{}'`
+       seen_at = null, tips = '{}', hard_mode = false, parked = null, vehicle_health = 100,
+       insured_until = null`
   );
 });
 
@@ -428,102 +440,140 @@ describe('arriving and desks', () => {
 describe('leaving the page', () => {
   const running = async (user) => (await call(user, 'get_me')).active_session;
 
-  test('more than 10 seconds away stops the session: no chips, no break', async () => {
-    await call('alice', 'start_session', 25, 'tab-a');
-    const { id, device } = await running('alice');
-    assert.equal(device, 'tab-a');
-    await travel(5);
+  test("by default, leaving the page doesn't stop a session", async () => {
+    let me = await call('alice', 'start_session', 25, 'tab-a');
+    assert.equal(me.hard_mode, false);
+    assert.equal(me.active_session.hard, false);
+    const { id } = me.active_session;
     await call('alice', 'leave_page', id, 'tab-a');
-    await travel(11 / 60);
-
-    let me = await call('alice', 'get_me');
-    assert.equal(me.status, 'idle');
-    assert.equal(me.active_session, null);
-    assert.equal(me.break_ends_at, null);
-    assert.equal(me.left_session.id, id);
-    assertNear(
-      Date.parse(me.left_session.left_at) - Date.parse(me.left_session.started_at),
-      5 * MIN,
-      2000,
-      'left 5 minutes in'
-    );
-    const board = await call('bob', 'get_friends_board');
-    assert.equal(board.find((f) => f.username === 'alice').status, 'idle');
-
-    // Coming back doesn't bring it back, and it never pays.
-    me = await call('alice', 'back_to_page', id, 'tab-a', 30);
-    assert.equal(me.active_session, null);
-    await travel(30);
-    assert.equal((await call('alice', 'get_me')).chips, 0);
-    await travel(12 * 60);
-    assert.equal((await call('alice', 'get_me')).left_session, null, 'forgotten by the next day');
-    await travel(-12 * 60);
-    me = await call('alice', 'start_session', 5, 'tab-a');
-    assert.equal(me.left_session, null, 'forgotten once you start another');
-  });
-
-  test('back within 10 seconds, the session carries on', async () => {
-    await call('alice', 'start_session', 25, 'tab-a');
-    const { id } = await running('alice');
-    await call('alice', 'leave_page', id, 'tab-a');
-    await travel(6 / 60);
-    let me = await call('alice', 'back_to_page', id, 'tab-a', 6);
+    await travel(10);
+    assert.equal((await call('alice', 'get_me')).status, 'focused');
+    me = await call('alice', 'back_to_page', id, 'tab-a', 600);
     assert.equal(me.status, 'focused');
-    await travel(30 / 60);
-    assert.equal((await call('alice', 'get_me')).status, 'focused');
-    await travel(25);
-    me = await call('alice', 'get_me');
-    assert.equal(me.status, 'on_break');
+    await travel(15);
+    me = await call('alice', 'back_to_page', id, 'tab-a', 900);
+    assert.equal(me.status, 'on_break', 'nor take it back afterwards');
     assertPayout(me.chips, 25);
   });
 
-  test('only the page the session started on counts', async () => {
-    await call('alice', 'start_session', 25, 'laptop');
-    const { id } = await running('alice');
-    await call('alice', 'leave_page', id, 'phone');
-    await travel(1);
-    assert.equal((await call('alice', 'get_me')).status, 'focused');
-    await call('alice', 'back_to_page', id, 'phone', 600);
-    assert.equal((await call('alice', 'get_me')).status, 'focused');
-    // Nor can anyone else stop it.
-    await call('bob', 'leave_page', id, 'laptop');
-    await travel(1);
-    assert.equal((await call('alice', 'get_me')).status, 'focused');
+  test('hard mode is kept per account, and each session keeps the mode it started in', async () => {
+    let me = await call('alice', 'set_hard_mode', true);
+    assert.equal(me.hard_mode, true);
+    me = await call('alice', 'start_session', 25, 'tab-a');
+    assert.equal(me.active_session.hard, true);
+    me = await call('alice', 'set_hard_mode', false);
+    assert.equal(me.active_session.hard, true, 'changing it mid-session changes nothing');
+    await call('alice', 'cancel_session');
+
+    // Joining a friend uses your own mode, not theirs.
+    await call('bob', 'set_hard_mode', true);
+    await call('bob', 'start_session', 30);
+    me = await call('alice', 'join_session', 'bob', 'tab-a');
+    assert.equal(me.active_session.hard, false);
   });
 
-  test('leaving in the last 10 seconds still pays', async () => {
-    await call('alice', 'start_session', 25, 'tab-a');
-    const { id } = await running('alice');
-    await travel(25 - 5 / 60);
-    await call('alice', 'leave_page', id, 'tab-a');
-    await travel(1);
-    const me = await call('alice', 'get_me');
-    assert.equal(me.status, 'on_break');
-    assertPayout(me.chips, 25);
-  });
+  describe('in hard mode', () => {
+    beforeEach(async () => {
+      for (const user of ['alice', 'bob']) await call(user, 'set_hard_mode', true);
+    });
 
-  test("the app's own count of time away stops it, even when word of leaving never came", async () => {
-    // Away (with no signal) since a minute before the end: bob's board
-    // finishes the session and pays it meanwhile, and coming back takes it back.
-    await call('alice', 'start_session', 25, 'tab-a');
-    const first = await running('alice');
-    await travel(27);
-    await call('bob', 'get_friends_board');
-    const [{ chips }] = await q('select chips from public.profiles where id = $1', [ids.alice]);
-    assertPayout(chips, 25);
-    let me = await call('alice', 'back_to_page', first.id, 'tab-a', 3 * 60);
-    assert.equal(me.chips, 0, 'taken back');
-    assert.equal(me.status, 'idle');
-    assert.equal(me.last_completed, null);
-    assert.equal(me.left_session.id, first.id);
+    test('more than 10 seconds away stops the session: no chips, no break', async () => {
+      await call('alice', 'start_session', 25, 'tab-a');
+      const { id, device } = await running('alice');
+      assert.equal(device, 'tab-a');
+      await travel(5);
+      await call('alice', 'leave_page', id, 'tab-a');
+      await travel(11 / 60);
 
-    // Still running when you come back: it stops then.
-    await call('alice', 'start_session', 25, 'tab-a');
-    const second = await running('alice');
-    await travel(2);
-    me = await call('alice', 'back_to_page', second.id, 'tab-a', 60);
-    assert.equal(me.active_session, null);
-    assert.equal(me.left_session.id, second.id);
+      let me = await call('alice', 'get_me');
+      assert.equal(me.status, 'idle');
+      assert.equal(me.active_session, null);
+      assert.equal(me.break_ends_at, null);
+      assert.equal(me.left_session.id, id);
+      assertNear(
+        Date.parse(me.left_session.left_at) - Date.parse(me.left_session.started_at),
+        5 * MIN,
+        2000,
+        'left 5 minutes in'
+      );
+      const board = await call('bob', 'get_friends_board');
+      assert.equal(board.find((f) => f.username === 'alice').status, 'idle');
+
+      // Coming back doesn't bring it back, and it never pays.
+      me = await call('alice', 'back_to_page', id, 'tab-a', 30);
+      assert.equal(me.active_session, null);
+      await travel(30);
+      assert.equal((await call('alice', 'get_me')).chips, 0);
+      await travel(12 * 60);
+      assert.equal((await call('alice', 'get_me')).left_session, null, 'forgotten by the next day');
+      await travel(-12 * 60);
+      me = await call('alice', 'start_session', 5, 'tab-a');
+      assert.equal(me.left_session, null, 'forgotten once you start another');
+    });
+
+    test('back within 10 seconds, the session carries on', async () => {
+      await call('alice', 'start_session', 25, 'tab-a');
+      const { id } = await running('alice');
+      await call('alice', 'leave_page', id, 'tab-a');
+      await travel(6 / 60);
+      let me = await call('alice', 'back_to_page', id, 'tab-a', 6);
+      assert.equal(me.status, 'focused');
+      await travel(30 / 60);
+      assert.equal((await call('alice', 'get_me')).status, 'focused');
+      await travel(25);
+      me = await call('alice', 'get_me');
+      assert.equal(me.status, 'on_break');
+      assertPayout(me.chips, 25);
+    });
+
+    test('only the page the session started on counts', async () => {
+      await call('alice', 'start_session', 25, 'laptop');
+      const { id } = await running('alice');
+      await call('alice', 'leave_page', id, 'phone');
+      await travel(1);
+      assert.equal((await call('alice', 'get_me')).status, 'focused');
+      await call('alice', 'back_to_page', id, 'phone', 600);
+      assert.equal((await call('alice', 'get_me')).status, 'focused');
+      // Nor can anyone else stop it.
+      await call('bob', 'leave_page', id, 'laptop');
+      await travel(1);
+      assert.equal((await call('alice', 'get_me')).status, 'focused');
+    });
+
+    test('leaving in the last 10 seconds still pays', async () => {
+      await call('alice', 'start_session', 25, 'tab-a');
+      const { id } = await running('alice');
+      await travel(25 - 5 / 60);
+      await call('alice', 'leave_page', id, 'tab-a');
+      await travel(1);
+      const me = await call('alice', 'get_me');
+      assert.equal(me.status, 'on_break');
+      assertPayout(me.chips, 25);
+    });
+
+    test("the app's own count of time away stops it, even when word of leaving never came", async () => {
+      // Away (with no signal) since a minute before the end: bob's board
+      // finishes the session and pays it meanwhile, and coming back takes it back.
+      await call('alice', 'start_session', 25, 'tab-a');
+      const first = await running('alice');
+      await travel(27);
+      await call('bob', 'get_friends_board');
+      const [{ chips }] = await q('select chips from public.profiles where id = $1', [ids.alice]);
+      assertPayout(chips, 25);
+      let me = await call('alice', 'back_to_page', first.id, 'tab-a', 3 * 60);
+      assert.equal(me.chips, 0, 'taken back');
+      assert.equal(me.status, 'idle');
+      assert.equal(me.last_completed, null);
+      assert.equal(me.left_session.id, first.id);
+
+      // Still running when you come back: it stops then.
+      await call('alice', 'start_session', 25, 'tab-a');
+      const second = await running('alice');
+      await travel(2);
+      me = await call('alice', 'back_to_page', second.id, 'tab-a', 60);
+      assert.equal(me.active_session, null);
+      assert.equal(me.left_session.id, second.id);
+    });
   });
 });
 
@@ -1128,6 +1178,7 @@ describe('invites', () => {
     assert.deepEqual(await call('anon', 'check_signup', typed, 'dave'), {
       ok: true,
       from: 'Carol',
+      studying_until: null,
     });
 
     await signUp('dave', typed, { name: 'Dave' });
@@ -1251,6 +1302,187 @@ describe('testing tools', () => {
   });
 });
 
+describe('the car park', () => {
+  /** Buys `user` a vehicle (and leaves them with `chips` after). */
+  async function drives(user, vehicle = 'hatchback', chips = 0) {
+    const [{ price }] = await q('select price from public.items where slug = $1', [vehicle]);
+    await setChips(user, price + chips);
+    await call(user, 'buy', vehicle);
+  }
+
+  test('parking your vehicle is arriving, and friends see where you left it', async () => {
+    await rejects(call('alice', 'park', 100, 300, 0.5), /on foot/);
+    await drives('alice');
+    let me = await call('alice', 'park', 100, 300, 0.5);
+    assert.equal(me.status, 'idle');
+    assert.equal(me.place, 'outside');
+    assert.notEqual(me.desk, null);
+    assert.deepEqual(me.parked, { x: 100, y: 300, a: 0.5 });
+    assert.equal(me.vehicle_health, 100);
+    let alice = (await call('bob', 'get_friends_board')).find((f) => f.username === 'alice');
+    assert.deepEqual(alice.parked, { x: 100, y: 300, a: 0.5 });
+    assert.equal(alice.vehicle_health, 100);
+
+    // Kept to the car park, and facing somewhere between 0 and a full turn.
+    me = await call('alice', 'park', -50, 9999, -1);
+    assert.equal(me.parked.x, 0);
+    assert.equal(me.parked.y, 640);
+    assertNear(me.parked.a, 2 * Math.PI - 1, 0.001, 'heading');
+
+    await call('alice', 'start_session', 5);
+    await rejects(call('alice', 'park', 100, 300, 0), /studying/);
+    await call('alice', 'cancel_session');
+
+    // Your vehicle goes home with you.
+    me = await call('alice', 'go_home');
+    assert.equal(me.parked, null);
+    alice = (await call('bob', 'get_friends_board')).find((f) => f.username === 'alice');
+    assert.equal(alice.parked, null);
+  });
+
+  test('walking about the car park is being at work, and you can smoke there', async () => {
+    await give('alice', 'cigarette', 2);
+    await rejects(call('alice', 'smoke'), /Park up or walk about first/);
+    let me = await call('alice', 'set_place', 'outside');
+    assert.equal(me.status, 'idle');
+    assert.equal(me.place, 'outside');
+    assert.notEqual(me.desk, null);
+    const garden = await call('alice', 'smoke');
+    assert.equal(garden.me.activity, 'smoking');
+    const alice = (await call('bob', 'get_friends_board')).find((f) => f.username === 'alice');
+    assert.equal(alice.activity, 'smoking');
+    assert.ok(alice.activity_until);
+
+    // While the app's open out there, you're still at work, long after arriving.
+    for (let i = 0; i < 20; i++) {
+      await travel(1);
+      me = await call('alice', 'get_me');
+    }
+    assert.equal(me.status, 'idle');
+    await travel(3);
+    const board = await call('bob', 'get_friends_board');
+    assert.equal(board.find((f) => f.username === 'alice').status, 'absent');
+  });
+
+  test("driving into a friend's vehicle damages both, and they can claim damages", async () => {
+    await drives('alice');
+    await drives('bob');
+    await drives('carol');
+    await call('alice', 'park', 100, 300, 0);
+    await call('bob', 'park', 200, 300, 0);
+    await call('carol', 'park', 300, 300, 0);
+
+    await rejects(call('alice', 'crash', 'carol', 120), /only bump into friends/);
+    let me = await call('alice', 'crash', 'bob', 10);
+    assert.equal(me.vehicle_health, 100, 'a nudge does nothing');
+    assert.deepEqual(me.crashes, []);
+
+    me = await call('alice', 'crash', 'bob', 120);
+    assert.equal(me.vehicle_health, 80);
+    assert.equal(me.crashes.length, 1);
+    const [crash] = me.crashes;
+    assert.equal(crash.driver, 'alice');
+    assert.equal(crash.owner, 'bob');
+    assert.equal(crash.vehicle, 'hatchback');
+    assert.equal(crash.damage, 20);
+    assert.equal(crash.cost, 30, 'half the price for a wreck, so 30 for 20 damage to a 300');
+    assert.equal(crash.status, 'open');
+    me = await call('alice', 'crash', 'bob', 120);
+    assert.equal(me.vehicle_health, 80, 'crumpling into it again is the same crash');
+
+    let bob = await call('bob', 'get_me');
+    assert.equal(bob.vehicle_health, 80);
+    assert.deepEqual(
+      bob.crashes.map((c) => [c.id, c.driver_name, c.status]),
+      [[crash.id, 'Alice', 'open']]
+    );
+    await rejects(call('alice', 'claim_crash', crash.id, true), /settled/);
+
+    // alice hasn't the chips to pay it all: she pays what she has.
+    await setChips('alice', 25);
+    bob = await call('bob', 'claim_crash', crash.id, true);
+    assert.equal(bob.vehicle_health, 100, 'put right');
+    assert.equal(bob.crashes[0].status, 'claimed');
+    assert.equal(bob.crashes[0].paid_by, 'driver');
+    assert.equal(bob.crashes[0].paid, 25);
+    me = await call('alice', 'get_me');
+    assert.equal(me.chips, 0);
+    assert.equal(me.vehicle_health, 80, 'your own damage is yours to repair');
+    await rejects(call('bob', 'claim_crash', crash.id, true), /settled/);
+
+    // Only friends who are here.
+    await call('bob', 'go_home');
+    await travel(1);
+    await rejects(call('alice', 'crash', 'bob', 120), /Bob hasn't parked here/);
+  });
+
+  test('insurance pays claims for crashes while it lasts; or the owner lets them go', async () => {
+    await rejects(call('alice', 'buy_insurance'), /nothing to insure/);
+    await drives('alice', 'hatchback', 100);
+    await drives('bob');
+    await call('bob', 'park', 200, 300, 0);
+    let shop = await call('alice', 'buy_insurance');
+    assert.equal(shop.chips, 70);
+    assert.equal(shop.insurance_price, 30);
+    assert.equal(shop.insurance_days, 7);
+    assertNear(Date.parse(shop.insured_until) - Date.now(), 7 * DAY, MIN, 'insured for a week');
+
+    await call('alice', 'park', 100, 300, 0);
+    let me = await call('alice', 'crash', 'bob', 300);
+    assert.equal(me.vehicle_health, 70, 'at most 30 a crash');
+    let bob = await call('bob', 'claim_crash', me.crashes[0].id, true);
+    assert.equal(bob.crashes[0].paid_by, 'insurer');
+    assert.equal(bob.crashes[0].paid, 0);
+    assert.equal(bob.vehicle_health, 100);
+    assert.equal((await call('alice', 'get_me')).chips, 70);
+
+    // A week on, it's run out.
+    await travel(7 * 24 * 60 + 1);
+    for (const user of ['alice', 'bob']) await call(user, 'set_place', 'outside');
+    me = await call('alice', 'crash', 'bob', 60);
+    assert.equal(me.insured_until, null);
+    const open = me.crashes.find((c) => c.status === 'open');
+    bob = await call('bob', 'claim_crash', open.id, false);
+    assert.equal(bob.crashes.find((c) => c.id === open.id).status, 'waived');
+    assert.equal(bob.vehicle_health, 90, 'let go, so not put right');
+    assert.equal((await call('alice', 'get_me')).chips, 70);
+
+    await setChips('alice', 200);
+    for (let i = 0; i < 4; i++) shop = await call('alice', 'buy_insurance');
+    await rejects(call('alice', 'buy_insurance'), /weeks yet/);
+    assertNear(Date.parse(shop.insured_until) - Date.now(), 28 * DAY, MIN, 'four weeks ahead');
+  });
+
+  test('the shed repairs your vehicle, and a wreck stays at home', async () => {
+    await drives('alice');
+    await drives('bob', 'campervan');
+    await call('bob', 'park', 200, 300, 0);
+    await call('alice', 'park', 100, 300, 0);
+    await call('alice', 'crash', 'bob', 120);
+    await setChips('alice', 100);
+    let shop = await call('alice', 'get_shop');
+    assert.equal(shop.vehicle_health, 80);
+    assert.equal(shop.repair_cost, 30);
+    shop = await call('alice', 'repair_vehicle');
+    assert.equal(shop.vehicle_health, 100);
+    assert.equal(shop.chips, 70);
+    await rejects(call('alice', 'repair_vehicle'), /doesn't need repairing/);
+
+    await q('update public.profiles set vehicle_health = 0 where id = $1', [ids.alice]);
+    await rejects(call('alice', 'park', 100, 300, 0), /hatchback is a wreck/);
+    await rejects(call('alice', 'crash', 'bob', 120), /not driving anything/);
+    await setChips('alice', 0);
+    await rejects(call('alice', 'repair_vehicle'), /Not enough chips/);
+    assert.equal((await call('alice', 'get_shop')).repair_cost, 150);
+
+    // A new vehicle comes without a scratch.
+    await setChips('alice', 500);
+    shop = await call('alice', 'buy', 'estate');
+    assert.equal(shop.vehicle, 'estate');
+    assert.equal(shop.vehicle_health, 100);
+  });
+});
+
 describe('access', () => {
   test("row level security: read your own data and your friends', write nothing", async () => {
     await give('bob', 'tomato', 1);
@@ -1370,6 +1602,38 @@ describe('access', () => {
     for (const topic of ['garden:bob', 'garden-chat:bob', 'garden:carol', 'garden-chat:carol']) {
       await rejects(speak('alice', topic), /row-level security/, topic);
     }
+  });
+});
+
+describe('the car park channels', () => {
+  test("work as the garden's do: friends and theirs hear you walk, only friends hear you talk", async () => {
+    for (const name of ['alice', 'bob', 'carol', 'dave']) {
+      for (const kind of ['carpark', 'carpark-chat']) {
+        await q(
+          `insert into realtime.messages (topic, extension, event) values ($1, 'broadcast', 'x')`,
+          [`${kind}:${name}`]
+        );
+      }
+    }
+    const hears = async (user, topic) =>
+      (await asUser(user, 'select count(*)::int as n from realtime.messages', [], topic))[0].n > 0;
+    assert.equal(await hears('alice', 'carpark:alice'), true);
+    assert.equal(await hears('alice', 'carpark:bob'), true);
+    assert.equal(await hears('alice', 'carpark-chat:bob'), true);
+    assert.equal(await hears('alice', 'carpark:carol'), true, 'a friend of a friend walks');
+    assert.equal(await hears('alice', 'carpark-chat:carol'), false, 'but talks to friends');
+    assert.equal(await hears('alice', 'carpark:dave'), false, 'further off');
+
+    const speak = (user, topic) =>
+      asUser(
+        user,
+        `insert into realtime.messages (topic, extension, event) values ($1, 'broadcast', 'x')`,
+        [topic],
+        topic
+      );
+    await speak('alice', 'carpark:alice');
+    await speak('alice', 'carpark-chat:alice');
+    await rejects(speak('alice', 'carpark:bob'), /row-level security/);
   });
 });
 
@@ -1934,5 +2198,98 @@ describe('streaks', () => {
   test("skipped sessions and giving up don't count", async () => {
     assert.equal(await studiedDaysAgo([0], { skipped: true }), 0);
     assert.equal(await studiedDaysAgo([0], { status: 'cancelled' }), 0);
+  });
+});
+
+describe('emails', () => {
+  test('signing up needs a real email address, which only you can read', async () => {
+    const { code } = await call('alice', 'create_invite');
+    for (const contact of [
+      null,
+      '',
+      'gina',
+      'gina@focus.test',
+      'gina@@mail.com',
+      'Gina@Example.com',
+      'gina@mail',
+    ]) {
+      await rejects(signUp('gina', code, { contact }), /real email/, String(contact));
+    }
+    assert.match((await call('anon', 'check_signup', code, 'gina', 'nope')).reason, /real email/);
+    assert.equal((await call('anon', 'check_signup', code, 'gina', 'gina@uni.ac.uk')).ok, true);
+
+    await signUp('gina', code, { contact: '  Gina.Smith+focus@GMail.com ' });
+    assert.equal((await call('gina', 'get_me')).email, 'gina.smith+focus@gmail.com');
+    assert.deepEqual(
+      (await asUser('alice', 'select email from public.emails')).map((r) => r.email),
+      ['alice@studymail.co.uk']
+    );
+
+    // Players can change theirs, but only to a real one.
+    await rejects(call('gina', 'set_email', 'gina@localhost'), /real email/);
+    const me = await call('gina', 'set_email', 'gina@uni.ac.uk');
+    assert.equal(me.email, 'gina@uni.ac.uk');
+  });
+});
+
+describe('study invites', () => {
+  test('an invite to your session: whoever joins with it studies with you, as your friend', async () => {
+    await rejects(call('carol', 'invite_to_session'), /Start a session first/);
+    await call('carol', 'start_session', 40);
+    await travel(10);
+    const invite = await call('carol', 'invite_to_session');
+    const carol = await call('carol', 'get_me');
+    assert.equal(invite.ends_at, carol.active_session.ends_at);
+    const check = await call('anon', 'check_signup', invite.code, 'hal', 'hal@uni.ac.uk');
+    assert.equal(check.ok, true);
+    assert.equal(check.from, 'Carol');
+    assert.equal(check.studying_until, carol.active_session.ends_at);
+
+    await signUp('hal', invite.code);
+    const used = await call('hal', 'use_invite', invite.code, 'page-h');
+    assert.equal(used.from, 'Carol');
+    assert.equal(used.session, true);
+    assert.equal(used.joined, true);
+    assert.equal(used.me.active_session.ends_at, carol.active_session.ends_at);
+    assert.equal(used.me.active_session.device, 'page-h');
+    assert.ok((await call('hal', 'get_friends_board')).some((f) => f.username === 'carol'));
+
+    const again = await call('hal', 'use_invite', invite.code);
+    assert.equal(again.joined, false);
+    assert.match(again.note, /studying already/);
+    await rejects(call('bob', 'use_invite', invite.code), /isn't valid/);
+  });
+
+  test('signed-in players can use any invite to become friends, and join if it is to a session', async () => {
+    await q(
+      `delete from public.friendships
+       where (user_id = $1 and friend_id = $2) or (user_id = $2 and friend_id = $1)`,
+      [ids.alice, ids.carol]
+    );
+    await call('carol', 'start_session', 30);
+    const invite = await call('carol', 'invite_to_session');
+    await rejects(call('carol', 'use_invite', invite.code), /your own invite/);
+    const used = await call('alice', 'use_invite', invite.code, 'page-a');
+    assert.equal(used.joined, true);
+    assert.equal(used.me.status, 'focused');
+    assert.ok((await call('carol', 'get_friends_board')).some((f) => f.username === 'alice'));
+    await call('alice', 'cancel_session');
+
+    // Over by the time it's used: still friends, but nothing to join.
+    await q('delete from public.invites where created_by = $1 and used_by is null', [ids.bob]);
+    await call('bob', 'start_session', 30);
+    const late = await call('bob', 'invite_to_session');
+    await call('bob', 'cancel_session');
+    const hal = await call('hal', 'use_invite', late.code);
+    assert.equal(hal.joined, false);
+    assert.match(hal.note, /Bob has finished that session/);
+    assert.equal((await call('anon', 'check_signup', late.code, 'zed')).ok, false, 'used up');
+
+    // A plain invite makes you friends too.
+    const plain = await call('bob', 'create_invite');
+    const gina = await call('gina', 'use_invite', plain.code);
+    assert.equal(gina.session, false);
+    assert.equal(gina.joined, false);
+    assert.ok((await call('gina', 'get_friends_board')).some((f) => f.username === 'bob'));
   });
 });

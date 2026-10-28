@@ -16,6 +16,13 @@ const GONE_AFTER_MS = 50_000;
 
 export type Bubble = { id: number; text: string; ttl: number };
 
+/** Anything more a position says: in the car park, whether you're driving, and which way. */
+export type Extra = { car?: number; a?: number };
+
+/** Which place's channels: "garden:<username>" and "garden-chat:", or the car park's. */
+export type Where = { prefix: 'garden' | 'carpark'; clamp: (p: Point) => Point };
+const GARDEN: Where = { prefix: 'garden', clamp: clampToGarden };
+
 /** Longer messages stay up a little longer: 4–10 s. */
 const ttlFor = (text: string) => Math.min(10_000, 4_000 + text.length * 60);
 
@@ -23,12 +30,12 @@ let nextId = 1;
 
 type Handlers = {
   /** A friend moved (or told us where they are, and whether they're sitting on a bench). */
-  onMove: (username: string, at: Point, sitting: boolean) => void;
+  onMove: (username: string, at: Point, sitting: boolean, extra: Extra) => void;
   /**
    * You moved on another device (or it said where you are). `walking` means
    * someone's steering you there.
    */
-  onSelf: (at: Point, sitting: boolean, walking: boolean) => void;
+  onSelf: (at: Point, sitting: boolean, walking: boolean, extra: Extra) => void;
   /** A rift opened at `at`: between your own devices, or a friend's. */
   onRift: (username: string, at: Point) => void;
   /** Where you are, to answer a friend who's just come into the garden. */
@@ -37,14 +44,24 @@ type Handlers = {
   sitting: () => boolean;
   /** Whether you're being steered on this device. */
   steering: () => boolean;
+  /** Anything more to say with your position. */
+  extra?: () => Extra;
 };
+
+/** The extra fields a position can carry, if they're numbers. */
+function extraOf(payload: Record<string, unknown>): Extra {
+  return {
+    ...(payload.car === 1 && { car: 1 }),
+    ...(Number.isFinite(payload.a) && { a: payload.a as number }),
+  };
+}
 
 const isPoint = (
   p: { x?: unknown; y?: unknown } | undefined
 ): p is Point & Record<string, unknown> => Number.isFinite(p?.x) && Number.isFinite(p?.y);
 
 /**
- * The garden's live link: who's in it, where they're standing, and
+ * The garden's (or the car park's) live link: who's in it, where they're standing, and
  * Club Penguin-style chat bubbles. Everyone has two private Realtime channels:
  * "garden:<username>", where they are, which friends and friends of friends
  * hear; and "garden-chat:<username>", what they say, which only friends hear.
@@ -68,7 +85,8 @@ export function useGardenChannel(
   /** Friends of friends in the garden: you see them walk, but don't hear them talk. */
   others: string[],
   enabled: boolean,
-  handlers: Handlers
+  handlers: Handlers,
+  place: Where = GARDEN
 ) {
   const [bubbles, setBubbles] = useState<Record<string, Bubble>>({});
   /** Friends who are in the garden right now, as far as we've heard. */
@@ -120,6 +138,7 @@ export function useGardenChannel(
         ...(on.current.sitting() && { sit: 1 }),
         ...(on.current.steering() && { walk: 1 }),
         ...(arriving && { new: 1 }),
+        ...on.current.extra?.(),
       },
     });
   }, []);
@@ -139,8 +158,9 @@ export function useGardenChannel(
       mine.current?.send({ type: 'broadcast', event: 'hello', payload: {} });
       sendPos(true);
     };
+    const { prefix, clamp } = place;
     const where = walkers.map((username) => {
-      const channel = supabase.channel(`garden:${username}`, { config: { private: true } });
+      const channel = supabase.channel(`${prefix}:${username}`, { config: { private: true } });
       // Your other devices. (Nothing you send here comes back to this one.)
       if (username === me) {
         channel
@@ -149,9 +169,10 @@ export function useGardenChannel(
             // Just arrived there: this device knows better, so say where you are.
             if (payload.new === 1) return sendPos();
             on.current.onSelf(
-              clampToGarden({ x: payload.x, y: payload.y }),
+              clamp({ x: payload.x, y: payload.y }),
               payload.sit === 1,
-              payload.walk === 1
+              payload.walk === 1,
+              extraOf(payload)
             );
           })
           .on('broadcast', { event: 'rift' }, ({ payload }) => {
@@ -163,8 +184,9 @@ export function useGardenChannel(
             if (!Number.isFinite(payload?.x) || !Number.isFinite(payload?.y)) return;
             on.current.onMove(
               username,
-              clampToGarden({ x: payload.x, y: payload.y }),
-              payload.sit === 1
+              clamp({ x: payload.x, y: payload.y }),
+              payload.sit === 1,
+              extraOf(payload)
             );
             hear(username);
           })
@@ -181,7 +203,7 @@ export function useGardenChannel(
     // What you and your friends say, on each one's chat channel (yours from your other devices too).
     const said = talkers.map((username) =>
       supabase
-        .channel(`garden-chat:${username}`, { config: { private: true } })
+        .channel(`${prefix}-chat:${username}`, { config: { private: true } })
         .on('broadcast', { event: 'say' }, ({ payload }) => {
           if (typeof payload?.text !== 'string') return;
           if (username !== me) hear(username);
@@ -226,7 +248,7 @@ export function useGardenChannel(
       listening.clear();
       publishPresent();
     };
-  }, [me, friendKey, othersKey, enabled, show, hear, publishPresent, sendPos]);
+  }, [me, friendKey, othersKey, enabled, show, hear, publishPresent, sendPos, place]);
 
   /** Says something; returns false if it was empty or too soon after the last. */
   const say = useCallback(

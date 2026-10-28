@@ -46,6 +46,8 @@ export const palette = {
     lit: '#f2d8a2',
     hedge: '#5d7a5a',
     tree: '#6b8a62',
+    verge: '#71906a',
+    road: '#55595e',
   },
   office: {
     ground: '#c9b9a2',
