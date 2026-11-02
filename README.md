@@ -10,8 +10,8 @@ up and shipping each update is in **[deployment/](deployment/)**, starting with
 change before a pull request is in **[docs/TESTING.md](docs/TESTING.md)**.
 
 ## The places
-- **Car park**: where the app opens. Drive your car or bike in and park where
-  there's room (mind friends' cars: bumps cost chips unless you're insured),
+- **Car park**: where the app opens. Drive your car into a free bay (or your bike
+  into the rack) and park (mind friends' cars: bumps cost chips unless you're insured),
   then walk about, chat and smoke. Friends who are in show as their vehicles
   and, if they're out there, walking about.
 - **Office**: twelve identical desks. You get a random one when you walk in and

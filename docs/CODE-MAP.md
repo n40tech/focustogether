@@ -33,11 +33,12 @@ screen or a module, change the tables below.
 | `src/app/(app)/payout.tsx`, `garden.tsx`, `shop.tsx`, `friends.tsx` | The payout, the garden, the shed (with repairs and insurance) and the Friends board. |
 | `src/components/StudyPanel.tsx` | Picking a length, hard mode, the countdown, and the study invite. |
 | `src/components/Noticeboard.tsx` | The Friends board: friends, requests, invites, notifications, your email. |
+| `src/components/Steering.tsx` | The thumbstick on a touchscreen; on a computer, the keys to press. |
 | `src/components/Walkabout.tsx` | Shared by the garden and the car park: `Pan`, `Follow`, `Label`, `ChatBar`, `useLit`. |
 | `src/world/World.tsx` | `useWorld()`: you, friends, friends of friends and looks, polled every 10 s. `useGo()` moves between places. |
 | `src/world/useWalker.ts` | Walking (and, with `driving`, driving) with the stick or keys, the camera, collisions. |
 | `src/world/useGardenChannel.ts` | Realtime positions and chat, for the garden or (with `CHANNELS`) the car park. |
-| `src/world/gardenMap.ts`, `carParkMap.ts` | Each place's layout and what blocks you. |
+| `src/world/gardenMap.ts`, `carParkMap.ts` | Each place's layout and what blocks you. `carParkMap` also says where you can park (`parkingSpot`: a free bay, or a rack slot for a bike). |
 | `src/world/seats.ts` | Who sits at which desk (and the bay that goes with it). |
 | `src/lib/api.ts` | Every type the server returns, and `api.*` wrappers for each RPC. |
 | `src/lib/away.ts` | Hard mode: telling the server when the page is left, and keeping the screen on. |
@@ -79,7 +80,9 @@ Public (called by the app with `supabase.rpc`):
 | 0013 | `place_desk_item`, `store_desk_item` |
 | 0014 | `get_profile` |
 | 0015 | `drop_push`, `due_pushes`, `forget_pushes`, `save_push` |
-| 0017 | `back_to_page`, `buy`, `buy_insurance`, `check_signup`, `claim_crash`, `crash`, `get_friends_board`, `get_friends_of_friends`, `get_me`, `get_shop`, `go_home`, `invite_to_session`, `join_session`, `leave_page`, `may_listen`, `park`, `repair_vehicle`, `set_email`, `set_hard_mode`, `set_place`, `smoke`, `start_session`, `use_invite` |
+| 0017 | `back_to_page`, `buy`, `buy_insurance`, `check_signup`, `claim_crash`, `crash`, `get_friends_board`, `get_friends_of_friends`, `get_me`, `get_shop`, `go_home`, `invite_to_session`, `join_session`, `leave_page`, `may_listen`, `repair_vehicle`, `set_email`, `set_hard_mode`, `set_place`, `smoke`, `start_session`, `use_invite` |
+| 0018 | `park` |
+| 0019 | `bump` |
 
 Private (helpers; the app can't call them):
 
@@ -116,6 +119,18 @@ Things to know when writing one:
   `realtime.messages` but not `alter` them (it isn't the owner). The test
   stubs don't catch that; rehearsing locally does.
 - Each file runs once, as one transaction, on a database in use.
+
+## Keeping it quick
+
+- `usePolled` ignores a poll that brings back what it had (bar
+  `server_now`), so nothing redraws for it. Keep it that way: a whole place
+  redrawing every few seconds stutters on slower laptops.
+- What a place draws that never changes (the car park's office, bays and
+  lamp posts) is a `memo` component, so other changes don't redraw it.
+- Walking and driving move Animated values directly; nothing re-renders as
+  you move. Keep per-frame work out of React state.
+- To measure: drive a Playwright page with the CPU slowed
+  (`Emulation.setCPUThrottlingRate`), and watch long tasks and frame times.
 
 ## Tests
 

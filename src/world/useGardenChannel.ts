@@ -98,6 +98,7 @@ export function useGardenChannel(
   const ready = useRef(false);
   const lastSaid = useRef(0);
   const sentAt = useRef(0);
+  const lastSent = useRef('');
   const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
   const friendKey = friends.join(',');
   const othersKey = others.join(',');
@@ -125,22 +126,28 @@ export function useGardenChannel(
     [publishPresent]
   );
 
-  const sendPos = useCallback((arriving = false) => {
+  /**
+   * Says where you are. `onlyIfMoved` (as you walk) skips it when that's just
+   * what you said last time, say while you're pushing against a wall: each
+   * message counts against Supabase's Realtime quota, for every friend who
+   * hears it.
+   */
+  const sendPos = useCallback((arriving = false, onlyIfMoved = false) => {
     if (!ready.current) return;
     const at = on.current.where();
+    const payload = {
+      x: Math.round(at.x),
+      y: Math.round(at.y),
+      ...(on.current.sitting() && { sit: 1 }),
+      ...(on.current.steering() && { walk: 1 }),
+      ...(arriving && { new: 1 }),
+      ...on.current.extra?.(),
+    };
+    const text = JSON.stringify(payload);
+    if (onlyIfMoved && text === lastSent.current) return;
+    lastSent.current = text;
     sentAt.current = Date.now();
-    mine.current?.send({
-      type: 'broadcast',
-      event: 'pos',
-      payload: {
-        x: Math.round(at.x),
-        y: Math.round(at.y),
-        ...(on.current.sitting() && { sit: 1 }),
-        ...(on.current.steering() && { walk: 1 }),
-        ...(arriving && { new: 1 }),
-        ...on.current.extra?.(),
-      },
-    });
+    mine.current?.send({ type: 'broadcast', event: 'pos', payload });
   }, []);
 
   useEffect(() => {
@@ -225,7 +232,7 @@ export function useGardenChannel(
     myChat.current = said[0];
     // Don't wait forever on a friend's channel that won't join.
     const fallback = setTimeout(greet, 4000);
-    const heartbeat = setInterval(sendPos, HEARTBEAT_MS);
+    const heartbeat = setInterval(() => sendPos(), HEARTBEAT_MS);
     const sweep = setInterval(() => {
       const cutoff = Date.now() - GONE_AFTER_MS;
       let changed = false;
@@ -277,10 +284,10 @@ export function useGardenChannel(
   const moved = useCallback(() => {
     if (pending.current) return;
     const wait = sentAt.current + POS_EVERY_MS - Date.now();
-    if (wait <= 0) return sendPos();
+    if (wait <= 0) return sendPos(false, true);
     pending.current = setTimeout(() => {
       pending.current = null;
-      sendPos();
+      sendPos(false, true);
     }, wait);
   }, [sendPos]);
 

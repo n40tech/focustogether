@@ -109,7 +109,8 @@ async function travel(minutes) {
   );
   await q(
     `update public.profiles set went_home_at = went_home_at - ${m}, activity_until = activity_until - ${m},
-       arrived_at = arrived_at - ${m}, seen_at = seen_at - ${m}, insured_until = insured_until - ${m}`
+       arrived_at = arrived_at - ${m}, seen_at = seen_at - ${m}, insured_until = insured_until - ${m},
+       bumped_at = bumped_at - ${m}`
   );
   await q(`update public.crashes set at = at - ${m}, settled_at = settled_at - ${m}`);
   await q(
@@ -212,7 +213,7 @@ beforeEach(async () => {
     `update public.profiles set chips = 0, vehicle = null, went_home_at = null, activity = null,
        activity_until = null, arrived_at = null, desk = null, tester = false, place = null,
        seen_at = null, tips = '{}', hard_mode = false, parked = null, vehicle_health = 100,
-       insured_until = null`
+       insured_until = null, bumped_at = null`
   );
 });
 
@@ -1323,11 +1324,17 @@ describe('the car park', () => {
     assert.deepEqual(alice.parked, { x: 100, y: 300, a: 0.5 });
     assert.equal(alice.vehicle_health, 100);
 
-    // Kept to the car park, and facing somewhere between 0 and a full turn.
-    me = await call('alice', 'park', -50, 9999, -1);
-    assert.equal(me.parked.x, 0);
-    assert.equal(me.parked.y, 640);
+    // Kept to the car park (which carries on a little past either side), and
+    // facing somewhere between 0 and a full turn.
+    me = await call('alice', 'park', -500, 9999, -1);
+    assert.equal(me.parked.x, -80);
+    assert.equal(me.parked.y, 660);
     assertNear(me.parked.a, 2 * Math.PI - 1, 0.001, 'heading');
+    me = await call('alice', 'park', 900, 0, 0);
+    assert.deepEqual(me.parked, { x: 460, y: 150, a: 0 });
+    // Up on the pavement, as a bike in the rack is.
+    me = await call('alice', 'park', 22, 202, 0);
+    assert.deepEqual(me.parked, { x: 22, y: 202, a: 0 });
 
     await call('alice', 'start_session', 5);
     await rejects(call('alice', 'park', 100, 300, 0), /studying/);
@@ -1451,6 +1458,24 @@ describe('the car park', () => {
     for (let i = 0; i < 4; i++) shop = await call('alice', 'buy_insurance');
     await rejects(call('alice', 'buy_insurance'), /weeks yet/);
     assertNear(Date.parse(shop.insured_until) - Date.now(), 28 * DAY, MIN, 'four weeks ahead');
+  });
+
+  test('driving into a lamp post damages your own vehicle', async () => {
+    await rejects(call('alice', 'bump', 120), /not driving anything/);
+    await drives('alice');
+    let me = await call('alice', 'bump', 10);
+    assert.equal(me.vehicle_health, 100, 'a nudge does nothing');
+    me = await call('alice', 'bump', 120);
+    assert.equal(me.vehicle_health, 80);
+    me = await call('alice', 'bump', 120);
+    assert.equal(me.vehicle_health, 80, 'crumpling into it again is the same bump');
+    await travel(0.1);
+    me = await call('alice', 'bump', 600);
+    assert.equal(me.vehicle_health, 50, 'at most 30 a bump');
+    assert.deepEqual(me.crashes, [], "there's nobody to claim");
+
+    await call('alice', 'start_session', 5);
+    await rejects(call('alice', 'bump', 120), /studying/);
   });
 
   test('the shed repairs your vehicle, and a wreck stays at home', async () => {
