@@ -36,8 +36,12 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="apple-mobile-web-app-title" content="Focus Together" />
         {/* ?v= changes with the icon, so browsers and phones fetch the new
             one instead of keeping theirs (see scripts/icons.mjs). */}
-        <link rel="manifest" href="/manifest.json?v=3" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3" />
+        <link rel="manifest" href="/manifest.json?v=4" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=4" />
+        {/* The clock: an SVG that turns to midnight in dark mode, and a PNG
+            for browsers that can't show an SVG icon. */}
+        <link rel="icon" href="/favicon.png?v=4" sizes="48x48" />
+        <link rel="icon" href="/favicon.svg?v=4" type="image/svg+xml" />
         <ScrollViewStyleReset />
         <style dangerouslySetInnerHTML={{ __html: PAGE_BACKGROUND }} />
       </head>

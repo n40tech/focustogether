@@ -155,9 +155,12 @@ a pull request is in **[docs/TESTING.md](docs/TESTING.md)**.
   audio files yet.
 - Scenes are placeholder art built from shapes (`src/art`), seen from above and
   in front.
-- The icon, two of the game's people in front of a timer on sage, is drawn by
+- The icon, two friends under the office clock, is drawn by
   `scripts/icons.mjs`: change it there and run `npm run icons` to write every
-  size. `public/manifest.json` and `src/app/+html.tsx` give it, and the name, to
+  size. By day they look up at the clock; iOS's dark icon has them at midnight,
+  telling a ghost story by torchlight. The favicon is just the clock, and its
+  SVG turns to midnight when the browser is in dark mode. `app.json`,
+  `public/manifest.json` and `src/app/+html.tsx` give the icons, and the name, to
   browsers and phones. Raise the `?v=` in both when the icon changes, or they
   keep showing the old one.
 - While it's in beta, a banner across the top of every place but the office
