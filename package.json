@@ -5,7 +5,7 @@
   "homepage": "https://focustogether.expo.app",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/n40tech/focus-together.git"
+    "url": "git+https://github.com/n40tech/focustogether.git"
   },
   "license": "MIT",
   "private": true,

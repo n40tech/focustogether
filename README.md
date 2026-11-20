@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/n40tech/focus-together/actions/workflows/ci.yml"><img src="https://github.com/n40tech/focus-together/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="https://github.com/n40tech/focustogether/actions/workflows/ci.yml"><img src="https://github.com/n40tech/focustogether/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
   <img src="https://img.shields.io/badge/status-invite--only%20beta-7a9a7e" alt="Status: invite-only beta">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT"></a>
 </p>
