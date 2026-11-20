@@ -1,8 +1,28 @@
-# Focus Together
+<p align="center">
+  <img src="assets/icon.png" width="112" alt="Focus Together app icon">
+</p>
 
-A calm, sound-first study game for friends. Park up, study at your desk in a
-shared office, earn poker chips for every minute, and spend your earned breaks
-in the allotment garden. Expo (web now; iOS / Android later) + Supabase.
+<h1 align="center">Focus Together</h1>
+
+<p align="center">
+  <b>A calm, sound-first study game for friends.</b><br>
+  Park up, study at your desk in a shared office, earn poker chips for every minute,<br>
+  and spend your earned breaks in the allotment garden.
+</p>
+
+<p align="center">
+  <a href="https://focustogether.expo.app">Play it</a> ·
+  <a href="docs/PLAN.md">Game plan</a> ·
+  <a href="deployment/0001-setup-and-launch.md">Run your own</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/n40tech/focus-together/actions/workflows/ci.yml"><img src="https://github.com/n40tech/focus-together/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <img src="https://img.shields.io/badge/status-invite--only%20beta-7a9a7e" alt="Status: invite-only beta">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT"></a>
+</p>
+
+> **Invite-only beta:** sign-up needs an invite code. Built with Expo (web now; iOS / Android later) and Supabase.
 
 The design, rules and roadmap are in **[docs/PLAN.md](docs/PLAN.md)**. Setting
 up and shipping each update is in **[deployment/](deployment/)**, starting with
@@ -142,3 +162,7 @@ a pull request is in **[docs/TESTING.md](docs/TESTING.md)**.
   keep showing the old one.
 - While it's in beta, a banner across the top of every place but the office
   links testers to the WhatsApp group (`src/components/BetaBanner.tsx`).
+
+## License
+
+[MIT](LICENSE).

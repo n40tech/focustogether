@@ -1,6 +1,14 @@
 {
   "name": "focus-app",
   "version": "1.0.0",
+  "description": "A calm, sound-first study game for friends. Expo + Supabase.",
+  "homepage": "https://focustogether.expo.app",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/n40tech/focus-together.git"
+  },
+  "license": "MIT",
+  "private": true,
   "main": "expo-router/entry",
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -37,6 +45,5 @@
     "test:web": "playwright test",
     "icons": "node scripts/icons.mjs",
     "vapid-keys": "node scripts/vapid-keys.mjs"
-  },
-  "private": true
+  }
 }
