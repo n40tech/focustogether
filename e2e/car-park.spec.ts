@@ -180,3 +180,11 @@ test('on a computer, the keys to press are where the thumbstick would be', async
   await expect(page.getByLabel(/Drive with W and S, and steer with A and D/)).toBeVisible();
   await expect(page.getByText('A D steer', { exact: false })).toBeVisible();
 });
+
+test('under-18s have nothing to smoke', async ({ page, fake }) => {
+  fake.atDesk();
+  fake.me.under_18 = true;
+  await fake.open('/');
+  await expect(button(page, 'Go in')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Smoke a cigarette/ })).toHaveCount(0);
+});

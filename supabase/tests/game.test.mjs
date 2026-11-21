@@ -80,7 +80,7 @@ async function asService(fn, ...args) {
 }
 
 /** What Supabase Auth does on sign-up: insert the user with the form's metadata. */
-async function signUp(username, invite, { email, name, contact } = {}) {
+async function signUp(username, invite, { email, name, contact, born } = {}) {
   const [u] = await q(
     `insert into auth.users (email, raw_user_meta_data) values ($1, $2) returning id`,
     [
@@ -93,6 +93,7 @@ async function signUp(username, invite, { email, name, contact } = {}) {
           contact === undefined
             ? `${username.normalize('NFD').replace(/[^a-z0-9_]/g, '')}@studymail.co.uk`
             : contact,
+        born: born === undefined ? '1999-04-01' : born,
       },
     ]
   );
@@ -2313,6 +2314,70 @@ describe('emails', () => {
     await rejects(call('gina', 'set_email', 'gina@localhost'), /real email/);
     const me = await call('gina', 'set_email', 'gina@uni.ac.uk');
     assert.equal(me.email, 'gina@uni.ac.uk');
+  });
+});
+
+/** The date `years` ago today, as YYYY-MM-DD, moved by `days`. */
+function yearsAgo(years, days = 0) {
+  const d = new Date();
+  d.setUTCFullYear(d.getUTCFullYear() - years);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+describe('dates of birth', () => {
+  test('signing up needs a real date of birth, which nobody can read', async () => {
+    const { code } = await call('alice', 'create_invite');
+    for (const born of [null, '', 'soon', '2001-02-30', '1899-12-31', yearsAgo(0, 1)]) {
+      await rejects(signUp('ivy', code, { born }), /date of birth/, String(born));
+    }
+    await signUp('ivy', code, { born: yearsAgo(30) });
+    assert.equal((await call('ivy', 'get_me')).under_18, false);
+    for (const user of ['ivy', 'alice', 'anon']) {
+      await rejects(asUser(user, 'select * from public.birthdays'), /permission denied/);
+    }
+  });
+
+  test('players who joined before dates of birth count as grown-ups', async () => {
+    await q('delete from public.birthdays where user_id = $1', [ids.alice]);
+    assert.equal((await call('alice', 'get_me')).under_18, false);
+  });
+
+  test('under-18s have no cigarettes: none in the shed, from friends or stalls', async () => {
+    const { code } = await call('alice', 'create_invite');
+    await signUp('jay', code, { born: yearsAgo(18, 1) });
+    let me = await call('jay', 'get_me');
+    assert.equal(me.under_18, true);
+
+    await setChips('jay', 100);
+    const shop = await call('jay', 'get_shop');
+    assert.equal(
+      shop.items.some((i) => i.kind === 'cigarette'),
+      false
+    );
+    assert.ok((await call('alice', 'get_shop')).items.some((i) => i.kind === 'cigarette'));
+    await rejects(call('jay', 'buy', 'cigarette'), /over-18s/);
+    await q('update public.profiles set tester = true where id = $1', [ids.jay]);
+    await rejects(call('jay', 'dev_item', 'cigarette', 5), /over-18s/);
+    await rejects(call('jay', 'smoke'), /over-18s/);
+
+    // A friend can't give them any, or sell them any.
+    await give('alice', 'cigarette', 5);
+    await study(['alice', 'jay'], 50);
+    const garden = await call('alice', 'offer_trade', 'jay', 'cigarette', 1, null, null);
+    await rejects(call('jay', 'respond_trade', garden.trades[0].id, true), /over-18s/);
+    await call('jay', 'respond_trade', garden.trades[0].id, false);
+    const stall = await call('alice', 'list_item', 'cigarette', 2, 1);
+    const chips = (await call('jay', 'get_me')).chips;
+    await rejects(call('jay', 'buy_listing', stall.me.stall[0].id, 1), /over-18s/);
+    me = await call('jay', 'get_me');
+    assert.equal(me.inventory.cigarette, undefined);
+    assert.equal(me.chips, chips);
+
+    // On their 18th birthday, they're grown up.
+    await q('update public.birthdays set born = $2 where user_id = $1', [ids.jay, yearsAgo(18)]);
+    assert.equal((await call('jay', 'get_me')).under_18, false);
+    await call('jay', 'buy', 'cigarette');
   });
 });
 

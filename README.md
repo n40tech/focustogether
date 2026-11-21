@@ -51,7 +51,8 @@ change before a pull request is in **[docs/TESTING.md](docs/TESTING.md)**.
   bins, write letters at the post box, see friends at the Friends board, and
   buy and sell at the market with friends standing next to you. Walk out
   through the gate to go back to work.
-- **Shed**: vehicles, desk things, seeds and cigarettes.
+- **Shed**: vehicles, desk things, seeds and cigarettes (not for under-18s:
+  sign-up asks for a date of birth).
 - **Friends board**: friends, their profiles, asking to be friends, and
   invites. In the office, tap a friend's desk to join their session.
 

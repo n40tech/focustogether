@@ -43,6 +43,8 @@ once (Claude does this through the Supabase connector, md5-guarded, as
 
 ## 2. Run migration 0019
 
+**Done late, on 2026-11-20**: it had been missed when this update merged.
+
 The new app calls `bump` when you drive into a lamp post. Check it hasn't
 been run already:
 

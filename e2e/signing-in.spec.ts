@@ -10,6 +10,7 @@ test('joining with an invite link', async ({ page, fake }) => {
   await username.fill('Nate!');
   await page.getByPlaceholder('Your name (shown to friends)').fill('Nate');
   await page.getByPlaceholder('Email (for news; never shown)').fill('nate@studymail.co.uk');
+  await page.getByPlaceholder('Date of birth (DD/MM/YYYY)').fill('01041999');
   await page.getByPlaceholder('Password').fill('hunter22');
   await button(page, 'Join').click();
   await expect(
@@ -27,6 +28,7 @@ test('joining with an invite link', async ({ page, fake }) => {
         username: 'nate',
         display_name: 'Nate',
         contact_email: 'nate@studymail.co.uk',
+        born: '1999-04-01',
       },
     }),
   ]);
@@ -40,6 +42,7 @@ test('a username can have accents; the account email is its plain spelling', asy
   await fake.open(`/login?invite=${INVITE}`);
   await page.getByPlaceholder('Username (how friends find you)').fill(' Zoë_Straße ');
   await page.getByPlaceholder('Email (for news; never shown)').fill('nate@studymail.co.uk');
+  await page.getByPlaceholder('Date of birth (DD/MM/YYYY)').fill('01041999');
   await page.getByPlaceholder('Password').fill('hunter22');
   await button(page, 'Join').click();
   await expect(button(page, 'Walk in')).toBeVisible();
@@ -51,6 +54,7 @@ test('a username can have accents; the account email is its plain spelling', asy
         username: 'zoë_straße',
         display_name: 'Zoë_Straße',
         contact_email: 'nate@studymail.co.uk',
+        born: '1999-04-01',
       },
     }),
   ]);
@@ -92,4 +96,27 @@ test('logging out on a break counts as going home', async ({ page, fake }) => {
   expect(fake.calls[home]?.status).toBe('on_break');
   expect(home).toBeLessThan(fake.calls.findIndex((c) => c.fn === 'logout'));
   expect(fake.me.status).toBe('absent');
+});
+
+test('joining needs a real date of birth', async ({ page, fake }) => {
+  fake.signedIn = false;
+  await fake.open(`/login?invite=${INVITE}`);
+  await page.getByPlaceholder('Username (how friends find you)').fill('nate');
+  await page.getByPlaceholder('Email (for news; never shown)').fill('nate@studymail.co.uk');
+  const born = page.getByPlaceholder('Date of birth (DD/MM/YYYY)');
+  await born.fill('31022009');
+  await expect(born).toHaveValue('31/02/2009');
+  await page.getByPlaceholder('Password').fill('hunter22');
+  await button(page, 'Join').click();
+  await expect(
+    page.getByText('Write your date of birth as day, month and year: 14/03/2009')
+  ).toBeVisible();
+  expect(fake.called('signup')).toEqual([]);
+
+  await born.fill('14/03/2009');
+  await button(page, 'Join').click();
+  await expect(button(page, 'Walk in')).toBeVisible();
+  expect(fake.called('signup')).toEqual([
+    expect.objectContaining({ data: expect.objectContaining({ born: '2009-03-14' }) }),
+  ]);
 });

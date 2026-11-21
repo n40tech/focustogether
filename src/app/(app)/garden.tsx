@@ -543,7 +543,7 @@ export default function GardenScene() {
             x={0}
             y={0}
             pose={sitting.includes(n.username) ? 'bench' : 'stand'}
-            activity={n.activity}
+            activity={me.under_18 ? null : n.activity}
             smokingUntil={n.activity_until}
             basket={n.stall.length > 0}
           />
@@ -839,15 +839,17 @@ export default function GardenScene() {
                 )}
               </View>
               <View style={styles.row}>
-                <Button
-                  title={smoking ? 'Smoking' : 'Smoke'}
-                  accessibilityLabel={`Smoke a cigarette (${cigarettes} left)`}
-                  variant="quiet"
-                  small
-                  style={styles.grow}
-                  disabled={smoking || cigarettes === 0}
-                  onPress={() => act(() => api.smoke(), 'lighter')}
-                />
+                {!me.under_18 && (
+                  <Button
+                    title={smoking ? 'Smoking' : 'Smoke'}
+                    accessibilityLabel={`Smoke a cigarette (${cigarettes} left)`}
+                    variant="quiet"
+                    small
+                    style={styles.grow}
+                    disabled={smoking || cigarettes === 0}
+                    onPress={() => act(() => api.smoke(), 'lighter')}
+                  />
+                )}
                 <Button
                   title={incoming.length > 0 ? `Basket · ${incoming.length}` : 'Basket'}
                   accessibilityLabel={

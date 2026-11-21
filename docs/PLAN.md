@@ -357,6 +357,10 @@ touching code.
   for tests and examples. Only its owner can read it, and the project's
   dashboard. Players who joined before add theirs on the Friends board (a
   tip in the car park asks, once).
+- And a date of birth, typed day first (`public.birthdays`). Nobody can read
+  it, not even its owner: the game only knows whether you're under 18. Under
+  18s have no cigarettes (see *Cigarettes*). Players who joined before have
+  none, and count as grown-ups.
 - An invite opened by someone who's already signed in makes them friends
   with whoever made it, and uses it up.
 - An invite can be to a session (see *Studying together*).
@@ -398,6 +402,10 @@ Friends, and friends of friends, see it everywhere you're drawn.
 Smoked in the garden or the car park, one at a time. Each burns for **3 minutes**, getting
 shorter as it goes, then it's out. Friends see the smoke and hear a lighter
 flick and a quiet crackle.
+
+Not for under-18s. The shed doesn't show them cigarettes, there's no Smoke
+button, friends' trades and stalls can't pass them any, and they don't see
+friends smoking. On their 18th birthday that stops by itself.
 
 ### Post
 - The **post box** in the garden takes letters (up to 1000 characters) to
@@ -627,6 +635,7 @@ deployment/               numbered runbooks for setting up and shipping each upd
 | `profiles` | + `hard_mode` (0017); + `parked` {x, y, a}, `vehicle_health` (0–100), `insured_until` (0017); + `bumped_at` (0019) |
 | `sessions` | + `hard`: started in hard mode (0017) |
 | `emails` | player → email, for news; readable only by its owner (0017) |
+| `birthdays` | player → date of birth; readable by nobody, only `under_18` reaches the app (0021) |
 | `invites` | + `session`: the session it asks you to join (0017) |
 | `crashes` | driver, owner, vehicle hit, damage, repair cost, open / claimed / waived, who paid what (0017) |
 | `sessions`, `friend_requests` | + `start_pushed_at`, `end_pushed_at`, `break_pushed_at` / `pushed_at`: told once (0015) |

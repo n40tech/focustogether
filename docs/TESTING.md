@@ -232,6 +232,10 @@ and the places around it, in both windows. Every so often (and always for a
 bigger change), do the whole round:
 
 - [ ] **Join and sign in:** join with an invite, log out, sign in again.
+      The date of birth fills in its slashes as you type, and a date that
+      isn't real (31/02/2009) is turned down. Join again with a date of
+      birth under 18 years ago: the shed has no cigarettes, and there's no
+      Smoke button in the car park or the garden.
       Logging out on a break counts as going home. A username with accents
       (say `zoë`) can sign in as `zoe` too.
 - [ ] **Friends board:** ask someone to be friends by username (with or

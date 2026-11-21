@@ -230,3 +230,10 @@ test("a friend of a friend walks about, see-through, as Bob's friend until you t
   expect([...fake.joined]).not.toContain('garden-chat:dave');
   expect([...fake.joined]).toContain('garden-chat:bob');
 });
+
+test('under-18s have nothing to smoke in the garden', async ({ page, fake }) => {
+  fake.me.under_18 = true;
+  await enterGarden(page, fake);
+  await expect(button(page, 'Your basket')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Smoke a cigarette/ })).toHaveCount(0);
+});

@@ -17,6 +17,7 @@ test('someone new opens the link, joins, and studies with you', async ({ page, f
   await expect(page.getByText(/Bob invited you to study with them, until/)).toBeVisible();
   await page.getByPlaceholder('Username (how friends find you)').fill('nate');
   await page.getByPlaceholder('Email (for news; never shown)').fill('nate@studymail.co.uk');
+  await page.getByPlaceholder('Date of birth (DD/MM/YYYY)').fill('01041999');
   await page.getByPlaceholder('Password').fill('hunter22');
   await button(page, 'Join').click();
 
@@ -43,6 +44,7 @@ test('signing up needs a real email', async ({ page, fake }) => {
   await fake.open(`/login?invite=${STUDY_INVITE}`);
   await page.getByPlaceholder('Username (how friends find you)').fill('nate');
   await page.getByPlaceholder('Email (for news; never shown)').fill('nate@focus.test');
+  await page.getByPlaceholder('Date of birth (DD/MM/YYYY)').fill('01041999');
   await page.getByPlaceholder('Password').fill('hunter22');
   await button(page, 'Join').click();
   await expect(page.getByText("That doesn't look like a real email address")).toBeVisible();
