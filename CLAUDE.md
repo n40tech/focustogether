@@ -35,6 +35,9 @@ screen or module.
 - **The car park** is walkable too, and you drive your vehicle in
   (`src/app/(app)/index.tsx`, `src/world/carParkMap.ts`; driving is in
   `useWalker`). Friends hear you on `carpark:<username>` channels.
+- **The website** (`site/`, on GitHub Pages) walks through the game in
+  pictures of it (`npm run site:shots`) and ends with an invite from
+  `website_invite`. See `docs/CODE-MAP.md`.
 - **Sound** is synthesised with Web Audio (`src/audio/engine.web.ts`; native is
   a silent stub). The **weather** is a function of the clock (`src/weather`).
   The **art** is placeholder shapes on a 360×640 stage, seen from above and in

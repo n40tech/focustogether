@@ -47,6 +47,13 @@ screen or a module, change the tables below.
 | `src/art/` | Placeholder drawing on the 360 × 640 stage: `Scene`, `primitives`, `Vehicles` (with damage), `People`, `Office`, `Garden`. |
 | `src/audio/` | Synthesised sound (`engine.web.ts`); add a sound to `types.ts` and the engine's `play`. |
 
+## The website
+
+| Where | What |
+|---|---|
+| `site/index.html` | The one-page website (GitHub Pages, `.github/workflows/pages.yml`): the car park and the arrow, the office and the buzzer, the garden and the invite from `website_invite`. Plain HTML, CSS and JavaScript. |
+| `site/assets/scenes/` | Its pictures of the game, and `stage.json`, which says where the game's stage is in each. Made by `npm run site:shots` (`scripts/site-shots.spec.ts`), from the browser tests' build and pretend Supabase. Take them again when the art changes. |
+
 ## Database tables
 
 Read-only through row-level security; everything else goes through
@@ -83,6 +90,7 @@ Public (called by the app with `supabase.rpc`):
 | 0017 | `back_to_page`, `buy`, `buy_insurance`, `check_signup`, `claim_crash`, `crash`, `get_friends_board`, `get_friends_of_friends`, `get_me`, `get_shop`, `go_home`, `invite_to_session`, `join_session`, `leave_page`, `may_listen`, `repair_vehicle`, `set_email`, `set_hard_mode`, `set_place`, `smoke`, `start_session`, `use_invite` |
 | 0018 | `park` |
 | 0019 | `bump` |
+| 0020 | `website_invite` (anyone, signed in or not) |
 
 Private (helpers; the app can't call them):
 

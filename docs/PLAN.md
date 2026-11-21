@@ -835,7 +835,7 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 | Usernames with accents | Allowed (Latin letters). The plain spelling is unique, so accents never tell two players apart. |
 | Eating | Just a munching sound. Nothing to see, no effect. |
 | Friends' plots | You can water them, but not plant or harvest. |
-| Sign-ups | Invite-only for now, with a real email. Whoever invites you starts as your friend. |
+| Sign-ups | Invite-only for now, with a real email. Whoever invites you starts as your friend. The website gives an invite to anyone who gets to its end: made by nobody, good for 2 days, at most 10 an hour and 30 a day. |
 | Studying with someone new | An invite link to your session: they sign up if they need to, and join it as your friend. |
 | "Roughly" 1 chip a minute | The minutes, plus or minus a little random luck (up to 12%, usually far less). |
 | Where you sit | Not at the front: the office starts as twelve empty desks, and everyone (you included) gets a random one on arrival, kept across breaks until they go home. |

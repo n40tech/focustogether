@@ -12,6 +12,7 @@
 
 <p align="center">
   <a href="https://focustogether.expo.app">Play it</a> ·
+  <a href="https://n40tech.github.io/focustogether/">Website</a> ·
   <a href="docs/PLAN.md">Game plan</a> ·
   <a href="deployment/0001-setup-and-launch.md">Run your own</a>
 </p>
@@ -163,6 +164,10 @@ a pull request is in **[docs/TESTING.md](docs/TESTING.md)**.
   `public/manifest.json` and `src/app/+html.tsx` give the icons, and the name, to
   browsers and phones. Raise the `?v=` in both when the icon changes, or they
   keep showing the old one.
+- The website, in `site/`, is one screen with no scrolling: the car park, the
+  office and the garden, in pictures of the game taken by `npm run site:shots`.
+  It ends with an invite from the database (`website_invite`), and GitHub Pages
+  publishes it when `site/` changes on `main`.
 - While it's in beta, a banner across the top of every place but the office
   links testers to the WhatsApp group (`src/components/BetaBanner.tsx`).
 

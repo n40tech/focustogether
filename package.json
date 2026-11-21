@@ -44,6 +44,7 @@
     "test:db": "node --test supabase/tests/game.test.mjs",
     "test:web": "playwright test",
     "icons": "node scripts/icons.mjs",
-    "vapid-keys": "node scripts/vapid-keys.mjs"
+    "vapid-keys": "node scripts/vapid-keys.mjs",
+    "site:shots": "playwright test -c scripts/site-shots.config.ts"
   }
 }

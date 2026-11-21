@@ -1227,6 +1227,65 @@ describe('invites', () => {
     for (let i = 0; i < 5; i++) await call('bob', 'create_invite');
     await rejects(call('bob', 'create_invite'), /5 unused invites/);
   });
+
+  test('the website hands out invites to anyone: 10 an hour, 30 a day', async () => {
+    await q(`delete from public.invites where from_website`);
+    const first = await call('anon', 'website_invite');
+    assert.match(first.code, /^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{8}$/);
+    // Made by nobody, and good for 2 days.
+    const [made] = await q(
+      `select created_by, from_website,
+         extract(epoch from expires_at - created_at)::int as lasts
+       from public.invites where code = $1`,
+      [first.code]
+    );
+    assert.deepEqual(made, { created_by: null, from_website: true, lasts: 2 * 24 * 3600 });
+    assert.equal(new Date(first.expires_at).getTime() > Date.now(), true);
+
+    // Signed in or not, it's the same limit for everyone.
+    for (let i = 1; i < 9; i++) assert.ok((await call('anon', 'website_invite')).code);
+    assert.ok((await call('alice', 'website_invite')).code);
+    assert.deepEqual(await call('anon', 'website_invite'), { code: null, reason: 'busy' });
+
+    // An hour on, ten more; then the day's 30 are gone until a day's passed.
+    const later = (minutes) =>
+      q(
+        `update public.invites set created_at = created_at - make_interval(mins => ${minutes})
+         where from_website`
+      );
+    await later(61);
+    for (let i = 0; i < 10; i++) assert.ok((await call('anon', 'website_invite')).code);
+    await later(61);
+    for (let i = 0; i < 10; i++) assert.ok((await call('anon', 'website_invite')).code);
+    await later(61);
+    assert.deepEqual(await call('anon', 'website_invite'), { code: null, reason: 'busy' });
+    await later(24 * 60);
+    assert.ok((await call('anon', 'website_invite')).code);
+  });
+
+  test('joining with a website invite: from Focus, with no friends yet', async () => {
+    const { code } = await call('anon', 'website_invite');
+    assert.deepEqual(await call('anon', 'check_signup', code, 'wendy'), {
+      ok: true,
+      from: 'Focus',
+      studying_until: null,
+    });
+    await signUp('wendy', code, { name: 'Wendy' });
+    assert.deepEqual(await call('wendy', 'get_friends_board'), []);
+
+    // Left two days, it's no good.
+    const old = await call('anon', 'website_invite');
+    await travel(2 * 24 * 60 + 1);
+    await rejects(signUp('xena', old.code), /invite-only/);
+  });
+
+  test("players' own invites don't count towards the website's", async () => {
+    await q(`delete from public.invites where from_website`);
+    await q(`delete from public.invites where created_by = $1 and used_by is null`, [ids.carol]);
+    for (let i = 0; i < 5; i++) await call('carol', 'create_invite');
+    for (let i = 0; i < 10; i++) assert.ok((await call('anon', 'website_invite')).code);
+    await q(`delete from public.invites where created_by = $1 and used_by is null`, [ids.carol]);
+  });
 });
 
 describe('testing tools', () => {
@@ -1571,7 +1630,7 @@ describe('access', () => {
     );
   });
 
-  test('anonymous callers can only check an invite', async () => {
+  test('anonymous callers can only check an invite, or get one from the website', async () => {
     for (const fn of [
       'get_garden',
       'get_shop',
