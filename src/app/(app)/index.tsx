@@ -609,7 +609,7 @@ export default function CarPark() {
             username={f.username}
             x={0}
             y={0}
-            activity={f.activity}
+            activity={me.under_18 ? null : f.activity}
             smokingUntil={f.activity_until}
           />
         </Follow>
@@ -846,15 +846,17 @@ export default function CarPark() {
               )}
             </View>
             <View style={styles.row}>
-              <Button
-                title={smoking ? 'Smoking' : 'Smoke'}
-                accessibilityLabel={`Smoke a cigarette (${cigarettes} left)`}
-                variant="quiet"
-                small
-                style={styles.grow}
-                disabled={smoking || cigarettes === 0 || driving || !atWork}
-                onPress={smoke}
-              />
+              {!me.under_18 && (
+                <Button
+                  title={smoking ? 'Smoking' : 'Smoke'}
+                  accessibilityLabel={`Smoke a cigarette (${cigarettes} left)`}
+                  variant="quiet"
+                  small
+                  style={styles.grow}
+                  disabled={smoking || cigarettes === 0 || driving || !atWork}
+                  onPress={smoke}
+                />
+              )}
               {mine && (
                 <Button
                   title={`Your ${kindOf(mine.model)}`}

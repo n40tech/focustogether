@@ -62,6 +62,8 @@ export type Me = {
   hard_mode: boolean;
   /** Your email, for news of Focus Together (only you can see it). */
   email: string | null;
+  /** Under 18: no cigarettes, and friends' smoking isn't shown. */
+  under_18: boolean;
   active_session: {
     id: number;
     started_at: string;

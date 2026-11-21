@@ -23,6 +23,7 @@ import { confirm } from '@/lib/confirm';
 import { font } from '@/lib/theme';
 import { useNow } from '@/hooks/useNow';
 import { formatSpan } from '@/lib/time';
+import { useWorld } from '@/world/World';
 
 /** Runs a garden action, then updates the garden from its result. */
 export type Act = (action: () => Promise<Garden>, sound?: Sfx) => Promise<boolean>;
@@ -621,7 +622,10 @@ export function TradeSheet({
   onClose: () => void;
 }) {
   const tone = useTone();
+  const { me } = useWorld();
   const mine = Object.entries(garden.me.inventory).filter(([slug]) => TRADEABLE.includes(slug));
+  // Under-18s can't ask for cigarettes.
+  const wanted = TRADEABLE.filter((slug) => !(me.under_18 && ITEMS[slug].kind === 'cigarette'));
   const friends = garden.neighbours;
   const recipient = friends.find((f) => f.username === initialTo);
   const [to, setTo] = useState(initialTo ?? friends[0]?.username);
@@ -682,14 +686,16 @@ export function TradeSheet({
         <Text style={[font.label, { color: tone.muted }]}>You ask for</Text>
         <View style={styles.choices}>
           <Choice label="Nothing (a gift)" selected={want === null} onPress={() => setWant(null)} />
-          {TRADEABLE.filter((slug) => slug !== give).map((slug) => (
-            <Choice
-              key={slug}
-              label={itemInfo(slug).name}
-              selected={want === slug}
-              onPress={() => setWant(slug)}
-            />
-          ))}
+          {wanted
+            .filter((slug) => slug !== give)
+            .map((slug) => (
+              <Choice
+                key={slug}
+                label={itemInfo(slug).name}
+                selected={want === slug}
+                onPress={() => setWant(slug)}
+              />
+            ))}
         </View>
         {want && <Stepper value={wantQty} min={1} max={99} onChange={setWantQty} />}
         <Muted>{'What you offer is set aside until they answer, or until you withdraw it.'}</Muted>
@@ -827,18 +833,21 @@ export function FriendSheet({
   onClose: () => void;
 }) {
   const tone = useTone();
+  const { me } = useWorld();
   const friend = garden.neighbours.find((n) => n.username === username);
   if (!friend) return null;
   const chips = garden.me.chips;
+  // Under-18s don't see the cigarettes on a stall.
+  const stall = friend.stall.filter((l) => !(me.under_18 && itemInfo(l.item).kind === 'cigarette'));
   return (
     <Sheet title={friend.display_name} onClose={onClose}>
       <ScrollView contentContainerStyle={styles.list}>
         <FriendProfile username={friend.username} />
         <Text style={[font.label, { color: tone.muted }]}>Stall</Text>
-        {friend.stall.length === 0 ? (
+        {stall.length === 0 ? (
           <Body>{`${friend.display_name} hasn't put anything out.`}</Body>
         ) : (
-          friend.stall.map((l) => (
+          stall.map((l) => (
             <Row key={l.id} slug={l.item} title={countOf(l.item, l.qty)} detail={`${l.price} each`}>
               <Button
                 title={`Buy 1 · ${l.price}`}

@@ -137,6 +137,7 @@ export class FakeSupabase {
     activity_until: null,
     hard_mode: false,
     email: 'nate@studymail.co.uk',
+    under_18: false,
     active_session: null,
     last_completed: null,
     left_session: null,

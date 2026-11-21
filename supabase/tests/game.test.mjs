@@ -80,7 +80,7 @@ async function asService(fn, ...args) {
 }
 
 /** What Supabase Auth does on sign-up: insert the user with the form's metadata. */
-async function signUp(username, invite, { email, name, contact } = {}) {
+async function signUp(username, invite, { email, name, contact, born } = {}) {
   const [u] = await q(
     `insert into auth.users (email, raw_user_meta_data) values ($1, $2) returning id`,
     [
@@ -93,6 +93,7 @@ async function signUp(username, invite, { email, name, contact } = {}) {
           contact === undefined
             ? `${username.normalize('NFD').replace(/[^a-z0-9_]/g, '')}@studymail.co.uk`
             : contact,
+        born: born === undefined ? '1999-04-01' : born,
       },
     ]
   );
@@ -1227,6 +1228,65 @@ describe('invites', () => {
     for (let i = 0; i < 5; i++) await call('bob', 'create_invite');
     await rejects(call('bob', 'create_invite'), /5 unused invites/);
   });
+
+  test('the website hands out invites to anyone: 10 an hour, 30 a day', async () => {
+    await q(`delete from public.invites where from_website`);
+    const first = await call('anon', 'website_invite');
+    assert.match(first.code, /^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{8}$/);
+    // Made by nobody, and good for 2 days.
+    const [made] = await q(
+      `select created_by, from_website,
+         extract(epoch from expires_at - created_at)::int as lasts
+       from public.invites where code = $1`,
+      [first.code]
+    );
+    assert.deepEqual(made, { created_by: null, from_website: true, lasts: 2 * 24 * 3600 });
+    assert.equal(new Date(first.expires_at).getTime() > Date.now(), true);
+
+    // Signed in or not, it's the same limit for everyone.
+    for (let i = 1; i < 9; i++) assert.ok((await call('anon', 'website_invite')).code);
+    assert.ok((await call('alice', 'website_invite')).code);
+    assert.deepEqual(await call('anon', 'website_invite'), { code: null, reason: 'busy' });
+
+    // An hour on, ten more; then the day's 30 are gone until a day's passed.
+    const later = (minutes) =>
+      q(
+        `update public.invites set created_at = created_at - make_interval(mins => ${minutes})
+         where from_website`
+      );
+    await later(61);
+    for (let i = 0; i < 10; i++) assert.ok((await call('anon', 'website_invite')).code);
+    await later(61);
+    for (let i = 0; i < 10; i++) assert.ok((await call('anon', 'website_invite')).code);
+    await later(61);
+    assert.deepEqual(await call('anon', 'website_invite'), { code: null, reason: 'busy' });
+    await later(24 * 60);
+    assert.ok((await call('anon', 'website_invite')).code);
+  });
+
+  test('joining with a website invite: from Focus, with no friends yet', async () => {
+    const { code } = await call('anon', 'website_invite');
+    assert.deepEqual(await call('anon', 'check_signup', code, 'wendy'), {
+      ok: true,
+      from: 'Focus',
+      studying_until: null,
+    });
+    await signUp('wendy', code, { name: 'Wendy' });
+    assert.deepEqual(await call('wendy', 'get_friends_board'), []);
+
+    // Left two days, it's no good.
+    const old = await call('anon', 'website_invite');
+    await travel(2 * 24 * 60 + 1);
+    await rejects(signUp('xena', old.code), /invite-only/);
+  });
+
+  test("players' own invites don't count towards the website's", async () => {
+    await q(`delete from public.invites where from_website`);
+    await q(`delete from public.invites where created_by = $1 and used_by is null`, [ids.carol]);
+    for (let i = 0; i < 5; i++) await call('carol', 'create_invite');
+    for (let i = 0; i < 10; i++) assert.ok((await call('anon', 'website_invite')).code);
+    await q(`delete from public.invites where created_by = $1 and used_by is null`, [ids.carol]);
+  });
 });
 
 describe('testing tools', () => {
@@ -1571,7 +1631,7 @@ describe('access', () => {
     );
   });
 
-  test('anonymous callers can only check an invite', async () => {
+  test('anonymous callers can only check an invite, or get one from the website', async () => {
     for (const fn of [
       'get_garden',
       'get_shop',
@@ -2254,6 +2314,70 @@ describe('emails', () => {
     await rejects(call('gina', 'set_email', 'gina@localhost'), /real email/);
     const me = await call('gina', 'set_email', 'gina@uni.ac.uk');
     assert.equal(me.email, 'gina@uni.ac.uk');
+  });
+});
+
+/** The date `years` ago today, as YYYY-MM-DD, moved by `days`. */
+function yearsAgo(years, days = 0) {
+  const d = new Date();
+  d.setUTCFullYear(d.getUTCFullYear() - years);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+describe('dates of birth', () => {
+  test('signing up needs a real date of birth, which nobody can read', async () => {
+    const { code } = await call('alice', 'create_invite');
+    for (const born of [null, '', 'soon', '2001-02-30', '1899-12-31', yearsAgo(0, 1)]) {
+      await rejects(signUp('ivy', code, { born }), /date of birth/, String(born));
+    }
+    await signUp('ivy', code, { born: yearsAgo(30) });
+    assert.equal((await call('ivy', 'get_me')).under_18, false);
+    for (const user of ['ivy', 'alice', 'anon']) {
+      await rejects(asUser(user, 'select * from public.birthdays'), /permission denied/);
+    }
+  });
+
+  test('players who joined before dates of birth count as grown-ups', async () => {
+    await q('delete from public.birthdays where user_id = $1', [ids.alice]);
+    assert.equal((await call('alice', 'get_me')).under_18, false);
+  });
+
+  test('under-18s have no cigarettes: none in the shed, from friends or stalls', async () => {
+    const { code } = await call('alice', 'create_invite');
+    await signUp('jay', code, { born: yearsAgo(18, 1) });
+    let me = await call('jay', 'get_me');
+    assert.equal(me.under_18, true);
+
+    await setChips('jay', 100);
+    const shop = await call('jay', 'get_shop');
+    assert.equal(
+      shop.items.some((i) => i.kind === 'cigarette'),
+      false
+    );
+    assert.ok((await call('alice', 'get_shop')).items.some((i) => i.kind === 'cigarette'));
+    await rejects(call('jay', 'buy', 'cigarette'), /over-18s/);
+    await q('update public.profiles set tester = true where id = $1', [ids.jay]);
+    await rejects(call('jay', 'dev_item', 'cigarette', 5), /over-18s/);
+    await rejects(call('jay', 'smoke'), /over-18s/);
+
+    // A friend can't give them any, or sell them any.
+    await give('alice', 'cigarette', 5);
+    await study(['alice', 'jay'], 50);
+    const garden = await call('alice', 'offer_trade', 'jay', 'cigarette', 1, null, null);
+    await rejects(call('jay', 'respond_trade', garden.trades[0].id, true), /over-18s/);
+    await call('jay', 'respond_trade', garden.trades[0].id, false);
+    const stall = await call('alice', 'list_item', 'cigarette', 2, 1);
+    const chips = (await call('jay', 'get_me')).chips;
+    await rejects(call('jay', 'buy_listing', stall.me.stall[0].id, 1), /over-18s/);
+    me = await call('jay', 'get_me');
+    assert.equal(me.inventory.cigarette, undefined);
+    assert.equal(me.chips, chips);
+
+    // On their 18th birthday, they're grown up.
+    await q('update public.birthdays set born = $2 where user_id = $1', [ids.jay, yearsAgo(18)]);
+    assert.equal((await call('jay', 'get_me')).under_18, false);
+    await call('jay', 'buy', 'cigarette');
   });
 });
 

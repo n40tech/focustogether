@@ -44,8 +44,16 @@ screen or a module, change the tables below.
 | `src/lib/away.ts` | Hard mode: telling the server when the page is left, and keeping the screen on. |
 | `src/lib/invites.ts` | Invite codes, links, sharing, and the invite waiting to be opened. |
 | `src/lib/email.ts`, `username.ts` | Mirrors of the database's email and username rules. |
+| `src/lib/birth.ts` | The sign-up form's date of birth: typing it day first, and checking it's real. |
 | `src/art/` | Placeholder drawing on the 360 × 640 stage: `Scene`, `primitives`, `Vehicles` (with damage), `People`, `Office`, `Garden`. |
 | `src/audio/` | Synthesised sound (`engine.web.ts`); add a sound to `types.ts` and the engine's `play`. |
+
+## The website
+
+| Where | What |
+|---|---|
+| `site/index.html` | The one-page website (GitHub Pages, `.github/workflows/pages.yml`): the car park and the arrow, the office and the buzzer, the garden and the invite from `website_invite`. Plain HTML, CSS and JavaScript. |
+| `site/assets/scenes/` | Its pictures of the game, and `stage.json`, which says where the game's stage is in each. Made by `npm run site:shots` (`scripts/site-shots.spec.ts`), from the browser tests' build and pretend Supabase. Take them again when the art changes. |
 
 ## Database tables
 
@@ -56,7 +64,7 @@ functions. `profiles` has grown in most migrations: see the data model in
 `profiles`, `sessions`, `friendships`, `friend_requests`, `items`, `crops`,
 `inventory`, `plots` (with the view `private.beds`), `trades`, `listings`,
 `invites`, `letters`, `desk_layout`, `push_subscriptions`, `emails`,
-`crashes`.
+`crashes`, `birthdays` (no policies: nobody reads it directly).
 
 ## Database functions
 
@@ -80,16 +88,18 @@ Public (called by the app with `supabase.rpc`):
 | 0013 | `place_desk_item`, `store_desk_item` |
 | 0014 | `get_profile` |
 | 0015 | `drop_push`, `due_pushes`, `forget_pushes`, `save_push` |
-| 0017 | `back_to_page`, `buy`, `buy_insurance`, `check_signup`, `claim_crash`, `crash`, `get_friends_board`, `get_friends_of_friends`, `get_me`, `get_shop`, `go_home`, `invite_to_session`, `join_session`, `leave_page`, `may_listen`, `repair_vehicle`, `set_email`, `set_hard_mode`, `set_place`, `smoke`, `start_session`, `use_invite` |
+| 0017 | `back_to_page`, `buy`, `buy_insurance`, `check_signup`, `claim_crash`, `crash`, `get_friends_board`, `get_friends_of_friends`, `go_home`, `invite_to_session`, `join_session`, `leave_page`, `may_listen`, `repair_vehicle`, `set_email`, `set_hard_mode`, `set_place`, `start_session`, `use_invite` |
 | 0018 | `park` |
 | 0019 | `bump` |
+| 0020 | `website_invite` (anyone, signed in or not) |
+| 0021 | `get_me`, `get_shop`, `smoke` |
 
 Private (helpers; the app can't call them):
 
 | Migration | Functions |
 |---|---|
 | 0001 | `require_uid` |
-| 0002 | `add_item`, `break_minutes`, `inventory_of`, `is_tradeable`, `require_not_studying`, `require_on_break`, `status_of`, `take_item` |
+| 0002 | `break_minutes`, `inventory_of`, `is_tradeable`, `require_not_studying`, `require_on_break`, `status_of`, `take_item` |
 | 0003 | `assign_plot_slot`, `desk_of`, `make_invite`, `new_invite_code`, `stall_of` |
 | 0004 | `keeps_for` |
 | 0005 | `require_tester` |
@@ -101,7 +111,8 @@ Private (helpers; the app can't call them):
 | 0012 | `is_looks` |
 | 0013 | `desk_items_of` |
 | 0016 | `streak` |
-| 0017 | `crashes_of`, `insurance_lasts`, `insurance_price`, `invite_studying_until`, `is_email`, `normal_email`, `on_signup` (the sign-up trigger), `presence`, `repair_cost` |
+| 0017 | `crashes_of`, `insurance_lasts`, `insurance_price`, `invite_studying_until`, `is_email`, `normal_email`, `presence`, `repair_cost` |
+| 0021 | `add_item` (refuses cigarettes to under-18s), `on_signup` (the sign-up trigger), `under_18` |
 
 Rebuild these tables with a short script: for each migration in order, find
 `create (or replace) function (public|private).<name>`; the last file wins.

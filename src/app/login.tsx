@@ -17,6 +17,7 @@ import { BetaBanner } from '@/components/BetaBanner';
 import { Button } from '@/components/Button';
 import { Muted } from '@/components/Chrome';
 import { api } from '@/lib/api';
+import { formatBirth, parseBirth } from '@/lib/birth';
 import { isEmail } from '@/lib/email';
 import { formatInvite, holdInvite, normaliseInvite, pendingInvite } from '@/lib/invites';
 import { supabase } from '@/lib/supabase';
@@ -142,6 +143,7 @@ function Join({ invite, onSignIn }: { invite: string; onSignIn: () => void }) {
   const [username, setUsername] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [born, setBorn] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -180,6 +182,8 @@ function Join({ invite, onSignIn }: { invite: string; onSignIn: () => void }) {
     setError(null);
     try {
       if (!isEmail(email)) throw new Error("That doesn't look like a real email address");
+      const birthday = parseBirth(born);
+      if (!birthday) throw new Error('Write your date of birth as day, month and year: 14/03/2009');
       const check = await api.checkSignup(code, username, email);
       if (!check.ok) throw new Error(check.reason ?? "That didn't work");
       if (password.length < 6) throw new Error('Passwords need at least 6 characters');
@@ -194,6 +198,7 @@ function Join({ invite, onSignIn }: { invite: string; onSignIn: () => void }) {
             username: normalUsername(username),
             display_name: name.trim() || username.trim(),
             contact_email: email.trim(),
+            born: birthday,
           },
         },
       });
@@ -271,6 +276,16 @@ function Join({ invite, onSignIn }: { invite: string; onSignIn: () => void }) {
         style={input}
       />
       <TextInput
+        value={born}
+        onChangeText={(t) => setBorn(formatBirth(t))}
+        placeholder="Date of birth (DD/MM/YYYY)"
+        placeholderTextColor={tone.muted}
+        autoComplete="birthdate-full"
+        inputMode="numeric"
+        accessibilityLabel="Date of birth: day, month and year. Never shown to anyone."
+        style={input}
+      />
+      <TextInput
         value={password}
         onChangeText={setPassword}
         placeholder="Password"
@@ -286,7 +301,12 @@ function Join({ invite, onSignIn }: { invite: string; onSignIn: () => void }) {
         title="Join"
         onPress={join}
         disabled={
-          busy || normaliseInvite(code).length < 8 || !username.trim() || !email.trim() || !password
+          busy ||
+          normaliseInvite(code).length < 8 ||
+          !username.trim() ||
+          !email.trim() ||
+          !born ||
+          !password
         }
       />
       <Switch label="Already joined? Arrive" onPress={onSignIn} />

@@ -12,6 +12,7 @@
 
 <p align="center">
   <a href="https://focustogether.expo.app">Play it</a> ·
+  <a href="https://n40tech.github.io/focustogether/">Website</a> ·
   <a href="docs/PLAN.md">Game plan</a> ·
   <a href="deployment/0001-setup-and-launch.md">Run your own</a>
 </p>
@@ -50,7 +51,8 @@ change before a pull request is in **[docs/TESTING.md](docs/TESTING.md)**.
   bins, write letters at the post box, see friends at the Friends board, and
   buy and sell at the market with friends standing next to you. Walk out
   through the gate to go back to work.
-- **Shed**: vehicles, desk things, seeds and cigarettes.
+- **Shed**: vehicles, desk things, seeds and cigarettes (not for under-18s:
+  sign-up asks for a date of birth).
 - **Friends board**: friends, their profiles, asking to be friends, and
   invites. In the office, tap a friend's desk to join their session.
 
@@ -155,11 +157,18 @@ a pull request is in **[docs/TESTING.md](docs/TESTING.md)**.
   audio files yet.
 - Scenes are placeholder art built from shapes (`src/art`), seen from above and
   in front.
-- The icon, two of the game's people in front of a timer on sage, is drawn by
+- The icon, two friends under the office clock, is drawn by
   `scripts/icons.mjs`: change it there and run `npm run icons` to write every
-  size. `public/manifest.json` and `src/app/+html.tsx` give it, and the name, to
+  size. By day they look up at the clock; iOS's dark icon has them at midnight,
+  telling a ghost story by torchlight. The favicon is just the clock, and its
+  SVG turns to midnight when the browser is in dark mode. `app.json`,
+  `public/manifest.json` and `src/app/+html.tsx` give the icons, and the name, to
   browsers and phones. Raise the `?v=` in both when the icon changes, or they
   keep showing the old one.
+- The website, in `site/`, is one screen with no scrolling: the car park, the
+  office and the garden, in pictures of the game taken by `npm run site:shots`.
+  It ends with an invite from the database (`website_invite`), and GitHub Pages
+  publishes it when `site/` changes on `main`.
 - While it's in beta, a banner across the top of every place but the office
   links testers to the WhatsApp group (`src/components/BetaBanner.tsx`).
 
