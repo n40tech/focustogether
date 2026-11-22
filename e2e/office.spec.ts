@@ -104,8 +104,10 @@ test.describe('on a phone', () => {
     fake.atDesk();
     fake.me.tips = ALL_TIPS.filter((tip) => tip !== 'stay');
     await fake.open('/office');
+    await button(page, 'Settings').click();
     await page.getByRole('switch', { name: 'Hard mode' }).click();
     await expect.poll(() => fake.called('set_hard_mode')).toEqual([{ p_on: true }]);
+    await button(page, 'Close').last().click();
     await button(page, 'Start 25 min').click();
     const studying = page.getByText('Studying · 25 min · hard mode · stay on this page');
     await expect(studying).toBeVisible();

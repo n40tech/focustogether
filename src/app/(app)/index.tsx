@@ -8,7 +8,8 @@ import { BLEED, Scene, STAGE, useTone } from '@/art/Scene';
 import { Bike, Car, CarLights } from '@/art/Vehicles';
 import { playSound, setSmoking, useAmbience } from '@/audio/sound';
 import { Button } from '@/components/Button';
-import { Body, HeaderDetail, Muted, Panel, SceneHeader, Sheet, Toast } from '@/components/Chrome';
+import { Body, Muted, Panel, Sheet, Toast } from '@/components/Chrome';
+import { SceneHeader } from '@/components/Header';
 import { Countdown } from '@/components/Countdown';
 import { FriendOfFriendSheet } from '@/components/FriendOfFriendSheet';
 import { HomeScreenTip, useHomeScreenTip } from '@/components/HomeScreenTip';
@@ -19,9 +20,6 @@ import { ChatBar, Follow, Label, Pan, useLit, walkabout } from '@/components/Wal
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { api, CRASH_SPEED, type Crash, type Me, type Parked } from '@/lib/api';
 import { itemInfo } from '@/lib/catalog';
-import { cancelSessionEnd } from '@/lib/notifications';
-import { turnOff } from '@/lib/push';
-import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import { useConditions } from '@/weather/useConditions';
 import {
@@ -527,21 +525,6 @@ export default function CarPark() {
     }
   };
 
-  // Logging out is going home: you've left, break or no break.
-  const logOut = async () => {
-    setLeaving(true);
-    try {
-      if (atWork) await api.goHome();
-      await cancelSessionEnd();
-      // No notifications for you on this device once you've gone.
-      await turnOff().catch(() => {});
-      await supabase.auth.signOut();
-    } catch (e) {
-      sayError(e);
-      setLeaving(false);
-    }
-  };
-
   // --- smoking -------------------------------------------------------------
 
   const smoking = useLit(me.activity === 'smoking' ? me.activity_until : null);
@@ -804,11 +787,7 @@ export default function CarPark() {
       onStage={onStage}
       reserve={{ top: 56, bottom: 220 }}
     >
-      <SceneHeader
-        place="Car park"
-        chips={me.chips}
-        detail={<HeaderDetail>{conditions.label}</HeaderDetail>}
-      />
+      <SceneHeader chips={me.chips} weather={conditions} />
       <Panel>
         {homeScreenTip ? <HomeScreenTip /> : tip}
         <Greeting me={me} friendsIn={friendNames.length} driving={driving} />
@@ -846,14 +825,14 @@ export default function CarPark() {
               )}
             </View>
             <View style={styles.row}>
-              {!me.under_18 && (
+              {!me.under_18 && (cigarettes > 0 || smoking) && (
                 <Button
                   title={smoking ? 'Smoking' : 'Smoke'}
                   accessibilityLabel={`Smoke a cigarette (${cigarettes} left)`}
                   variant="quiet"
                   small
                   style={styles.grow}
-                  disabled={smoking || cigarettes === 0 || driving || !atWork}
+                  disabled={smoking || driving || !atWork}
                   onPress={smoke}
                 />
               )}
@@ -874,13 +853,6 @@ export default function CarPark() {
         </View>
         <View style={styles.row}>
           <Button title="Walk in" small onPress={walkIn} disabled={leaving} style={styles.flex} />
-          <Button
-            title="Friends"
-            variant="quiet"
-            small
-            onPress={() => go('/friends', null)}
-            style={styles.flex}
-          />
           {onBreak && (
             <Button
               title="Garden"
@@ -900,14 +872,6 @@ export default function CarPark() {
               style={styles.flex}
             />
           )}
-          <Button
-            title="Log out"
-            variant="ghost"
-            small
-            onPress={logOut}
-            disabled={leaving}
-            style={styles.flex}
-          />
         </View>
       </Panel>
       {looked &&

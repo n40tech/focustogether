@@ -72,7 +72,7 @@ test.describe('on a phone', () => {
   test('by default, leaving the page mid-session is fine', async ({ page, fake }) => {
     fake.atDesk();
     await fake.open('/office');
-    await expect(page.getByRole('switch', { name: 'Hard mode' })).not.toBeChecked();
+    await expect(page.getByText('Hard mode is on', { exact: false })).toHaveCount(0);
     await button(page, 'Start 25 min').click();
     const studying = page.getByText('Studying · 25 min', { exact: true });
     await expect(studying).toBeVisible();

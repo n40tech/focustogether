@@ -1,10 +1,12 @@
+import { useLocalSearchParams, type Href } from 'expo-router';
 import { StyleSheet } from 'react-native';
 
 import { Box, Dot } from '@/art/primitives';
 import { BLEED, Scene } from '@/art/Scene';
 import { useAmbience } from '@/audio/sound';
 import { Button } from '@/components/Button';
-import { Panel, SceneHeader } from '@/components/Chrome';
+import { Panel } from '@/components/Chrome';
+import { SceneHeader } from '@/components/Header';
 import { Noticeboard } from '@/components/Noticeboard';
 import { palette } from '@/lib/theme';
 import { useConditions } from '@/weather/useConditions';
@@ -12,11 +14,22 @@ import { useGo, useWorld } from '@/world/World';
 
 const C = palette.carpark;
 
+/** Back to wherever you came from (the header's Friends button says). */
+const BACK: Record<string, { href: Href; label: string }> = {
+  '/': { href: '/', label: 'Back to the car park' },
+  '/office': { href: '/office', label: 'Back to the office' },
+  '/garden': { href: '/garden', label: 'Back to the garden' },
+  '/shop': { href: '/shop', label: 'Back to the shed' },
+  '/payout': { href: '/payout', label: 'Back' },
+};
+
 export default function NoticeboardScreen() {
   useAmbience('carpark');
   const { me } = useWorld();
   const conditions = useConditions();
   const go = useGo();
+  const { from } = useLocalSearchParams<{ from?: string }>();
+  const back = BACK[from ?? '/'] ?? BACK['/'];
   const art = (
     <>
       <Box x={BLEED.x} y={-400} w={BLEED.w} h={1440} c={C.wall} />
@@ -49,16 +62,16 @@ export default function NoticeboardScreen() {
 
   return (
     <Scene conditions={conditions} ground={C.wall} art={art} reserve={{ top: 56, bottom: 0 }}>
-      <SceneHeader place="Friends" chips={me.chips} />
+      <SceneHeader chips={me.chips} />
       <Panel style={styles.board}>
         <Noticeboard
           footer={
             <Button
-              title="Back to the car park"
+              title={back.label}
               variant="ghost"
               small
               style={styles.flex}
-              onPress={() => go('/', null)}
+              onPress={() => go(back.href, null)}
             />
           }
         />

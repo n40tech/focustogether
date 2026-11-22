@@ -20,7 +20,8 @@ import { Rift } from '@/art/Rift';
 import { BLEED, Scene, STAGE, useTone } from '@/art/Scene';
 import { playSound, setSmoking, useAmbience } from '@/audio/sound';
 import { Button } from '@/components/Button';
-import { Body, Muted, Panel, SceneHeader, Sheet, Toast } from '@/components/Chrome';
+import { Body, Muted, Panel, Sheet, Toast } from '@/components/Chrome';
+import { SceneHeader } from '@/components/Header';
 import { Countdown } from '@/components/Countdown';
 import { FriendOfFriendSheet } from '@/components/FriendOfFriendSheet';
 import {
@@ -58,6 +59,7 @@ import {
   dist,
   distToRect,
   FENCE_Y,
+  ENTRY,
   GATE,
   GATE_OUT_Y,
   HEDGE_Y,
@@ -197,7 +199,7 @@ export default function GardenScene() {
   const [start] = useState(() =>
     lastSpot?.username === me.username && lastSpot.breakEndsAt === me.break_ends_at
       ? lastSpot.at
-      : GATE
+      : ENTRY
   );
   // Sitting on a bench: which seat (see SEATS), until you walk off.
   const [seat, setSeat] = useState<number | null>(null);
@@ -248,7 +250,7 @@ export default function GardenScene() {
       lastSpot = {
         username: me.username,
         breakEndsAt: me.break_ends_at,
-        at: at.y > HEDGE_Y ? GATE : at,
+        at: at.y > HEDGE_Y ? ENTRY : at,
       };
     },
     [me.username, me.break_ends_at, where]
@@ -799,7 +801,7 @@ export default function GardenScene() {
       reserve={{ top: 56, bottom: onBreak ? 260 : 150 }}
     >
       <SceneHeader
-        place="Garden"
+        weather={conditions}
         detail={onBreak && breakEndsAt ? <BreakLeft until={breakEndsAt} onDone={endBreak} /> : null}
       />
       {status === 'absent' ? (
@@ -839,14 +841,14 @@ export default function GardenScene() {
                 )}
               </View>
               <View style={styles.row}>
-                {!me.under_18 && (
+                {!me.under_18 && (cigarettes > 0 || smoking) && (
                   <Button
                     title={smoking ? 'Smoking' : 'Smoke'}
                     accessibilityLabel={`Smoke a cigarette (${cigarettes} left)`}
                     variant="quiet"
                     small
                     style={styles.grow}
-                    disabled={smoking || cigarettes === 0}
+                    disabled={smoking}
                     onPress={() => act(() => api.smoke(), 'lighter')}
                   />
                 )}
@@ -1113,7 +1115,7 @@ function BreakLeft({ until, onDone }: { until: string; onDone: () => void }) {
   const tone = useTone();
   return (
     <Text style={{ color: tone.muted, fontSize: 12 }}>
-      {'· break '}
+      {'Break '}
       <Countdown
         until={until}
         onDone={onDone}

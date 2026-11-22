@@ -63,7 +63,7 @@ test("the car park says when someone's asked", async ({ page, fake }) => {
     page.getByText('Someone would like to be friends. Answer on the Friends board.')
   ).toBeVisible();
   await button(page, 'Friends').click();
-  await expect(page).toHaveURL(/\/friends$/);
+  await expect(page).toHaveURL(/\/friends/);
   await expect(page.getByText('Would like to be friends')).toBeVisible();
 });
 

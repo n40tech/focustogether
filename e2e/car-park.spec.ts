@@ -121,6 +121,22 @@ test('smoking in the car park', async ({ page, fake }) => {
   expect(fake.called('smoke')).toHaveLength(1);
 });
 
+test('with no cigarettes there is no Smoke button, but the last one stays lit', async ({
+  page,
+  fake,
+}) => {
+  fake.atDesk();
+  fake.me.inventory = {};
+  await fake.open('/');
+  await expect(button(page, 'Go in')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Smoke a cigarette/ })).toHaveCount(0);
+
+  fake.me.inventory = { cigarette: 1 };
+  await page.reload();
+  await button(page, 'Smoke a cigarette (1 left)').click();
+  await expect(button(page, 'Smoke a cigarette (0 left)')).toBeDisabled();
+});
+
 test('buying a car suggests insurance, and the shed repairs it', async ({ page, fake }) => {
   fake.me.chips = 400;
   fake.shop.push({

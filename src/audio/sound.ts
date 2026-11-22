@@ -3,13 +3,19 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 
 import { engine } from './engine';
-import type { Ambience, Sfx, SfxOptions, SoundSettings } from './types';
+import {
+  DEFAULT_SOUND,
+  type Ambience,
+  type Sfx,
+  type SfxOptions,
+  type SoundSettings,
+} from './types';
 
-export type { Ambience, Sfx } from './types';
+export type { Ambience, Sfx, SoundLevels, SoundSettings } from './types';
 
 const KEY = 'focus.sound';
 
-let settings: SoundSettings = { muted: false, volume: 0.8 };
+let settings: SoundSettings = DEFAULT_SOUND;
 let snapshot = { ...settings, unlocked: engine.unlocked };
 const listeners = new Set<() => void>();
 
@@ -23,7 +29,10 @@ let loading: Promise<void> | null = null;
 function load() {
   loading ??= AsyncStorage.getItem(KEY)
     .then((raw) => {
-      if (raw) settings = { ...settings, ...(JSON.parse(raw) as Partial<SoundSettings>) };
+      if (!raw) return;
+      const saved = JSON.parse(raw) as Partial<SoundSettings>;
+      // Saved before some setting existed: that one keeps its default.
+      settings = { ...settings, ...saved, levels: { ...settings.levels, ...saved.levels } };
     })
     .catch(() => {})
     .finally(() => {

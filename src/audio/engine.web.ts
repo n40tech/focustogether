@@ -13,7 +13,14 @@ import { conditionsAt } from '@/weather/conditions';
 import { gustAt, smoothstep, strikeDistance, strikesBetween } from '@/weather/weather';
 
 import { loopingNoise, type NoiseColour } from './noise';
-import type { Ambience, AudioEngine, Sfx, SfxOptions, SoundSettings } from './types';
+import {
+  DEFAULT_SOUND,
+  type Ambience,
+  type AudioEngine,
+  type Sfx,
+  type SfxOptions,
+  type SoundSettings,
+} from './types';
 
 /** How each place mixes the layers. `window` is the cutoff (Hz) for outside sounds. */
 type Mix = {
@@ -49,6 +56,9 @@ const PENTATONIC = [1046.5, 1174.7, 1318.5, 1568, 1760];
 
 /** Brings the quiet, layered mix up to a comfortable level; the limiter catches peaks. */
 const MAKEUP_GAIN = 3.2;
+
+/** A slider's 0–1 as a gain: squared, so the middle of the slider sounds like half as loud. */
+const loudness = (slider: number) => Math.max(0, Math.min(1, slider)) ** 2;
 
 type Nodes = {
   master: GainNode;
@@ -157,8 +167,9 @@ class WebAudioEngine implements AudioEngine {
   private n: Nodes | null = null;
   private noise: Record<NoiseColour, AudioBuffer> | null = null;
   private ambience: Ambience = 'quiet';
-  private settings: SoundSettings = { muted: false, volume: 0.8 };
+  private settings: SoundSettings = DEFAULT_SOUND;
   private smoking = false;
+  private timer: ReturnType<typeof setInterval> | null = null;
   private listeners = new Set<() => void>();
   private scheduledUntil = 0;
   private strikesUntil = 0;
@@ -178,15 +189,33 @@ class WebAudioEngine implements AudioEngine {
     for (const type of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown']) {
       window.addEventListener(type, unlock, { capture: true, passive: true });
     }
-    // Phones suspend the sound while the page is hidden; pick up again on return.
+    // Leaving the page: the sound stops, unless you'd like it to carry on.
+    // Phones may stop it anyway; it picks up again when you come back, or
+    // failing that, at your next tap.
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState !== 'visible') {
-        silentSwitch.release();
-        return;
-      }
-      if (!this.settings.muted && this.unlocked) silentSwitch.claim();
-      if (this.ctx && this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
+      if (document.visibilityState === 'visible') this.comeBack();
+      else this.goAway();
     });
+    // Opened again from the back/forward cache, or from the home screen.
+    window.addEventListener('pageshow', () => this.comeBack());
+    window.addEventListener('focus', () => this.comeBack());
+  }
+
+  private away = false;
+
+  private goAway() {
+    if (this.settings.keepPlaying) return;
+    this.away = true;
+    silentSwitch.release();
+    if (this.ctx?.state === 'running') this.ctx.suspend().catch(() => {});
+  }
+
+  private comeBack() {
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+    this.away = false;
+    if (!this.ctx || !this.n) return; // never started: the first tap does it
+    if (!this.settings.muted) silentSwitch.claim();
+    if (this.ctx.state !== 'running') this.resume();
   }
 
   // --- public API -----------------------------------------------------------
@@ -206,6 +235,7 @@ class WebAudioEngine implements AudioEngine {
     if (settings.muted) silentSwitch.release();
     else if (this.unlocked) silentSwitch.claim();
     this.applyVolume(0.15);
+    if (this.n) this.tick();
   }
 
   subscribe(listener: () => void) {
@@ -270,26 +300,43 @@ class WebAudioEngine implements AudioEngine {
           window.AudioContext ??
           (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
         if (!Context) return; // no Web Audio here; stay silent
-        this.ctx = new Context();
+        const ctx = new Context();
+        this.ctx = ctx;
+        // Phones stop the sound for calls, other apps and the lock screen.
+        // Whether it's playing is what the sound button shows.
+        ctx.addEventListener('statechange', () => this.setRunning(ctx.state === 'running'));
       }
       if (!this.n) this.build(this.ctx);
     } catch {
       return;
     }
+    this.resume();
+  }
+
+  private resume() {
     const ctx = this.ctx;
+    if (!ctx || this.away) return;
     ctx
       .resume()
-      .then(() => {
-        if (this.unlocked) return;
-        this.unlocked = true;
-        this.scheduledUntil = ctx.currentTime;
-        this.strikesUntil = serverNow();
-        this.tick();
-        this.applyVolume(1.5); // fade in rather than start with a burst
-        setInterval(() => this.tick(), TICK_MS);
-        this.listeners.forEach((l) => l());
-      })
+      .then(() => this.setRunning(ctx.state === 'running'))
       .catch(() => {});
+  }
+
+  private setRunning(running: boolean) {
+    const ctx = this.ctx;
+    if (!ctx || running === this.unlocked) return;
+    this.unlocked = running;
+    if (running) {
+      // Whatever was due while it was stopped is skipped, not played at once.
+      this.scheduledUntil = ctx.currentTime;
+      this.strikesUntil = serverNow();
+      this.n!.master.gain.cancelScheduledValues(ctx.currentTime);
+      this.n!.master.gain.setValueAtTime(0, ctx.currentTime);
+      this.tick();
+      this.applyVolume(1.5); // fade in rather than start with a burst
+      this.timer ??= setInterval(() => this.tick(), TICK_MS);
+    }
+    this.listeners.forEach((l) => l());
   }
 
   private applyVolume(timeConstant: number) {
@@ -297,6 +344,11 @@ class WebAudioEngine implements AudioEngine {
     const { muted, volume } = this.settings;
     const level = this.unlocked && !muted ? volume * volume * MAKEUP_GAIN : 0;
     this.n.master.gain.setTargetAtTime(level, this.ctx.currentTime, timeConstant / 3);
+    this.n.sfx.gain.setTargetAtTime(
+      loudness(this.settings.levels.effects),
+      this.ctx.currentTime,
+      0.05
+    );
   }
 
   private build(ctx: AudioContext) {
@@ -438,7 +490,22 @@ class WebAudioEngine implements AudioEngine {
     const ms = serverNow();
     const { weather: w, light } = conditionsAt(ms);
     const gust = gustAt(ms, w.wind);
-    const mix = MIXES[this.ambience];
+    const base = MIXES[this.ambience];
+    const { weather, nature, traffic, room } = this.settings.levels;
+    const [wx, nx, tx] = [loudness(weather), loudness(nature), loudness(traffic)];
+    // The place's mix, turned up or down by your sliders in settings.
+    const mix: Mix = {
+      ...base,
+      rain: base.rain * wx,
+      drops: base.drops * wx,
+      wind: base.wind * wx,
+      glass: base.glass * wx,
+      birds: base.birds * nx,
+      crickets: base.crickets * nx,
+      chimes: base.chimes * nx,
+      traffic: base.traffic * tx,
+      room: base.room * loudness(room),
+    };
     const dark = 1 - light.daylight;
 
     this.glide(n.muffle.frequency, mix.window, SCENE_FADE);
@@ -462,7 +529,7 @@ class WebAudioEngine implements AudioEngine {
       [n.birds, mix.birds],
       [n.chimes, mix.chimes],
       [n.cars, mix.traffic],
-      [n.thunder, 1],
+      [n.thunder, wx],
     ] as const) {
       this.glide(bus.gain, level, SCENE_FADE);
     }
@@ -472,15 +539,15 @@ class WebAudioEngine implements AudioEngine {
     if (to > from) {
       if (w.rain > 0.02) {
         this.every(3 + 14 * w.rain, from, to, (t) => this.drop(t, 0.04 + 0.08 * Math.random()));
-        if (mix.glass > 0) this.every(1 + 9 * w.rain, from, to, (t) => this.glassTap(t));
+        if (mix.glass > 0.001) this.every(1 + 9 * w.rain, from, to, (t) => this.glassTap(t));
       }
       const birdiness = light.daylight * (1 - smoothstep(0.05, 0.4, w.rain)) * (1 - 0.6 * w.wind);
       if (birdiness > 0.02) this.every(0.45 * birdiness, from, to, (t) => this.birdPhrase(t));
       if (dark > 0.05) this.scheduleCrickets(from, to);
-      if (mix.chimes > 0 && gust > 0.35) {
+      if (mix.chimes > 0.001 && gust > 0.35) {
         this.every(1.5 * (gust - 0.35) ** 1.3, from, to, (t) => this.windChime(t));
       }
-      if (mix.traffic > 0) this.every(1 / 25, from, to, (t) => this.passingCar(t));
+      if (mix.traffic > 0.001) this.every(1 / 25, from, to, (t) => this.passingCar(t));
       if (this.smoking) this.every(1.2, from, to, (t) => this.crackle(t));
       this.scheduledUntil = to;
     }

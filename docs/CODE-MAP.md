@@ -31,7 +31,10 @@ screen or a module, change the tables below.
 | `src/app/(app)/index.tsx` | The car park: driving in, parking, walking about, smoking, crashes and claims. |
 | `src/app/(app)/office.tsx` | Desks, joining friends, arranging your desk; `StudyPanel` at the bottom. |
 | `src/app/(app)/payout.tsx`, `garden.tsx`, `shop.tsx`, `friends.tsx` | The payout, the garden, the shed (with repairs and insurance) and the Friends board. |
-| `src/components/StudyPanel.tsx` | Picking a length, hard mode, the countdown, and the study invite. |
+| `src/components/StudyPanel.tsx` | Picking a length, the countdown, the study invite, and (on a break) back to the garden. |
+| `src/components/Header.tsx` | `SceneHeader`: the Friends, sound and weather icons; your break, chips and the settings cog. |
+| `src/components/Icons.tsx` | The header's icons, drawn from shapes. |
+| `src/components/Settings.tsx` | The settings sheet: sound sliders, keep playing, hard mode, friends of friends, log out. |
 | `src/components/Noticeboard.tsx` | The Friends board: friends, requests, invites, notifications, your email. |
 | `src/components/Steering.tsx` | The thumbstick on a touchscreen; on a computer, the keys to press. |
 | `src/components/Walkabout.tsx` | Shared by the garden and the car park: `Pan`, `Follow`, `Label`, `ChatBar`, `useLit`. |
@@ -44,9 +47,10 @@ screen or a module, change the tables below.
 | `src/lib/away.ts` | Hard mode: telling the server when the page is left, and keeping the screen on. |
 | `src/lib/invites.ts` | Invite codes, links, sharing, and the invite waiting to be opened. |
 | `src/lib/email.ts`, `username.ts` | Mirrors of the database's email and username rules. |
+| `src/lib/prefs.ts` | Settings kept on this device (sound's are in `src/audio/sound.ts`). |
 | `src/lib/birth.ts` | The sign-up form's date of birth: typing it day first, and checking it's real. |
 | `src/art/` | Placeholder drawing on the 360 × 640 stage: `Scene`, `primitives`, `Vehicles` (with damage), `People`, `Office`, `Garden`. |
-| `src/audio/` | Synthesised sound (`engine.web.ts`); add a sound to `types.ts` and the engine's `play`. |
+| `src/audio/` | Synthesised sound (`engine.web.ts`); add a sound to `types.ts` and the engine's `play`. The settings sliders (`SoundLevels`) scale the engine's layers in its `tick`. |
 
 ## The website
 

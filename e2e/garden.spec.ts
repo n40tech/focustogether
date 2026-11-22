@@ -100,9 +100,8 @@ test('the post box: picking up a letter, and writing back', async ({ page, fake 
     },
   ];
   await enterGarden(page, fake);
-  // Up past the bench, then along to the post box, bottom right.
+  // Along past the bench to the post box, bottom right.
   const postBox = button(page, 'Post box · 1 for you');
-  await walk(page, 'ArrowUp', 300);
   await walk(page, 'ArrowRight', 6000, postBox);
   await postBox.click();
 
@@ -125,7 +124,6 @@ test("a friend by the post box doesn't hide it", async ({ page, fake }) => {
   fake.inGarden = [{ username: 'bob', x: 1000, y: 600 }];
   await enterGarden(page, fake);
   const postBox = button(page, 'Post box · 1 for you');
-  await walk(page, 'ArrowUp', 300);
   await walk(page, 'ArrowRight', 6000, postBox);
   // Bob as well, beside it, by name.
   await expect(button(page, "Bob's stall")).toHaveText('Bob');
@@ -137,7 +135,6 @@ test("a friend by the post box doesn't hide it", async ({ page, fake }) => {
 test('sitting on a bench, and getting up by walking off', async ({ page, fake }) => {
   await enterGarden(page, fake);
   const sit = button(page, 'Sit on the bench');
-  await walk(page, 'ArrowUp', 300);
   await walk(page, 'ArrowRight', 4000, sit);
   await sit.click();
   const standUp = button(page, 'Stand up');
@@ -153,9 +150,8 @@ test('sitting on a bench, and getting up by walking off', async ({ page, fake })
 test('throwing something in the bins', async ({ page, fake }) => {
   fake.me.inventory = { carrot: 2 };
   await enterGarden(page, fake);
-  // Up past the bench, then along to the bin by the shed.
+  // Along past the bench to the bin by the shed.
   const bins = button(page, 'Throw something away');
-  await walk(page, 'ArrowUp', 300);
   await walk(page, 'ArrowLeft', 6000, bins);
   await bins.click();
   await expect(page.getByText('2 carrots')).toBeVisible();
@@ -167,9 +163,37 @@ test('throwing something in the bins', async ({ page, fake }) => {
 
 test('walking out through the gate goes back to work', async ({ page, fake }) => {
   await enterGarden(page, fake);
+  // You come in a few steps from the gate, so a step back doesn't take you out.
+  await walk(page, 'ArrowDown', 300);
+  expect(pathOf(page)).toBe('/garden');
   await walk(page, 'ArrowDown', 800);
   await expect(page).toHaveURL(/\/office$/);
   await expect.poll(() => fake.called('set_place')).toContainEqual({ p_place: 'office' });
+});
+
+test('on a break, you can go in and out of the office until the next session', async ({
+  page,
+  fake,
+}) => {
+  await enterGarden(page, fake);
+  await button(page, 'Back to work').click();
+  await expect(page).toHaveURL(/\/office$/);
+  await button(page, 'Back to the garden').click();
+  await expect(page).toHaveURL(/\/garden$/);
+  await expect(page.getByPlaceholder('Say something…')).toBeVisible();
+
+  await button(page, 'Back to work').click();
+  await button(page, 'Start 25 min').click();
+  await expect(page.getByText('Studying · 25 min', { exact: true })).toBeVisible();
+  await expect(button(page, 'Back to the garden')).toHaveCount(0);
+});
+
+test('the Friends button in the header comes back to the garden', async ({ page, fake }) => {
+  await enterGarden(page, fake);
+  await button(page, 'Friends').click();
+  await expect(page).toHaveURL(/\/friends/);
+  await button(page, 'Back to the garden').click();
+  await expect(page).toHaveURL(/\/garden$/);
 });
 
 test('going home ends the break', async ({ page, fake }) => {
@@ -229,6 +253,12 @@ test("a friend of a friend walks about, see-through, as Bob's friend until you t
   expect([...fake.joined]).toContain('garden:dave');
   expect([...fake.joined]).not.toContain('garden-chat:dave');
   expect([...fake.joined]).toContain('garden-chat:bob');
+
+  // Hidden in settings, they're gone.
+  await button(page, 'Settings').click();
+  await page.getByRole('switch', { name: 'Show friends of friends' }).click();
+  await button(page, 'Close').last().click();
+  await expect(button(page, 'Dave')).toHaveCount(0);
 });
 
 test('under-18s have nothing to smoke in the garden', async ({ page, fake }) => {

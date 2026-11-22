@@ -81,6 +81,11 @@ export const binRect = (b: Point): Rect => ({ x: b.x, y: b.y - 32, w: 24, h: 32 
 export const HEDGE_Y = 620;
 /** Where you come in. */
 export const GATE: Point = { x: 540, y: 606 };
+/**
+ * Where you appear as you come in: a few steps in from the gate, so you don't
+ * walk straight back out of it.
+ */
+export const ENTRY: Point = { x: GATE.x, y: 580 };
 /** Walk this far down through the gate and you've left the garden. */
 export const GATE_OUT_Y = HEDGE_Y + 12;
 

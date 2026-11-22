@@ -17,6 +17,7 @@ import { usePolled } from '@/hooks/usePolled';
 import { api, type Friend, type FriendOfFriend, type Me } from '@/lib/api';
 import { fetchMe, startAwayWatch, watchSession } from '@/lib/away';
 import { defaultLooks, paint, type Looks } from '@/lib/looks';
+import { usePrefs } from '@/lib/prefs';
 import { keepPushFresh } from '@/lib/push';
 import { supabase } from '@/lib/supabase';
 import { tones } from '@/lib/theme';
@@ -48,6 +49,7 @@ type World = {
 };
 
 const WorldContext = createContext<World | null>(null);
+const NOBODY: FriendOfFriend[] = [];
 
 export function useWorld() {
   const world = use(WorldContext);
@@ -61,6 +63,8 @@ export function WorldProvider({ children }: { children: ReactNode }) {
   const board = usePolled(api.getFriendsBoard, FRIENDS_POLL_MS);
   const others = usePolled(api.getFriendsOfFriends, FRIENDS_POLL_MS);
   const looks = usePolled(api.getLooks, LOOKS_POLL_MS);
+  // Friends of friends can be hidden in settings.
+  const { friendsOfFriends: showOthers } = usePrefs();
 
   // Leaving the page mid-session stops the session (see src/lib/away).
   useEffect(startAwayWatch, []);
@@ -90,7 +94,7 @@ export function WorldProvider({ children }: { children: ReactNode }) {
         ? {
             me: me.data,
             friends: board.data ?? [],
-            friendsOfFriends: others.data ?? [],
+            friendsOfFriends: showOthers ? (others.data ?? NOBODY) : NOBODY,
             looks: looks.data ?? {},
             setLooks: looks.setData,
             revealed,
@@ -104,6 +108,7 @@ export function WorldProvider({ children }: { children: ReactNode }) {
       me.setData,
       board.data,
       others.data,
+      showOthers,
       looks.data,
       looks.setData,
       revealed,

@@ -12,7 +12,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { nativeDriver } from '@/art/motion';
 import { useReportPanelHeight, useTone } from '@/art/Scene';
-import { setSoundSettings, useSound, wasOnBeforeTap } from '@/audio/sound';
 import { font, palette } from '@/lib/theme';
 
 /** A poker chip, drawn small. */
@@ -41,55 +40,6 @@ export function ChipCount({ chips }: { chips: number }) {
     >
       <ChipIcon />
       <Text style={[styles.pillText, { color: tone.chip }]}>{chips.toLocaleString()}</Text>
-    </View>
-  );
-}
-
-export function SoundButton() {
-  const tone = useTone();
-  const { muted, unlocked } = useSound();
-  const label = !unlocked ? 'Sound' : muted ? 'Muted' : 'Sound on';
-  return (
-    <Pressable
-      // The tap that turns sound on mustn't turn it straight off again.
-      onPress={() => wasOnBeforeTap() && setSoundSettings({ muted: !muted })}
-      accessibilityRole="button"
-      accessibilityLabel={muted ? 'Unmute' : 'Mute'}
-      style={({ pressed }) => [
-        styles.pill,
-        { backgroundColor: tone.panel, opacity: pressed ? 0.7 : 1 },
-      ]}
-    >
-      <Text style={[styles.pillText, { color: unlocked && !muted ? tone.text : tone.muted }]}>
-        {unlocked && !muted ? '♪' : '–'} {label}
-      </Text>
-    </Pressable>
-  );
-}
-
-/** Place name (and an optional detail) on the left; chips and sound on the right. */
-export function SceneHeader({
-  place,
-  chips,
-  detail,
-}: {
-  place: string;
-  chips?: number;
-  detail?: ReactNode;
-}) {
-  const tone = useTone();
-  return (
-    <View style={styles.header} pointerEvents="box-none">
-      <View style={styles.row} pointerEvents="box-none">
-        <View style={[styles.pill, { backgroundColor: tone.panel }]}>
-          <Text style={[font.label, { color: tone.muted }]}>{place}</Text>
-          {detail}
-        </View>
-      </View>
-      <View style={styles.row} pointerEvents="box-none">
-        {chips !== undefined && <ChipCount chips={chips} />}
-        <SoundButton />
-      </View>
     </View>
   );
 }
@@ -186,12 +136,6 @@ export function Toast({ text, onDone }: { text: string; onDone: () => void }) {
   );
 }
 
-/** A quiet note beside the place name in the header, like the weather. */
-export function HeaderDetail({ children }: { children: ReactNode }) {
-  const tone = useTone();
-  return <Text style={{ color: tone.muted, fontSize: 12 }}>· {children}</Text>;
-}
-
 export function Muted({
   children,
   style,
@@ -220,14 +164,6 @@ export function Body({ children, style }: { children: ReactNode; style?: object 
 }
 
 const styles = StyleSheet.create({
-  header: {
-    height: 56,
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
