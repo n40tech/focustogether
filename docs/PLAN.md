@@ -358,8 +358,8 @@ touching code.
 - Signing up takes a real email address too, for news of Focus Together
   (`public.emails`): one @, a domain with a dot, and none of the names kept
   for tests and examples. Only its owner can read it, and the project's
-  dashboard. Players who joined before add theirs on the Friends board (a
-  tip in the car park asks, once).
+  dashboard. Players who joined before add theirs in settings (a tip in
+  the car park asks, once).
 - And a date of birth, typed day first (`public.birthdays`). Nobody can read
   it, not even its owner: the game only knows whether you're under 18. Under
   18s have no cigarettes (see *Cigarettes*). Players who joined before have
@@ -419,7 +419,7 @@ friends smoking. On their 18th birthday that stops by itself.
 - Letters are only readable by whoever wrote them and whoever they're for.
 
 ### Notifications
-Turned on per device on the Friends board, they arrive even with Focus
+Turned on per device in settings, they arrive even with Focus
 Together closed (web push):
 - "Bob is studying right now", to his friends who aren't studying, with the
   office a tap away to join him;
@@ -431,7 +431,7 @@ Together closed (web push):
 
 Each goes once, within about a minute, and nothing more than 10 minutes old
 is sent. On an iPhone, web push only works in the home-screen app, so the
-Friends board says to add it there first. Logging out turns them off for that
+settings say to add it there first. Logging out turns them off for that
 device.
 
 ### Bins
@@ -524,7 +524,7 @@ later.
   wind, birds and crickets, traffic, the office, footsteps and doors) are in
   settings and remembered per device.
 - Leaving the page, the sound carries on by default. Turn off *Keep playing
-  when you leave* and it stops, and starts again when you come back. If the
+  sounds when you leave* and it stops, and starts again when you come back. If the
   phone stopped it meanwhile, it starts again on your next tap, and the
   sound button shows it's off until then.
 - On native (later), either `react-native-audio-api` (a Web Audio
@@ -546,8 +546,10 @@ later.
 - UI chrome is a thin header and a bottom action panel. The header has round
   icons: the Friends board, sound and (outdoors) the weather on the left;
   your break, chips and the settings cog on the right. Tap the weather for a
-  word or two. Settings has the sound sliders, *Keep playing when you
-  leave*, hard mode, *Show friends of friends* and *Log out*.
+  word or two. Settings has the sound sliders, *Keep playing sounds when
+  you leave*, hard mode, *Show friends of friends*, notifications, your email
+  and *Log out*. Walking about, the thumbstick (on a computer, the keys to
+  press) sits on its own to the right of the bottom panel.
   Errors and notes appear as a short toast under the header and fade away.
 - Placeholder art is built from simple shapes on a fixed 360×640 "stage" that
   scales to fit between the header and the bottom panel. Backdrops (walls,

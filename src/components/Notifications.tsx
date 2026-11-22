@@ -16,7 +16,7 @@ const SAYS: Record<Exclude<PushState, 'unsupported'>, string> = {
     'On an iPhone, notifications work in the home-screen app. Add Focus Together to your home screen, open it from there, and turn them on.',
 };
 
-/** Turning notifications on or off for this device, on the Friends board. */
+/** Turning notifications on or off for this device, in settings. */
 export function Notifications() {
   const tone = useTone();
   const [state, setState] = useState<PushState | null>(null);
@@ -63,7 +63,7 @@ export function Notifications() {
 }
 
 const styles = StyleSheet.create({
-  box: { gap: 8, marginTop: 10 },
+  box: { gap: 10 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   flex: { flex: 1 },
 });

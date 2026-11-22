@@ -44,8 +44,19 @@ export function ChipCount({ chips }: { chips: number }) {
   );
 }
 
-/** The bottom action panel. */
-export function Panel({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+/**
+ * The bottom action panel. `aside` (like the thumbstick) sits on its own to
+ * the right of it, along the bottom.
+ */
+export function Panel({
+  children,
+  style,
+  aside,
+}: {
+  children: ReactNode;
+  style?: StyleProp<ViewStyle>;
+  aside?: ReactNode;
+}) {
   const tone = useTone();
   const insets = useSafeAreaInsets();
   const report = useReportPanelHeight();
@@ -56,8 +67,17 @@ export function Panel({ children, style }: { children: ReactNode; style?: StyleP
       pointerEvents="box-none"
       onLayout={(e) => report(Math.ceil(e.nativeEvent.layout.height))}
     >
-      <View style={[styles.panel, { backgroundColor: tone.panel, borderColor: tone.line }, style]}>
-        {children}
+      <View style={[styles.panelRow, !!aside && styles.panelRowWide]} pointerEvents="box-none">
+        <View
+          style={[styles.panel, { backgroundColor: tone.panel, borderColor: tone.line }, style]}
+        >
+          {children}
+        </View>
+        {aside && (
+          <View style={[styles.aside, { backgroundColor: tone.panel, borderColor: tone.line }]}>
+            {aside}
+          </View>
+        )}
       </View>
     </View>
   );
@@ -182,13 +202,22 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   panel: {
-    width: '100%',
-    maxWidth: 520,
+    flex: 1,
+    minWidth: 0,
     borderRadius: 20,
     borderWidth: 1,
     padding: 14,
     gap: 10,
   },
+  panelRow: {
+    width: '100%',
+    maxWidth: 520,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  panelRowWide: { maxWidth: 640 },
+  aside: { borderRadius: 999, borderWidth: 1, padding: 6 },
   backdrop: { backgroundColor: 'rgba(20, 22, 26, 0.35)' },
   toastWrap: { position: 'absolute', left: 16, right: 16, alignItems: 'center' },
   toast: {

@@ -127,6 +127,8 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 6, alignItems: 'center' },
   input: {
     flex: 1,
+    // A text box keeps the browser's own width unless it's allowed to shrink.
+    minWidth: 0,
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 12,

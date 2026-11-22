@@ -51,14 +51,11 @@ test('signing up needs a real email', async ({ page, fake }) => {
   expect(fake.called('signup')).toEqual([]);
 });
 
-test('players who joined before can add their email on the Friends board', async ({
-  page,
-  fake,
-}) => {
+test('players who joined before can add their email in settings', async ({ page, fake }) => {
   fake.me.email = null;
   fake.me.tips = fake.me.tips.filter((t) => t !== 'email');
   await fake.open('/');
-  await expect(page.getByText(/Add your email on the Friends board/)).toBeVisible();
+  await expect(page.getByText(/Add your email in settings/)).toBeVisible();
   await button(page, 'Add it').click();
   await page.getByLabel('Your email').fill('Nate@Uni.ac.uk');
   await button(page, 'Save').click();

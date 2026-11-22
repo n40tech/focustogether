@@ -311,7 +311,7 @@ bigger change), do the whole round:
 - [ ] **Sound:** after the first tap, the sound icon shows waves, each
       place sounds different, and muting works. In settings, each slider
       turns its kind of sound up and down. Switch to another app and back:
-      with *Keep playing when you leave* on it carries on, with it off it
+      with *Keep playing sounds when you leave* on it carries on, with it off it
       stops and starts again when you come back.
 - [ ] **Breaks:** on a break, walk through the garden gate into the office,
       then *Back to the garden*. You come in a few steps from the gate.
@@ -325,7 +325,7 @@ bigger change), do the whole round:
       vapid-keys -- supabase/functions/.env`, and put its public key in
       `.env` as `EXPO_PUBLIC_VAPID_PUBLIC_KEY`). In Chrome at
       `http://localhost:8081` (push needs `localhost` or https), turn
-      notifications on on the Friends board and allow them. Then, as the
+      notifications on in settings (the cog) and allow them. Then, as the
       other player, start a session, and call the function as the cron job
       would: `curl -X POST http://127.0.0.1:54321/functions/v1/push`. A
       notification says they're studying, and tapping it opens the office.

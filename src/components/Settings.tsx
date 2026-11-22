@@ -1,5 +1,6 @@
 import { useRef, useState, type ReactNode } from 'react';
 import {
+  Platform,
   ScrollView,
   StyleSheet,
   Switch,
@@ -12,6 +13,8 @@ import { useTone } from '@/art/Scene';
 import { setSoundSettings, useSound, type SoundLevels } from '@/audio/sound';
 import { Button } from '@/components/Button';
 import { Muted, Sheet } from '@/components/Chrome';
+import { EmailBox } from '@/components/EmailBox';
+import { Notifications } from '@/components/Notifications';
 import { api, AWAY_GRACE_S } from '@/lib/api';
 import { otherTabsAllowed } from '@/lib/away';
 import { cancelSessionEnd } from '@/lib/notifications';
@@ -29,7 +32,10 @@ const LEVELS: { key: keyof SoundLevels; label: string }[] = [
   { key: 'effects', label: 'Footsteps and doors' },
 ];
 
-/** Sound, hard mode, who you see, and logging out. Opened from the cog in the header. */
+/**
+ * Sound, hard mode, who you see, notifications, your email, and logging out.
+ * Opened from the cog in the header.
+ */
 export function SettingsSheet({ onClose }: { onClose: () => void }) {
   const tone = useTone();
   const sound = useSound();
@@ -79,7 +85,7 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
             />
           ))}
           <Toggle
-            label="Keep playing when you leave"
+            label="Keep playing sounds when you leave"
             note="The sound carries on while you're in another app or tab."
             value={sound.keepPlaying}
             onChange={(keepPlaying) => setSoundSettings({ keepPlaying })}
@@ -105,6 +111,8 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
             onChange={(friendsOfFriends) => setPrefs({ friendsOfFriends })}
           />
         </Section>
+        <Notifications />
+        <EmailBox />
         {studying ? (
           <Muted>You can log out once this session is over.</Muted>
         ) : (
@@ -201,7 +209,8 @@ function Slider({
           to(e);
         }}
         onResponderMove={to}
-        style={styles.track}
+        // On a phone, a drag along the track moves the slider, not the sheet.
+        style={[styles.track, Platform.OS === 'web' && ({ touchAction: 'none' } as object)]}
       >
         <View pointerEvents="none" style={[styles.rail, { backgroundColor: tone.line }]}>
           <View style={[styles.fill, { width: pct, backgroundColor: tone.accent }]} />

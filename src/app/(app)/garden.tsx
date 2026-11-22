@@ -816,69 +816,68 @@ export default function GardenScene() {
           <Button title="Go home" variant="quiet" onPress={goHome} />
         </Panel>
       ) : (
-        <Panel>
+        <Panel
+          // Under your thumb, on its own above the panel.
+          aside={<Steering size={92} onChange={walker.steer} />}
+        >
           {tip && <Tip id={tip.id}>{tip.text}</Tip>}
           <ChatBar onSay={chat.say} />
-          <View style={styles.controls}>
-            <View style={styles.side}>
-              <View style={styles.nearby}>
-                {actions.length > 0 ? (
-                  actions.map((a) => (
-                    <Button
-                      key={a.label ?? a.title}
-                      title={a.title}
-                      accessibilityLabel={a.label}
-                      small
-                      variant={a.quiet ? 'quiet' : 'primary'}
-                      style={styles.fit}
-                      onPress={a.onPress}
-                    />
-                  ))
-                ) : (
-                  <Muted style={styles.hint} numberOfLines={2}>
-                    {hint}
-                  </Muted>
-                )}
-              </View>
-              <View style={styles.row}>
-                {!me.under_18 && (cigarettes > 0 || smoking) && (
+          <View style={styles.side}>
+            <View style={styles.nearby}>
+              {actions.length > 0 ? (
+                actions.map((a) => (
                   <Button
-                    title={smoking ? 'Smoking' : 'Smoke'}
-                    accessibilityLabel={`Smoke a cigarette (${cigarettes} left)`}
-                    variant="quiet"
+                    key={a.label ?? a.title}
+                    title={a.title}
+                    accessibilityLabel={a.label}
                     small
-                    style={styles.grow}
-                    disabled={smoking}
-                    onPress={() => act(() => api.smoke(), 'lighter')}
+                    variant={a.quiet ? 'quiet' : 'primary'}
+                    style={styles.fit}
+                    onPress={a.onPress}
                   />
-                )}
-                <Button
-                  title={incoming.length > 0 ? `Basket · ${incoming.length}` : 'Basket'}
-                  accessibilityLabel={
-                    incoming.length > 0
-                      ? `Your basket, and ${incoming.length} offers for you`
-                      : 'Your basket'
-                  }
-                  variant="quiet"
-                  small
-                  style={styles.grow}
-                  onPress={() => setSheet({ kind: 'basket' })}
-                />
-                <Button
-                  title="Stall"
-                  accessibilityLabel="Your market stall"
-                  variant="quiet"
-                  small
-                  style={styles.grow}
-                  onPress={() => setSheet({ kind: 'stall' })}
-                />
-              </View>
+                ))
+              ) : (
+                <Muted style={styles.hint} numberOfLines={2}>
+                  {hint}
+                </Muted>
+              )}
             </View>
-            {/* On the right, under your thumb. */}
-            <Steering size={92} onChange={walker.steer} />
+            <View style={styles.row}>
+              {!me.under_18 && (cigarettes > 0 || smoking) && (
+                <Button
+                  title={smoking ? 'Smoking' : 'Smoke'}
+                  accessibilityLabel={`Smoke a cigarette (${cigarettes} left)`}
+                  variant="quiet"
+                  small
+                  style={styles.grow}
+                  disabled={smoking}
+                  onPress={() => act(() => api.smoke(), 'lighter')}
+                />
+              )}
+              <Button
+                title={incoming.length > 0 ? `Basket · ${incoming.length}` : 'Basket'}
+                accessibilityLabel={
+                  incoming.length > 0
+                    ? `Your basket, and ${incoming.length} offers for you`
+                    : 'Your basket'
+                }
+                variant="quiet"
+                small
+                style={styles.grow}
+                onPress={() => setSheet({ kind: 'basket' })}
+              />
+              <Button
+                title="Stall"
+                accessibilityLabel="Your market stall"
+                variant="quiet"
+                small
+                style={styles.grow}
+                onPress={() => setSheet({ kind: 'stall' })}
+              />
+            </View>
           </View>
+          <Button title="Back to work" small onPress={() => go('/office')} />
           <View style={styles.row}>
-            <Button title="Back to work" small style={styles.flex} onPress={() => go('/office')} />
             <Button
               title="Your look"
               variant="ghost"
@@ -1128,8 +1127,7 @@ function BreakLeft({ until, onDone }: { until: string; onDone: () => void }) {
 const styles = StyleSheet.create({
   figure: walkabout.figure,
   row: { flexDirection: 'row', gap: 6, alignItems: 'center' },
-  controls: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  side: { flex: 1, gap: 8 },
+  side: { gap: 8 },
   nearby: { flexDirection: 'row', gap: 6, height: 38, alignItems: 'center' },
   hint: { flex: 1, fontSize: 12, lineHeight: 16 },
   flex: { flex: 1 },

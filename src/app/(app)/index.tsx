@@ -9,7 +9,7 @@ import { Bike, Car, CarLights } from '@/art/Vehicles';
 import { playSound, setSmoking, useAmbience } from '@/audio/sound';
 import { Button } from '@/components/Button';
 import { Body, Muted, Panel, Sheet, Toast } from '@/components/Chrome';
-import { SceneHeader } from '@/components/Header';
+import { openSettings, SceneHeader } from '@/components/Header';
 import { Countdown } from '@/components/Countdown';
 import { FriendOfFriendSheet } from '@/components/FriendOfFriendSheet';
 import { HomeScreenTip, useHomeScreenTip } from '@/components/HomeScreenTip';
@@ -771,8 +771,8 @@ export default function CarPark() {
   ) : me.sessions_studied > 0 && !tips.has('invite') ? (
     <Tip id="invite">{INVITE_TIP}</Tip>
   ) : !me.email ? (
-    <Tip id="email" action={{ title: 'Add it', onPress: () => go('/friends', null) }}>
-      Add your email on the Friends board, for news of Focus Together. Only you can see it.
+    <Tip id="email" action={{ title: 'Add it', onPress: () => openSettings() }}>
+      Add your email in settings, for news of Focus Together. Only you can see it.
     </Tip>
   ) : null;
 
@@ -788,68 +788,67 @@ export default function CarPark() {
       reserve={{ top: 56, bottom: 220 }}
     >
       <SceneHeader chips={me.chips} weather={conditions} />
-      <Panel>
+      <Panel
+        // Under your thumb, on its own above the panel (on a computer, the keys to press).
+        aside={<Steering size={88} onChange={walker.steer} driving={driving} />}
+      >
         {homeScreenTip ? <HomeScreenTip /> : tip}
         <Greeting me={me} friendsIn={friendNames.length} driving={driving} />
         <CrashNotes me={me} onClaim={claim} />
         {around.length > 0 && !driving && <ChatBar onSay={chat.say} />}
-        <View style={styles.controls}>
-          <View style={styles.side}>
-            <View style={styles.nearby}>
-              {actions.length > 0 ? (
-                actions.map((a) => (
-                  <Button
-                    key={a.label ?? a.title}
-                    title={a.title}
-                    accessibilityLabel={a.label}
-                    small
-                    variant={a.quiet ? 'quiet' : 'primary'}
-                    style={styles.fit}
-                    onPress={() => run(a.act)}
-                  />
-                ))
-              ) : (
-                <Muted style={styles.hint} numberOfLines={2}>
-                  {driving
-                    ? bike
-                      ? spot
-                        ? 'Stop to park.'
-                        : 'Ride into the bike rack, by the office, to park.'
-                      : spot
-                        ? 'Stop to park.'
-                        : 'Drive into a free bay, straight on, to park.'
-                    : atWork
-                      ? 'Walk about, or tap a car to see how it is.'
-                      : 'Walk up to the office door to go in.'}
-                </Muted>
-              )}
-            </View>
-            <View style={styles.row}>
-              {!me.under_18 && (cigarettes > 0 || smoking) && (
+        <View style={styles.side}>
+          <View style={styles.nearby}>
+            {actions.length > 0 ? (
+              actions.map((a) => (
                 <Button
-                  title={smoking ? 'Smoking' : 'Smoke'}
-                  accessibilityLabel={`Smoke a cigarette (${cigarettes} left)`}
-                  variant="quiet"
+                  key={a.label ?? a.title}
+                  title={a.title}
+                  accessibilityLabel={a.label}
                   small
-                  style={styles.grow}
-                  disabled={smoking || driving || !atWork}
-                  onPress={smoke}
+                  variant={a.quiet ? 'quiet' : 'primary'}
+                  style={styles.fit}
+                  onPress={() => run(a.act)}
                 />
-              )}
-              {mine && (
-                <Button
-                  title={`Your ${kindOf(mine.model)}`}
-                  accessibilityLabel={vehicleLabel(mine)}
-                  variant="quiet"
-                  small
-                  style={styles.grow}
-                  onPress={() => setLooking(me.username)}
-                />
-              )}
-            </View>
+              ))
+            ) : (
+              <Muted style={styles.hint} numberOfLines={2}>
+                {driving
+                  ? bike
+                    ? spot
+                      ? 'Stop to park.'
+                      : 'Ride into the bike rack, by the office, to park.'
+                    : spot
+                      ? 'Stop to park.'
+                      : 'Drive into a free bay, straight on, to park.'
+                  : atWork
+                    ? 'Walk about, or tap a car to see how it is.'
+                    : 'Walk up to the office door to go in.'}
+              </Muted>
+            )}
           </View>
-          {/* On the right, under your thumb (on a computer, the keys to press). */}
-          <Steering size={88} onChange={walker.steer} driving={driving} />
+          <View style={styles.row}>
+            {!me.under_18 && (cigarettes > 0 || smoking) && (
+              <Button
+                title={smoking ? 'Smoking' : 'Smoke'}
+                accessibilityLabel={`Smoke a cigarette (${cigarettes} left)`}
+                variant="quiet"
+                small
+                style={styles.grow}
+                disabled={smoking || driving || !atWork}
+                onPress={smoke}
+              />
+            )}
+            {mine && (
+              <Button
+                title={`Your ${kindOf(mine.model)}`}
+                accessibilityLabel={vehicleLabel(mine)}
+                variant="quiet"
+                small
+                style={styles.grow}
+                onPress={() => setLooking(me.username)}
+              />
+            )}
+          </View>
         </View>
         <View style={styles.row}>
           <Button title="Walk in" small onPress={walkIn} disabled={leaving} style={styles.flex} />
@@ -1313,8 +1312,7 @@ const styles = StyleSheet.create({
   /** A zero-size anchor: things drawn round its (0, 0) turn about that point. */
   pivot: { position: 'absolute', left: 0, top: 0, width: 0, height: 0, overflow: 'visible' },
   row: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  controls: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  side: { flex: 1, gap: 8 },
+  side: { gap: 8 },
   nearby: { flexDirection: 'row', gap: 6, height: 38, alignItems: 'center' },
   hint: { flex: 1, fontSize: 12, lineHeight: 16 },
   flex: { flex: 1 },

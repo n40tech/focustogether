@@ -1,5 +1,5 @@
 import { usePathname } from 'expo-router';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useTone } from '@/art/Scene';
@@ -9,6 +9,22 @@ import { FriendsIcon, GearIcon, SoundIcon, WeatherIcon } from '@/components/Icon
 import { SettingsSheet } from '@/components/Settings';
 import type { Conditions } from '@/weather/conditions';
 import { useGo, useWorld } from '@/world/World';
+
+// Whether settings are open: the cog opens them, and so can a tip (see openSettings).
+let settingsOpen = false;
+const settingsListeners = new Set<() => void>();
+const subscribeSettings = (listener: () => void) => {
+  settingsListeners.add(listener);
+  return () => {
+    settingsListeners.delete(listener);
+  };
+};
+
+/** Opens (or closes) the settings sheet, from anywhere with a header. */
+export function openSettings(open = true) {
+  settingsOpen = open;
+  settingsListeners.forEach((l) => l());
+}
 
 /**
  * Across the top of every place: the Friends board, sound and the weather on
@@ -28,7 +44,13 @@ export function SceneHeader({
   const { me } = useWorld();
   const pathname = usePathname();
   const go = useGo();
-  const [settings, setSettings] = useState(false);
+  const settings = useSyncExternalStore(
+    subscribeSettings,
+    () => settingsOpen,
+    () => settingsOpen
+  );
+  // Leaving a place (or logging out) closes them.
+  useEffect(() => () => openSettings(false), []);
   // While you study, the office is the only place there is.
   const friends = me.status !== 'focused' && pathname !== '/friends';
   return (
@@ -49,7 +71,7 @@ export function SceneHeader({
         <View style={styles.row} pointerEvents="box-none">
           {detail && <View style={[styles.pill, { backgroundColor: tone.panel }]}>{detail}</View>}
           {chips !== undefined && <ChipCount chips={chips} />}
-          <Round label="Settings" onPress={() => setSettings(true)}>
+          <Round label="Settings" onPress={() => openSettings()}>
             <GearIcon color={tone.text} bg={tone.panel} />
           </Round>
         </View>
@@ -57,7 +79,7 @@ export function SceneHeader({
       {settings && (
         // Over the bottom panel, which comes after the header.
         <View style={styles.over} pointerEvents="box-none">
-          <SettingsSheet onClose={() => setSettings(false)} />
+          <SettingsSheet onClose={() => openSettings(false)} />
         </View>
       )}
     </>

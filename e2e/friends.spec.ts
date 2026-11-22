@@ -103,7 +103,7 @@ test("a friend of a friend's car is in their bay, and tapping it asks", async ({
   await expect(button(page, 'Ask to be friends')).toBeVisible();
 });
 
-test('turning notifications on, and off again', async ({ page, fake }) => {
+test('turning notifications on, and off again, in settings', async ({ page, fake }) => {
   // The browser's push service, as far as the app can tell.
   await page.addInitScript(() => {
     const sub = {
@@ -136,7 +136,8 @@ test('turning notifications on, and off again', async ({ page, fake }) => {
       },
     });
   });
-  await fake.open('/friends');
+  await fake.open('/');
+  await button(page, 'Settings').click();
   await button(page, 'Turn on').click();
   await expect(page.getByText(/^On for this device/)).toBeVisible();
   expect(fake.called('save_push')).toEqual([

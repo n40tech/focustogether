@@ -34,8 +34,8 @@ screen or a module, change the tables below.
 | `src/components/StudyPanel.tsx` | Picking a length, the countdown, the study invite, and (on a break) back to the garden. |
 | `src/components/Header.tsx` | `SceneHeader`: the Friends, sound and weather icons; your break, chips and the settings cog. |
 | `src/components/Icons.tsx` | The header's icons, drawn from shapes. |
-| `src/components/Settings.tsx` | The settings sheet: sound sliders, keep playing, hard mode, friends of friends, log out. |
-| `src/components/Noticeboard.tsx` | The Friends board: friends, requests, invites, notifications, your email. |
+| `src/components/Settings.tsx` | The settings sheet: sound sliders, keep playing sounds, hard mode, friends of friends, notifications (`Notifications.tsx`), your email (`EmailBox.tsx`), log out. `openSettings` in `Header.tsx` opens it from a tip. |
+| `src/components/Noticeboard.tsx` | The Friends board: friends, requests and invites. |
 | `src/components/Steering.tsx` | The thumbstick on a touchscreen; on a computer, the keys to press. |
 | `src/components/Walkabout.tsx` | Shared by the garden and the car park: `Pan`, `Follow`, `Label`, `ChatBar`, `useLit`. |
 | `src/world/World.tsx` | `useWorld()`: you, friends, friends of friends and looks, polled every 10 s. `useGo()` moves between places. |

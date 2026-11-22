@@ -91,7 +91,7 @@ test('settings: a slider for each kind of sound, kept for next time', async ({ p
   // All the way to the left: no traffic.
   await traffic.click({ position: { x: 2, y: 16 } });
   await expect(traffic).toHaveAttribute('aria-valuenow', '0');
-  await page.getByRole('switch', { name: 'Keep playing when you leave' }).click();
+  await page.getByRole('switch', { name: 'Keep playing sounds when you leave' }).click();
   await button(page, 'Close').last().click();
 
   await page.reload();
@@ -101,7 +101,9 @@ test('settings: a slider for each kind of sound, kept for next time', async ({ p
     'aria-valuenow',
     '80'
   );
-  await expect(page.getByRole('switch', { name: 'Keep playing when you leave' })).not.toBeChecked();
+  await expect(
+    page.getByRole('switch', { name: 'Keep playing sounds when you leave' })
+  ).not.toBeChecked();
 });
 
 test('logging out on a break counts as going home', async ({ page, fake }) => {
