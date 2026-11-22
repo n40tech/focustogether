@@ -80,7 +80,7 @@ changed.
 - To start afresh, `npx supabase db reset` rebuilds the local database from the
   migrations and the seed: back to alice, bob and carol with nothing. A
   browser that was signed in before the reset then says "No profile for this
-  account": press **Log out** and sign in again.
+  account": press **Log out** (in settings, the cog) and sign in again.
 - Never connect the CLI to the real project (`supabase link`, or any command
   with `--linked`). New migrations reach the real database one file at a time,
   following the runbooks in `deployment/`: Claude runs them through the
@@ -308,8 +308,16 @@ bigger change), do the whole round:
       park with a note. A friend in the garden sees the rift too.
 - [ ] **Shed:** buying something takes the chips, and it turns up where it
       should (in the car park, on your desk, or in your basket).
-- [ ] **Sound:** after the first tap, the Sound button says **♪ Sound on**,
-      each place sounds different, and muting works.
+- [ ] **Sound:** after the first tap, the sound icon shows waves, each
+      place sounds different, and muting works. In settings, each slider
+      turns its kind of sound up and down. Switch to another app and back:
+      with *Keep playing sounds when you leave* on it carries on, with it off it
+      stops and starts again when you come back.
+- [ ] **Breaks:** on a break, walk through the garden gate into the office,
+      then *Back to the garden*. You come in a few steps from the gate.
+- [ ] **Header:** the Friends icon opens the board, and its back button
+      returns to where you were. The weather icon matches the sky; tap it
+      for its name.
 - [ ] **Looks:** at phone width nothing is cut off or overlapping and button
       labels fit, and the night colours (`?hour=22`) are readable.
 - [ ] **Notifications:** the local Supabase runs the `push` function, with
@@ -317,7 +325,7 @@ bigger change), do the whole round:
       vapid-keys -- supabase/functions/.env`, and put its public key in
       `.env` as `EXPO_PUBLIC_VAPID_PUBLIC_KEY`). In Chrome at
       `http://localhost:8081` (push needs `localhost` or https), turn
-      notifications on on the Friends board and allow them. Then, as the
+      notifications on in settings (the cog) and allow them. Then, as the
       other player, start a session, and call the function as the cron job
       would: `curl -X POST http://127.0.0.1:54321/functions/v1/push`. A
       notification says they're studying, and tapping it opens the office.
@@ -399,4 +407,4 @@ turn sign-ups on and email confirmation off.
 - **The other player doesn't show up in the garden:** both have to be on a
   break with the garden open, and friends (the three test players all are).
 - **No sound:** tap or click once first, then check the phone's volume. On an
-  iPhone, check Focus Together itself isn't muted (the Sound button).
+  iPhone, check Focus Together itself isn't muted (the sound icon, top left).

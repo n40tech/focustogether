@@ -94,8 +94,8 @@ Put the local address and publishable key that `npx supabase status` prints in
 
 Sound starts after your first tap or click; browsers don't allow it sooner.
 On an iPhone it plays even with the silent switch on (which, like a video,
-pauses music from other apps); tap the Sound button to mute Focus Together and
-give the sound back.
+pauses music from other apps); tap the sound icon to mute Focus Together and
+give the sound back. The cog has a slider for each kind of sound.
 To preview other weather or another time of day, add
 `?weather=clear|cloudy|windy|rain|storm|mist` and/or `?hour=0-23` to the URL. This
 only changes what you see and hear. To try two players at once, use a normal and

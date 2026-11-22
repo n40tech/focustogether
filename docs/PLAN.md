@@ -90,7 +90,7 @@ agreed; **Open questions** lists what hasn't.
   invites) · the garden gate (only while you're on a break) · get in or out
   of your vehicle · tap any vehicle for its health · smoke · say something,
   when friends are out here · claim damages for a bump, or let it go · go
-  home (while you're at work) · log out.
+  home (while you're at work). Logging out is in settings.
 - **Hear:** open-air weather, distant traffic, car doors, and a crunch when
   someone drives into something.
 
@@ -118,7 +118,7 @@ agreed; **Open questions** lists what hasn't.
   with you** (see *Studying together*). There's the countdown and a small
   *give up* link, which forfeits the session. The chip balance, shop and all
   navigation are hidden. You can leave the page: the session carries on and
-  pays when it ends. In **hard mode** (a switch before you start), you have
+  pays when it ends. In **hard mode** (a switch in settings), you have
   to stay on the page (see *Staying on the page*). The screen is kept awake
   meanwhile.
   A new player can **skip their first session**, to see the payout and the
@@ -155,7 +155,10 @@ agreed; **Open questions** lists what hasn't.
   car park); the post box (letters). Next to a friend, their sheet shows
   their profile above their stall. With a friend beside
   you there, you get both: the place's button and theirs. Walking out through
-  the gate takes you back to work. From anywhere: smoke · your basket (eat,
+  the gate takes you back to work. You come in a few steps from the gate, so
+  you don't walk straight back out. On a break you can go back and forth
+  between the office and the garden (*Back to the garden* in the office)
+  until you start your next session. From anywhere: smoke · your basket (eat,
   save seeds, sell, offer, and answer offers) · your stall · *Your look* ·
   *Back to work* (office) · *Go home*.
 - **Hear:** the weather in full, birds when it's dry, crickets at night, wind
@@ -243,8 +246,8 @@ over by then, they're still friends. It's one of your 5 invites, and lasts
 ### Staying on the page
 - By default, a session runs whatever you do: switch apps, lock your phone,
   close the tab. It pays when it ends.
-- **Hard mode** brings back the strict rules below. It's a switch in the
-  office before you start, kept for your account; each session keeps the
+- **Hard mode** brings back the strict rules below. It's a switch in
+  settings, kept for your account; each session keeps the
   mode it started in (`sessions.hard`). The rest of this section is hard
   mode.
 - A session belongs to the page (browser tab) it was started on. On a phone
@@ -355,8 +358,8 @@ touching code.
 - Signing up takes a real email address too, for news of Focus Together
   (`public.emails`): one @, a domain with a dot, and none of the names kept
   for tests and examples. Only its owner can read it, and the project's
-  dashboard. Players who joined before add theirs on the Friends board (a
-  tip in the car park asks, once).
+  dashboard. Players who joined before add theirs in settings (a tip in
+  the car park asks, once).
 - And a date of birth, typed day first (`public.birthdays`). Nobody can read
   it, not even its owner: the game only knows whether you're under 18. Under
   18s have no cigarettes (see *Cigarettes*). Players who joined before have
@@ -401,7 +404,8 @@ Friends, and friends of friends, see it everywhere you're drawn.
 ### Cigarettes
 Smoked in the garden or the car park, one at a time. Each burns for **3 minutes**, getting
 shorter as it goes, then it's out. Friends see the smoke and hear a lighter
-flick and a quiet crackle.
+flick and a quiet crackle. The Smoke button only shows while you have one to
+smoke, or one still burning.
 
 Not for under-18s. The shed doesn't show them cigarettes, there's no Smoke
 button, friends' trades and stalls can't pass them any, and they don't see
@@ -415,7 +419,7 @@ friends smoking. On their 18th birthday that stops by itself.
 - Letters are only readable by whoever wrote them and whoever they're for.
 
 ### Notifications
-Turned on per device on the Friends board, they arrive even with Focus
+Turned on per device in settings, they arrive even with Focus
 Together closed (web push):
 - "Bob is studying right now", to his friends who aren't studying, with the
   office a tap away to join him;
@@ -427,7 +431,7 @@ Together closed (web push):
 
 Each goes once, within about a minute, and nothing more than 10 minutes old
 is sent. On an iPhone, web push only works in the home-screen app, so the
-Friends board says to add it there first. Logging out turns them off for that
+settings say to add it there first. Logging out turns them off for that
 device.
 
 ### Bins
@@ -516,7 +520,13 @@ later.
   low-pass "window" filter. Weather changes ramp over about 10 s, so the sound
   never jumps.
 - Browsers only allow audio after a tap; the first tap anywhere unlocks it.
-  Mute and volume are remembered per device.
+  Mute, the overall volume and a slider for each kind of sound (rain and
+  wind, birds and crickets, traffic, the office, footsteps and doors) are in
+  settings and remembered per device.
+- Leaving the page, the sound carries on by default. Turn off *Keep playing
+  sounds when you leave* and it stops, and starts again when you come back. If the
+  phone stopped it meanwhile, it starts again on your next tap, and the
+  sound button shows it's off until then.
 - On native (later), either `react-native-audio-api` (a Web Audio
   implementation, so the same engine runs) or `expo-audio` with recorded loops.
 
@@ -533,7 +543,13 @@ later.
 - Motion is slow and ambient: rain, drifting clouds, smoke. Lightning is a
   gentle brightening, never a strobe. With *reduce motion* turned on, the
   weather is drawn still.
-- UI chrome is a thin header (place, chips, sound) and a bottom action panel.
+- UI chrome is a thin header and a bottom action panel. The header has round
+  icons: the Friends board, sound and (outdoors) the weather on the left;
+  your break, chips and the settings cog on the right. Tap the weather for a
+  word or two. Settings has the sound sliders, *Keep playing sounds when
+  you leave*, hard mode, *Show friends of friends*, notifications, your email
+  and *Log out*. Walking about, the thumbstick (on a computer, the keys to
+  press) sits on its own to the right of the bottom panel.
   Errors and notes appear as a short toast under the header and fade away.
 - Placeholder art is built from simple shapes on a fixed 360×640 "stage" that
   scales to fit between the header and the bottom panel. Backdrops (walls,
@@ -831,7 +847,7 @@ Free tiers of EAS Hosting and Supabase comfortably cover a friend group.
 | Web hosting | EAS Hosting with a static export; Supabase for the backend. |
 | Social model | Pairwise friendships, as in the MVP. Friends of friends at work show see-through, so you can ask them to be friends. |
 | Changing desks | Tap an empty desk between sessions. Your bay follows. |
-| Friends of friends | Shown see-through, as "Alice's friend" until you tap them, in the office, the car park and the garden. They never hear your chat. |
+| Friends of friends | Shown see-through (unless you turn them off in settings), as "Alice's friend" until you tap them, in the office, the car park and the garden. They never hear your chat. |
 | Notifications | Web push, turned on per device: a friend starting, your session or break ending, and friend requests. Sent within a minute, and only once. |
 | Looks | Chosen in the garden from a few skin tones, colours, hairstyles and hair colours. Until then, picked from your username. |
 | Arranging a desk | Drag things where you want them, between sessions. Something new from the shed starts in the drawer, and you drag it onto your desk there and then. |

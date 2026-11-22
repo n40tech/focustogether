@@ -9,7 +9,8 @@ import { BLEED, Scene, useTone } from '@/art/Scene';
 import { playSound, useAmbience } from '@/audio/sound';
 import { ArrangeSheet } from '@/components/ArrangeSheet';
 import { Button } from '@/components/Button';
-import { ChipIcon, Muted, SceneHeader } from '@/components/Chrome';
+import { ChipIcon, Muted } from '@/components/Chrome';
+import { SceneHeader } from '@/components/Header';
 import { api, SMOKE_MINUTES, type ItemKind, type Shop, type ShopItem } from '@/lib/api';
 import { itemInfo } from '@/lib/catalog';
 import { font } from '@/lib/theme';
@@ -125,7 +126,7 @@ export default function ShedShop() {
 
   return (
     <Scene conditions={conditions} ground="#cbbfae" art={art} reserve={{ top: 56, bottom: 420 }}>
-      <SceneHeader place="Shed" chips={shop?.chips} />
+      <SceneHeader chips={shop?.chips} />
       <Catalogue
         shop={shop}
         busy={busy}

@@ -8,10 +8,8 @@ import { Muted } from '@/components/Chrome';
 import { Countdown } from '@/components/Countdown';
 import { Face } from '@/components/Face';
 import { FriendProfile } from '@/components/FriendProfile';
-import { Notifications } from '@/components/Notifications';
 import { forgetTips } from '@/components/Tip';
 import { api, type Friend, type FriendRequests, type Invite } from '@/lib/api';
-import { isEmail } from '@/lib/email';
 import { formatInvite, inviteLink, sendInvite } from '@/lib/invites';
 import { font } from '@/lib/theme';
 import { useWorld } from '@/world/World';
@@ -60,8 +58,6 @@ export function Noticeboard({ footer }: { footer?: ReactNode }) {
           <FriendCard key={f.username} friend={f} onRemoved={removed} />
         ))}
         <InviteList invites={invites.list} onSend={invites.send} />
-        <Notifications />
-        <EmailBox />
         <Button
           title="Show the tips for new players again"
           variant="ghost"
@@ -383,69 +379,6 @@ function useInvites() {
   };
 
   return { list, busy, message, make, send };
-}
-
-/** Your email, for news of Focus Together: add it if you joined before we asked, or change it. */
-function EmailBox() {
-  const tone = useTone();
-  const { me, setMe } = useWorld();
-  const [editing, setEditing] = useState(!me.email);
-  const [email, setEmail] = useState(me.email ?? '');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const save = async () => {
-    if (!isEmail(email)) return setError("That doesn't look like a real email address");
-    setBusy(true);
-    setError(null);
-    try {
-      setMe(await api.setEmail(email));
-      setEditing(false);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <View style={styles.invites}>
-      <Text style={[font.label, { color: tone.muted }]}>Email</Text>
-      {!editing && me.email ? (
-        <View style={styles.row}>
-          <Muted
-            style={styles.flex}
-          >{`News of Focus Together goes to ${me.email}. Only you can see it.`}</Muted>
-          <Button title="Change" small variant="quiet" onPress={() => setEditing(true)} />
-        </View>
-      ) : (
-        <>
-          <Muted>For news of Focus Together. Only you can see it.</Muted>
-          <View style={styles.row}>
-            <TextInput
-              value={email}
-              onChangeText={(t) => {
-                setEmail(t);
-                setError(null);
-              }}
-              placeholder="you@example.com"
-              placeholderTextColor={tone.muted}
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete="email"
-              keyboardType="email-address"
-              accessibilityLabel="Your email"
-              onSubmitEditing={save}
-              style={[
-                styles.input,
-                { color: tone.text, borderColor: tone.line, backgroundColor: tone.raised },
-              ]}
-            />
-            <Button title="Save" small onPress={save} disabled={busy || !email.trim()} />
-          </View>
-        </>
-      )}
-      {error && <Text style={{ color: tone.danger, fontSize: 13 }}>{error}</Text>}
-    </View>
-  );
 }
 
 function InviteList({ invites, onSend }: { invites: Invite[]; onSend: (code: string) => void }) {

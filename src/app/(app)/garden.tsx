@@ -20,7 +20,8 @@ import { Rift } from '@/art/Rift';
 import { BLEED, Scene, STAGE, useTone } from '@/art/Scene';
 import { playSound, setSmoking, useAmbience } from '@/audio/sound';
 import { Button } from '@/components/Button';
-import { Body, Muted, Panel, SceneHeader, Sheet, Toast } from '@/components/Chrome';
+import { Body, Muted, Panel, Sheet, Toast } from '@/components/Chrome';
+import { SceneHeader } from '@/components/Header';
 import { Countdown } from '@/components/Countdown';
 import { FriendOfFriendSheet } from '@/components/FriendOfFriendSheet';
 import {
@@ -58,6 +59,7 @@ import {
   dist,
   distToRect,
   FENCE_Y,
+  ENTRY,
   GATE,
   GATE_OUT_Y,
   HEDGE_Y,
@@ -197,7 +199,7 @@ export default function GardenScene() {
   const [start] = useState(() =>
     lastSpot?.username === me.username && lastSpot.breakEndsAt === me.break_ends_at
       ? lastSpot.at
-      : GATE
+      : ENTRY
   );
   // Sitting on a bench: which seat (see SEATS), until you walk off.
   const [seat, setSeat] = useState<number | null>(null);
@@ -248,7 +250,7 @@ export default function GardenScene() {
       lastSpot = {
         username: me.username,
         breakEndsAt: me.break_ends_at,
-        at: at.y > HEDGE_Y ? GATE : at,
+        at: at.y > HEDGE_Y ? ENTRY : at,
       };
     },
     [me.username, me.break_ends_at, where]
@@ -799,7 +801,7 @@ export default function GardenScene() {
       reserve={{ top: 56, bottom: onBreak ? 260 : 150 }}
     >
       <SceneHeader
-        place="Garden"
+        weather={conditions}
         detail={onBreak && breakEndsAt ? <BreakLeft until={breakEndsAt} onDone={endBreak} /> : null}
       />
       {status === 'absent' ? (
@@ -814,69 +816,68 @@ export default function GardenScene() {
           <Button title="Go home" variant="quiet" onPress={goHome} />
         </Panel>
       ) : (
-        <Panel>
+        <Panel
+          // Under your thumb, on its own above the panel.
+          aside={<Steering size={92} onChange={walker.steer} />}
+        >
           {tip && <Tip id={tip.id}>{tip.text}</Tip>}
           <ChatBar onSay={chat.say} />
-          <View style={styles.controls}>
-            <View style={styles.side}>
-              <View style={styles.nearby}>
-                {actions.length > 0 ? (
-                  actions.map((a) => (
-                    <Button
-                      key={a.label ?? a.title}
-                      title={a.title}
-                      accessibilityLabel={a.label}
-                      small
-                      variant={a.quiet ? 'quiet' : 'primary'}
-                      style={styles.fit}
-                      onPress={a.onPress}
-                    />
-                  ))
-                ) : (
-                  <Muted style={styles.hint} numberOfLines={2}>
-                    {hint}
-                  </Muted>
-                )}
-              </View>
-              <View style={styles.row}>
-                {!me.under_18 && (
+          <View style={styles.side}>
+            <View style={styles.nearby}>
+              {actions.length > 0 ? (
+                actions.map((a) => (
                   <Button
-                    title={smoking ? 'Smoking' : 'Smoke'}
-                    accessibilityLabel={`Smoke a cigarette (${cigarettes} left)`}
-                    variant="quiet"
+                    key={a.label ?? a.title}
+                    title={a.title}
+                    accessibilityLabel={a.label}
                     small
-                    style={styles.grow}
-                    disabled={smoking || cigarettes === 0}
-                    onPress={() => act(() => api.smoke(), 'lighter')}
+                    variant={a.quiet ? 'quiet' : 'primary'}
+                    style={styles.fit}
+                    onPress={a.onPress}
                   />
-                )}
-                <Button
-                  title={incoming.length > 0 ? `Basket · ${incoming.length}` : 'Basket'}
-                  accessibilityLabel={
-                    incoming.length > 0
-                      ? `Your basket, and ${incoming.length} offers for you`
-                      : 'Your basket'
-                  }
-                  variant="quiet"
-                  small
-                  style={styles.grow}
-                  onPress={() => setSheet({ kind: 'basket' })}
-                />
-                <Button
-                  title="Stall"
-                  accessibilityLabel="Your market stall"
-                  variant="quiet"
-                  small
-                  style={styles.grow}
-                  onPress={() => setSheet({ kind: 'stall' })}
-                />
-              </View>
+                ))
+              ) : (
+                <Muted style={styles.hint} numberOfLines={2}>
+                  {hint}
+                </Muted>
+              )}
             </View>
-            {/* On the right, under your thumb. */}
-            <Steering size={92} onChange={walker.steer} />
+            <View style={styles.row}>
+              {!me.under_18 && (cigarettes > 0 || smoking) && (
+                <Button
+                  title={smoking ? 'Smoking' : 'Smoke'}
+                  accessibilityLabel={`Smoke a cigarette (${cigarettes} left)`}
+                  variant="quiet"
+                  small
+                  style={styles.grow}
+                  disabled={smoking}
+                  onPress={() => act(() => api.smoke(), 'lighter')}
+                />
+              )}
+              <Button
+                title={incoming.length > 0 ? `Basket · ${incoming.length}` : 'Basket'}
+                accessibilityLabel={
+                  incoming.length > 0
+                    ? `Your basket, and ${incoming.length} offers for you`
+                    : 'Your basket'
+                }
+                variant="quiet"
+                small
+                style={styles.grow}
+                onPress={() => setSheet({ kind: 'basket' })}
+              />
+              <Button
+                title="Stall"
+                accessibilityLabel="Your market stall"
+                variant="quiet"
+                small
+                style={styles.grow}
+                onPress={() => setSheet({ kind: 'stall' })}
+              />
+            </View>
           </View>
+          <Button title="Back to work" small onPress={() => go('/office')} />
           <View style={styles.row}>
-            <Button title="Back to work" small style={styles.flex} onPress={() => go('/office')} />
             <Button
               title="Your look"
               variant="ghost"
@@ -1113,7 +1114,7 @@ function BreakLeft({ until, onDone }: { until: string; onDone: () => void }) {
   const tone = useTone();
   return (
     <Text style={{ color: tone.muted, fontSize: 12 }}>
-      {'· break '}
+      {'Break '}
       <Countdown
         until={until}
         onDone={onDone}
@@ -1126,8 +1127,7 @@ function BreakLeft({ until, onDone }: { until: string; onDone: () => void }) {
 const styles = StyleSheet.create({
   figure: walkabout.figure,
   row: { flexDirection: 'row', gap: 6, alignItems: 'center' },
-  controls: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  side: { flex: 1, gap: 8 },
+  side: { gap: 8 },
   nearby: { flexDirection: 'row', gap: 6, height: 38, alignItems: 'center' },
   hint: { flex: 1, fontSize: 12, lineHeight: 16 },
   flex: { flex: 1 },

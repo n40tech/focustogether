@@ -77,18 +77,40 @@ test('signing in with a username', async ({ page, fake }) => {
 
 test('the first tap turns the sound on', async ({ page, fake }) => {
   await fake.open('/');
-  const sound = button(page, 'Mute');
-  await expect(sound).toHaveText('– Sound');
-  await sound.click();
-  await expect(sound).toHaveText('♪ Sound on');
-  await sound.click();
-  await expect(button(page, 'Unmute')).toHaveText('– Muted');
+  await button(page, 'Start the sound').click();
+  await button(page, 'Mute').click();
+  await button(page, 'Unmute').click();
+  await expect(button(page, 'Mute')).toBeVisible();
+});
+
+test('settings: a slider for each kind of sound, kept for next time', async ({ page, fake }) => {
+  await fake.open('/');
+  await button(page, 'Settings').click();
+  const traffic = page.getByRole('slider', { name: 'Traffic' });
+  await expect(traffic).toHaveAttribute('aria-valuenow', '100');
+  // All the way to the left: no traffic.
+  await traffic.click({ position: { x: 2, y: 16 } });
+  await expect(traffic).toHaveAttribute('aria-valuenow', '0');
+  await page.getByRole('switch', { name: 'Keep playing sounds when you leave' }).click();
+  await button(page, 'Close').last().click();
+
+  await page.reload();
+  await button(page, 'Settings').click();
+  await expect(page.getByRole('slider', { name: 'Traffic' })).toHaveAttribute('aria-valuenow', '0');
+  await expect(page.getByRole('slider', { name: 'Overall' })).toHaveAttribute(
+    'aria-valuenow',
+    '80'
+  );
+  await expect(
+    page.getByRole('switch', { name: 'Keep playing sounds when you leave' })
+  ).not.toBeChecked();
 });
 
 test('logging out on a break counts as going home', async ({ page, fake }) => {
   fake.onBreak();
   await fake.open('/');
   await expect(page.getByText(/You're on a break/)).toBeVisible();
+  await button(page, 'Settings').click();
   await button(page, 'Log out').click();
 
   await expect(button(page, 'Arrive')).toBeVisible();

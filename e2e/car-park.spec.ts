@@ -56,6 +56,8 @@ test("driving into a friend's car damages both, and says they can claim", async 
     parked: { x: 250, y: 379, a: Math.PI / 2 },
   });
   await fake.open('/');
+  // Ready to drive once the keys show.
+  await expect(page.getByLabel(/Drive with W and S/)).toBeVisible();
   await walk(page, 'ArrowUp', 1500);
   await expect.poll(() => fake.called('crash')).toHaveLength(1);
   const [crash] = fake.called('crash');
@@ -121,6 +123,22 @@ test('smoking in the car park', async ({ page, fake }) => {
   expect(fake.called('smoke')).toHaveLength(1);
 });
 
+test('with no cigarettes there is no Smoke button, but the last one stays lit', async ({
+  page,
+  fake,
+}) => {
+  fake.atDesk();
+  fake.me.inventory = {};
+  await fake.open('/');
+  await expect(button(page, 'Go in')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Smoke a cigarette/ })).toHaveCount(0);
+
+  fake.me.inventory = { cigarette: 1 };
+  await page.reload();
+  await button(page, 'Smoke a cigarette (1 left)').click();
+  await expect(button(page, 'Smoke a cigarette (0 left)')).toBeDisabled();
+});
+
 test('buying a car suggests insurance, and the shed repairs it', async ({ page, fake }) => {
   fake.me.chips = 400;
   fake.shop.push({
@@ -179,6 +197,10 @@ test('on a computer, the keys to press are where the thumbstick would be', async
   await fake.open('/');
   await expect(page.getByLabel(/Drive with W and S, and steer with A and D/)).toBeVisible();
   await expect(page.getByText('A D steer', { exact: false })).toBeVisible();
+  // On its own, to the right of the panel, not in it.
+  const keys = await page.getByLabel(/Drive with W and S/).boundingBox();
+  const walkIn = await button(page, 'Walk in').boundingBox();
+  expect(keys!.x).toBeGreaterThanOrEqual(walkIn!.x + walkIn!.width);
 });
 
 test('under-18s have nothing to smoke', async ({ page, fake }) => {

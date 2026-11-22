@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useTone } from '@/art/Scene';
 import { playSound } from '@/audio/sound';
@@ -21,12 +21,14 @@ type Props = {
   setMe: (me: Me) => void;
   refresh: () => void;
   onWalkOut: () => void;
+  /** On a break: back out to the garden, until the next session starts. */
+  onGarden: () => void;
   /** Opens your desk, to arrange it (between sessions). */
   onArrange: () => void;
 };
 
 /** The office's bottom panel: pick a length and start, or the running countdown. */
-export function StudyPanel({ me, setMe, refresh, onWalkOut, onArrange }: Props) {
+export function StudyPanel({ me, setMe, refresh, onWalkOut, onGarden, onArrange }: Props) {
   const tone = useTone();
   const [minutes, setMinutes] = useState(25);
   const [busy, setBusy] = useState(false);
@@ -92,7 +94,7 @@ export function StudyPanel({ me, setMe, refresh, onWalkOut, onArrange }: Props) 
         ) : (
           <Tip id="away">
             You can leave the page while you study: the session carries on, and pays when it ends.
-            For the strict rules, turn on hard mode before you start.
+            For the strict rules, turn on hard mode in settings before you start.
           </Tip>
         )}
         <Countdown
@@ -172,8 +174,13 @@ export function StudyPanel({ me, setMe, refresh, onWalkOut, onArrange }: Props) 
       <Muted style={styles.centerText}>
         {`Earns about ${minutes} chip${minutes === 1 ? '' : 's'} and a ${breakMinutes(minutes)} min break.`}
       </Muted>
-      <HardMode me={me} setMe={setMe} />
+      {me.hard_mode && (
+        <Muted style={styles.centerText}>Hard mode is on. You can turn it off in settings.</Muted>
+      )}
       <Button title={`Start ${minutes} min`} onPress={start} disabled={busy} />
+      {me.status === 'on_break' && me.break_ends_at && (
+        <Button title="Back to the garden" variant="quiet" onPress={onGarden} />
+      )}
       <View style={styles.presets}>
         <Button
           title="Arrange your desk"
@@ -186,37 +193,6 @@ export function StudyPanel({ me, setMe, refresh, onWalkOut, onArrange }: Props) 
       </View>
       {error && <Text style={{ color: tone.danger, textAlign: 'center' }}>{error}</Text>}
     </Panel>
-  );
-}
-
-/**
- * Hard mode, for the strict rules: leaving the page stops the session. Kept
- * for your account, and each session keeps the mode it started in.
- */
-function HardMode({ me, setMe }: { me: Me; setMe: (me: Me) => void }) {
-  const tone = useTone();
-  const [on, setOn] = useState(me.hard_mode);
-  const flip = (value: boolean) => {
-    setOn(value);
-    api.setHardMode(value).then(setMe, () => setOn(!value));
-  };
-  return (
-    <View style={styles.hard}>
-      <View style={styles.flex}>
-        <Text style={{ color: tone.text, fontSize: 14, fontWeight: '600' }}>Hard mode</Text>
-        <Muted>
-          {otherTabsAllowed()
-            ? 'Close this tab mid-session and it stops, with no chips.'
-            : `Leave the page for more than ${AWAY_GRACE_S} seconds mid-session and it stops, with no chips.`}
-        </Muted>
-      </View>
-      <Switch
-        value={on}
-        onValueChange={flip}
-        accessibilityLabel="Hard mode"
-        trackColor={{ false: tone.line, true: tone.accent }}
-      />
-    </View>
   );
 }
 
@@ -295,7 +271,5 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   presets: { flexDirection: 'row', gap: 8 },
-  hard: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  flex: { flex: 1 },
   preset: { flex: 1 },
 });

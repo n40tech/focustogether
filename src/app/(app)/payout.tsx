@@ -6,7 +6,8 @@ import { Box, Dot } from '@/art/primitives';
 import { Scene, useTone, Zoom } from '@/art/Scene';
 import { playSound, useAmbience } from '@/audio/sound';
 import { Button } from '@/components/Button';
-import { Body, Muted, Panel, SceneHeader, Toast } from '@/components/Chrome';
+import { Body, Muted, Panel, Toast } from '@/components/Chrome';
+import { SceneHeader } from '@/components/Header';
 import { Countdown } from '@/components/Countdown';
 import { RipeNote } from '@/components/RipeNote';
 import { api } from '@/lib/api';
@@ -137,7 +138,7 @@ export default function Payout() {
   if (!session) {
     return (
       <Scene conditions={conditions} ground={palette.office.ground} art={art} glow={glow}>
-        <SceneHeader place="Office" chips={me.chips} />
+        <SceneHeader chips={me.chips} />
         <Panel>
           <Body>{"There's nothing to collect right now."}</Body>
           <Button title="Back to the car park" onPress={() => go('/')} />
@@ -154,7 +155,7 @@ export default function Payout() {
       glow={glow}
       reserve={{ top: 56, bottom: 240 }}
     >
-      <SceneHeader place="Session complete" chips={me.chips} />
+      <SceneHeader chips={me.chips} />
       <Panel>
         <Earned earned={earned} minutes={session.duration_min} streak={me.streak} />
         {me.break_ends_at && <BreakEarned minutes={session.break_min} until={me.break_ends_at} />}

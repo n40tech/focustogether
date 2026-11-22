@@ -6,7 +6,8 @@ import { Hotspot, Tag } from '@/art/primitives';
 import { Scene, useTone } from '@/art/Scene';
 import { playSound, useAmbience } from '@/audio/sound';
 import { Button } from '@/components/Button';
-import { Body, SceneHeader, Sheet } from '@/components/Chrome';
+import { Body, Sheet } from '@/components/Chrome';
+import { SceneHeader } from '@/components/Header';
 import { ArrangeSheet } from '@/components/ArrangeSheet';
 import { Countdown } from '@/components/Countdown';
 import { FriendOfFriendSheet } from '@/components/FriendOfFriendSheet';
@@ -96,12 +97,13 @@ export default function Office() {
       glow={<OfficeGlow seats={seats} />}
       overlay={overlay}
     >
-      <SceneHeader place="Office" chips={studying ? undefined : me.chips} />
+      <SceneHeader chips={studying ? undefined : me.chips} />
       <StudyPanel
         me={me}
         setMe={setMe}
         refresh={refresh}
         onWalkOut={walkOut}
+        onGarden={() => go('/garden')}
         onArrange={() => setArranging(true)}
       />
       {arranging && !studying && (
